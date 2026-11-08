@@ -154,18 +154,29 @@ try {
       economyController.close();
       economyState.economyManagementPanel={
         governmentId:'surface:arrival',role:'leader',
-        permissions:{view:true,manageTaxes:true,manageRoles:true},
+        permissions:{view:true,manageTaxes:true,manageRoles:true,manageFunds:true,proposeProjects:true,approveProjects:true},
+        governmentType:'village',worldId:'surface',settlementId:'arrival',
+        initialTreasuryBronze:null,budgetTemplateBronze:null,
+        governments:[{governmentId:'surface:arrival',worldId:'surface',governmentType:'village',settlementId:'arrival'},
+          {governmentId:'surface:royal',worldId:'surface',governmentType:'kingdom',settlementId:'royal'}],
         sampledAt:Date.now(),periodGameDays:7,periodEndDay:'2026-11-08',
         monetary:{priceFactor:1.05,referenceSupplyBronze:13000,sampledAt:Date.now()},
         kpis:{soldToNpc:90,boughtFromNpc:35,grossSalesBronze:2800,
           npcPurchaseRevenueBronze:1600,marketStock:47,marketVarieties:2,
           treasuryReceiptsBronze:60,treasuryExpensesBronze:10,transactions:12,journalBalanceBronze:0},
-        funds:[{fundCode:'general',balanceBronze:4250,reservedBronze:200}],
+        funds:[{fundCode:'general',balanceBronze:4250,reservedBronze:200},
+          {fundCode:'construction',balanceBronze:650,reservedBronze:130}],
         daily:[{day:'2026-11-07',soldToNpc:15,boughtFromNpc:10},
           {day:'2026-11-08',soldToNpc:20,boughtFromNpc:12}],
         stock:[{itemId:'wood',available:45,buyPrice:2,sellPrice:3},
           {itemId:'copperIngot',available:2,buyPrice:51,sellPrice:60}],
         roles:[{profileId:'11111111-1111-4111-8111-111111111111',username:'fiscal_teste',role:'auditor'}],
+        projects:[{projectId:'22222222-2222-4222-8222-222222222222',title:'Ponte da vila',
+          projectType:'construction',fundCode:'construction',budgetBronze:150,spentBronze:0,status:'proposed'},
+          {projectId:'33333333-3333-4333-8333-333333333333',title:'Telhado da guilda',
+            projectType:'construction',fundCode:'construction',budgetBronze:130,spentBronze:0,status:'funded'}],
+        transfers:[{requestId:'44444444-4444-4444-8444-444444444444',fromFund:'general',
+          toFund:'construction',amountBronze:90}],
       };
       window.economyPoint={key:'visual-government',placeId:'arrival',label:'Trocas da vila',
         sections:['trade','economy','government']};
@@ -174,7 +185,7 @@ try {
     await click('[data-service-section="economy"]');
     await assertLayout();
     assert.equal(await page.locator('.economy-kpi').count(),8);
-    assert.ok((await page.locator('#lodging-options').textContent()).includes('Tesouro e fundos públicos'));
+    assert.ok((await page.locator('#lodging-options').textContent()).includes('Tesouro e orçamento por finalidade'));
     await page.screenshot({path:`${output}/${name}-economy-dashboard.png`,fullPage:true});
     await page.locator('.economy-role-form input[name="username"]').fill('conta_teste');
     await page.locator('.economy-role-form select[name="role"]').selectOption('minister');
@@ -191,10 +202,67 @@ try {
     const revocation=await page.evaluate(()=>economyActions.at(-1));
     assert.equal(revocation.username,'fiscal_teste');
     assert.equal(revocation.role,'none');
+    await page.evaluate(()=>economyPanel.notice('Cargo revogado no servidor de teste.'));
+    assert.equal(await page.locator('.economy-transfer-form').count(),1);
+    await page.locator('.economy-transfer-form select[name="fromFund"]').selectOption('general');
+    await page.locator('.economy-transfer-form select[name="toFund"]').selectOption('construction');
+    await page.locator('.economy-transfer-form input[name="amountBronze"]').fill('300');
+    await click('.economy-transfer-form [data-service-action="economyFundTransfer"]');
+    assert.equal(await page.locator('.commerce-review').count(),1,'fund transfer requires review');
+    await page.screenshot({path:`${output}/${name}-treasury-transfer.png`,fullPage:true});
+    await click('[data-service-action="__confirm"]');
+    const transfer=await page.evaluate(()=>economyActions.at(-1));
+    assert.equal(transfer.name,'economyFundTransfer');
+    assert.equal(transfer.fromFund,'general');assert.equal(transfer.toFund,'construction');
+    assert.equal(transfer.amountBronze,300);
+    assert.match(transfer.requestId,/^[a-f0-9-]{36}$/i);
+    await page.evaluate(()=>economyPanel.notice('Transferência de teste registrada.'));
+
+    await page.locator('.economy-project-form input[name="title"]').fill('Reparar a ponte');
+    await page.locator('.economy-project-form select[name="projectType"]').selectOption('construction');
+    await page.locator('.economy-project-form input[name="budgetBronze"]').fill('280');
+    await click('.economy-project-form [data-service-action="economyProjectPropose"]');
+    assert.equal(await page.locator('.commerce-review').count(),1,'public budget proposal requires review');
+    await click('[data-service-action="__confirm"]');
+    const proposal=await page.evaluate(()=>economyActions.at(-1));
+    assert.equal(proposal.name,'economyProjectPropose');
+    assert.equal(proposal.title,'Reparar a ponte');assert.equal(proposal.budgetBronze,280);
+    assert.match(proposal.projectId,/^[a-f0-9-]{36}$/i);
+    await page.evaluate(()=>economyPanel.notice('Proposta de teste registrada.'));
+
+    await click('[data-service-action="economyProjectDecide"][data-decision="fund"]');
+    assert.equal(await page.locator('.commerce-review').count(),1,'fund allocation requires review');
+    await click('[data-service-action="__confirm"]');
+    const funding=await page.evaluate(()=>economyActions.at(-1));
+    assert.equal(funding.name,'economyProjectDecide');
+    assert.equal(funding.decision,'fund');
+    await page.evaluate(()=>economyPanel.notice('Verba reservada no teste.'));
+
+    await click('[data-service-action="economyProjectDecide"][data-decision="cancel"]');
+    await click('[data-service-action="__confirm"]');
+    const cancellation=await page.evaluate(()=>economyActions.at(-1));
+    assert.equal(cancellation.decision,'cancel');
+    await page.evaluate(()=>economyPanel.notice('Reserva cancelada no teste.'));
+
+    await click('[data-service-action="economyGovernmentSelect"][data-government-id="surface:royal"]');
+    const changedGovernment=await page.evaluate(()=>economyActions.at(-1));
+    assert.equal(changedGovernment.governmentId,'surface:royal');
     await page.evaluate(()=>{
-      economyPanel.notice('Cargo revogado no servidor de teste.');
+      economyPanel.notice('Tesouro do reino selecionado no teste.');
+      Object.assign(economyState.economyManagementPanel,{
+        governmentId:'surface:royal',governmentType:'kingdom',settlementId:'royal',
+        funds:[{fundCode:'general',balanceBronze:710,reservedBronze:0}],
+        stock:[],daily:[],monetary:null,projects:[],transfers:[],
+      });
+      economyPanel.refresh(economyPoint,'visual-government');
+    });
+    await assertLayout();
+    assert.ok((await page.locator('#lodging-options').textContent()).includes('Reino · royal'));
+    await page.screenshot({path:`${output}/${name}-kingdom-treasury.png`,fullPage:true});
+    await page.evaluate(()=>{
       economyState.economyManagementPanel.role='auditor';
-      economyState.economyManagementPanel.permissions={view:true,manageTaxes:false,manageRoles:false};
+      economyState.economyManagementPanel.permissions={view:true,manageTaxes:false,manageRoles:false,
+        manageFunds:false,proposeProjects:false,approveProjects:false};
       economyPanel.refresh(economyPoint,'visual-government');
     });
     assert.equal(await page.locator('.economy-role-form').count(),0,'read-only delegates never see appointment controls');
@@ -209,7 +277,8 @@ try {
     assert.deepEqual(errors,[],'no uncaught browser exceptions');
     records.push({viewport:name,marketGoods:2,buyConfirmed:true,staleStockBlocked:true,
       stalePriceBlocked:true,sellReview:true,rentReview:true,economyDashboard:true,
-      roleConfirmation:true,roleReadOnly:true,overflow:false,errors:0});
+      roleConfirmation:true,roleReadOnly:true,treasuryTransfer:true,projectProposal:true,
+      projectApproval:true,projectCancellation:true,kingdomSwitch:true,overflow:false,errors:0});
     await context.close();
   }
   await writeFile(path.join(output,'result.json'),

@@ -26,7 +26,7 @@ try { for(const [name,viewport] of [['desktop',{width:1440,height:900}],['mobile
  await page.locator('[data-quantity-item]').fill('51');await tap('[data-service-action=lodgeSell]');assert.equal(await page.evaluate(()=>actions.length),0);
  await page.locator('[data-quantity-item]').fill('12');await page.locator('[data-quantity-item]').blur();await page.screenshot({path:`${output}/${name}-sell.png`});await tap('[data-service-action=lodgeSell]');assert.equal(await page.evaluate(()=>actions.length),0);
  await fit();await page.screenshot({path:`${output}/${name}-review.png`});
- await page.evaluate(()=>state.marketQuotes={wood:{sellPrice:2}});await tap('[data-service-action=__confirm]');assert.equal(await page.evaluate(()=>actions.length),0,'changed quote requires new review');
+ await page.evaluate(()=>state.marketQuotes={wood:{buyPrice:2,sellPrice:3}});await tap('[data-service-action=__confirm]');assert.equal(await page.evaluate(()=>actions.length),0,'changed quote requires new review');
  await tap('[data-service-action=lodgeSell]');await tap('[data-service-action=__confirm]');assert.equal(await page.evaluate(()=>actions.length),1);
  assert.equal(await page.locator('[data-service-action=lodgeSell]').isDisabled(),true,'pending sends blocked');
  await page.evaluate(()=>commerce.notice('Venda concluída'));await tap('#lodging-back');await tap('[data-service-section=tools]');await tap('[data-service-action=lodgeBuyTool][data-tool=stoneAxe]');await fit();await tap('#lodging-back');

@@ -95,6 +95,8 @@ const ACTION_SECTIONS = Object.freeze({
   cabinGrantKey: ['keys'], cabinRevokeKey: ['keys'],
   setLodgingAutoRenew: ['rooms','properties'],
   governmentTaxPolicySet: ['government'], economyRefresh: ['economy'], economyRoleSet: ['economy'],
+  economyGovernmentSelect: ['economy'], economyFundTransfer: ['economy'],
+  economyProjectPropose: ['economy'], economyProjectDecide: ['economy'],
   propertyRequest:['properties','directory'], propertyQuote:['properties','directory'], propertyRentList:['properties'], propertyRentDelist:['properties'], propertyRent:['properties','directory'],
   propertyList: ['properties'], propertyDelist: ['properties'], propertyBuy: ['properties', 'directory'],
 });

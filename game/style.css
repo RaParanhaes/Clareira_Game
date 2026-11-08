@@ -1394,3 +1394,15 @@ body{background:#000}
 dialog.is-dragging{transition:none;cursor:grabbing}
 dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header,.staff-tools-head){cursor:grabbing}
 .player-menu .icon-button{min-height:36px;padding:6px 10px;font-size:13px}
+
+/* Auditoria de layout (feat/ui-menus-visual): textos mínimos de 10px e menu do celular sem cobrir o minimapa. */
+.inventory-slot-key{font-size:10px}
+.inventory-slot-count{font-size:10px}
+#weather-text{font-size:10px}
+.mini-map-caption,.mini-map-caption small,.mini-map-open-hint,#mini-map-exploration-status{font-size:10px}
+@media(max-width:720px){
+  .shell.is-authenticated>.topbar.menu-expanded{width:min(214px,calc(100vw - 176px))}
+  .mini-map-caption,.mini-map-caption small,.mini-map-open-hint,#mini-map-exploration-status{font-size:10px}
+}
+.quickbar .inventory-slot-key{font-size:9px}
+.quickbar .inventory-slot-count{font-size:9px}

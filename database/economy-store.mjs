@@ -374,7 +374,8 @@ export function createEconomyStore(pool) {
         [profileId],
       );
       const persisted = validateInventory(inventoryFromRows(
-        savedRows.rows.map(row => ({ itemId:row.item_id, quantity:Number(row.quantity) })), EMPTY_INVENTORY,
+        savedRows.rows.map(row => ({ itemId:row.item_id, quantity:Number(row.quantity) })),
+        { ...EMPTY_INVENTORY, attributes:{ ...EMPTY_INVENTORY.attributes }, learnedAbilities:[...EMPTY_INVENTORY.learnedAbilities] },
       ));
       const expectedAfter = createInventory(persisted);
       if (removeInventoryItem(expectedAfter, itemId, quantity) !== quantity
@@ -501,7 +502,8 @@ export function createEconomyStore(pool) {
         'SELECT item_id,quantity FROM inventory_items WHERE profile_id=$1 ORDER BY item_id FOR UPDATE', [profileId],
       );
       const saved = validateInventory(inventoryFromRows(
-        savedRows.rows.map(row => ({ itemId:row.item_id, quantity:Number(row.quantity) })), EMPTY_INVENTORY,
+        savedRows.rows.map(row => ({ itemId:row.item_id, quantity:Number(row.quantity) })),
+        { ...EMPTY_INVENTORY, attributes:{ ...EMPTY_INVENTORY.attributes }, learnedAbilities:[...EMPTY_INVENTORY.learnedAbilities] },
       ));
       if (JSON.stringify(saved) !== JSON.stringify(expected)) {
         throw Object.assign(new Error('O Inventário mudou. Atualize a compra e tente novamente.'), { status:409 });

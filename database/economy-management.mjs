@@ -5,6 +5,10 @@ import { gameDayKey } from '../game/game-calendar.mjs';
 const DEFAULT_GOVERNMENT = 'surface:arrival';
 const VALID_ROLES = new Set(['minister','treasurer','auditor']);
 const WINDOW_GAME_DAYS = 7;
+const FUNDS = Object.freeze(['general','donations','materials','construction','territory','diplomacy']);
+const PROJECT_FUNDS = Object.freeze({donation:'donations',material_purchase:'materials',construction:'construction',territory_expansion:'territory',diplomacy:'diplomacy'});
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const operationError = (message,status=409) => Object.assign(new Error(message),{status});
 
 const safeAmount = value => {
   const amount = Number(value || 0);
@@ -17,6 +21,9 @@ export function economyPermissions({ isLeader = false, isAdmin = false, role = n
     view: owner || VALID_ROLES.has(role),
     manageTaxes: owner || role === 'minister',
     manageRoles: owner,
+    manageFunds: owner || role === 'treasurer',
+    proposeProjects: owner || role === 'minister' || role === 'treasurer',
+    approveProjects: owner,
   };
 }
 
@@ -75,6 +82,27 @@ function intervalDays(endDay, rows) {
 }
 
 export function createEconomyManagementStore(pool) {
+  async function listAuthorizedEconomyGovernments({actorProfileId}={}) {
+    if (typeof actorProfileId!=='string' || !UUID.test(actorProfileId)) return [];
+    const {rows}=await pool.query(
+      `SELECT g.government_id,g.world_id,g.settlement_id,g.government_type,
+              g.leader_profile_id=a.id AS is_leader
+         FROM world_governments g
+         JOIN profiles a ON a.id=$1 AND a.is_guest=false
+         JOIN accounts account ON account.id=a.account_id
+         LEFT JOIN government_economy_roles delegate
+           ON delegate.government_id=g.government_id AND delegate.profile_id=a.id
+        WHERE g.status='active'
+          AND (g.leader_profile_id=a.id OR account.role='admin' OR delegate.role IN ('minister','treasurer','auditor'))
+        ORDER BY g.world_id,g.government_type,g.settlement_id LIMIT 50`,
+      [actorProfileId],
+    );
+    return rows.map(row=>({
+      governmentId:row.government_id,worldId:row.world_id,
+      settlementId:row.settlement_id,governmentType:row.government_type,
+    }));
+  }
+
   async function getGovernmentEconomyPanel({
     governmentId = DEFAULT_GOVERNMENT, actorProfileId, now = new Date(),
   } = {}) {
@@ -82,7 +110,7 @@ export function createEconomyManagementStore(pool) {
     if (!capabilities) return null;
     const currentDay = gameDayKey(now.getTime());
     const since = new Date(now.getTime() - WINDOW_GAME_DAYS * GAME_DAY_DURATION_MS);
-    const [fundsResult, treasuryResult, journalResult] = await Promise.all([
+    const [fundsResult, treasuryResult, journalResult, metadata, projectsResult, transfersResult, governments] = await Promise.all([
       pool.query(
         'SELECT fund_code,balance_bronze,reserved_bronze FROM government_fund_accounts ' +
         'WHERE government_id=$1 ORDER BY fund_code',[governmentId],
@@ -91,7 +119,9 @@ export function createEconomyManagementStore(pool) {
         `SELECT COALESCE(sum(CASE WHEN l.amount_bronze>0 THEN l.amount_bronze ELSE 0 END),0) AS receipts,
                 COALESCE(sum(CASE WHEN l.amount_bronze<0 THEN -l.amount_bronze ELSE 0 END),0) AS expenses
            FROM economy_journal_lines l JOIN economy_journal_transactions t USING(transaction_id)
-          WHERE l.account_code='government_treasury' AND l.government_id=$1 AND t.occurred_at >= $2 AND t.occurred_at <= $3`,
+          WHERE l.account_code='government_treasury' AND l.government_id=$1
+            AND t.event_type <> 'government_fund_transfer'
+            AND t.occurred_at >= $2 AND t.occurred_at <= $3`,
         [governmentId,since,now],
       ),
       governmentId===DEFAULT_GOVERNMENT
@@ -106,12 +136,36 @@ export function createEconomyManagementStore(pool) {
             WHERE t.occurred_at >= $1 AND t.occurred_at <= $2`,
           [since,now],
         ) : Promise.resolve({rows:[{transactions:0,journal_balance:0,npc_purchase_revenue:0}]}),
+      pool.query(
+        `SELECT g.world_id,g.settlement_id,g.government_type,
+                territory.parent_government_id,
+                issuance.treasury_amount_bronze AS initial_treasury_bronze,
+                budget.starting_treasury_bronze AS template_treasury_bronze
+           FROM world_governments g
+           LEFT JOIN government_territory_state territory ON territory.government_id=g.government_id
+           LEFT JOIN government_initial_budget_issuances issuance ON issuance.government_id=g.government_id
+           LEFT JOIN government_budget_templates budget
+             ON budget.world_id=g.world_id AND budget.government_type=g.government_type AND budget.active
+          WHERE g.government_id=$1 AND g.status='active'`,[governmentId],
+      ),
+      pool.query(
+        `SELECT project_id,project_type,fund_code,title,budget_bronze,spent_bronze,status,created_at
+           FROM government_projects WHERE government_id=$1
+          ORDER BY created_at DESC,project_id LIMIT 20`,[governmentId],
+      ),
+      pool.query(
+        `SELECT request_id,from_fund,to_fund,amount_bronze,created_at
+           FROM government_fund_transfers WHERE government_id=$1
+          ORDER BY created_at DESC LIMIT 10`,[governmentId],
+      ),
+      listAuthorizedEconomyGovernments({actorProfileId}),
     ]);
     const funds = fundsResult.rows.map(row => ({
       fundCode:row.fund_code, balanceBronze:safeAmount(row.balance_bronze),
       reservedBronze:safeAmount(row.reserved_bronze),
     }));
     const financial = treasuryResult.rows[0] || {};
+    const gov = metadata.rows[0] || {};
     const journal = journalResult.rows[0] || {};
     let flows = [], stock = [], monetary = null;
     if (governmentId === DEFAULT_GOVERNMENT) {
@@ -160,9 +214,22 @@ export function createEconomyManagementStore(pool) {
       grossSalesBronze:total.grossSalesBronze+(day.grossSalesBronze||0),
     }),{soldToNpc:0,boughtFromNpc:0,grossSalesBronze:0});
     return {
-      governmentId, role:capabilities.role,permissions:capabilities.permissions,
+      governmentId,worldId:gov.world_id,settlementId:gov.settlement_id,
+      governmentType:gov.government_type,parentGovernmentId:gov.parent_government_id,
+      initialTreasuryBronze:gov.initial_treasury_bronze===null?null:safeAmount(gov.initial_treasury_bronze),
+      budgetTemplateBronze:gov.template_treasury_bronze===null?null:safeAmount(gov.template_treasury_bronze),
+      governments, role:capabilities.role,permissions:capabilities.permissions,
       sampledAt:now.getTime(), periodEndDay:currentDay,periodGameDays:WINDOW_GAME_DAYS,
       funds, monetary, daily:flows, stock,
+      projects:projectsResult.rows.map(row=>({
+        projectId:row.project_id,projectType:row.project_type,fundCode:row.fund_code,
+        title:row.title,budgetBronze:safeAmount(row.budget_bronze),
+        spentBronze:safeAmount(row.spent_bronze),status:row.status,createdAt:new Date(row.created_at).getTime(),
+      })),
+      transfers:transfersResult.rows.map(row=>({
+        requestId:row.request_id,fromFund:row.from_fund,toFund:row.to_fund,
+        amountBronze:safeAmount(row.amount_bronze),createdAt:new Date(row.created_at).getTime(),
+      })),
       roles:rolesResult.rows.map(row=>({profileId:row.profile_id,username:row.username,role:row.role})),
       kpis:{
         ...summary,marketStock:stock.reduce((sum,item)=>sum+(item.available||0),0),
@@ -174,6 +241,154 @@ export function createEconomyManagementStore(pool) {
         journalBalanceBronze:safeAmount(journal.journal_balance),
       },
     };
+  }
+
+  async function transferGovernmentFunds({
+    governmentId=DEFAULT_GOVERNMENT,actorProfileId,fromFund,toFund,amountBronze,requestId,
+  }={}) {
+    if (!UUID.test(requestId||'') || !FUNDS.includes(fromFund) || !FUNDS.includes(toFund)
+        || fromFund===toFund || !Number.isSafeInteger(amountBronze) || amountBronze<1)
+      throw operationError('Transferência de fundos inválida.',400);
+    return transaction(pool,async client=>{
+      const granted=await access(client,governmentId,actorProfileId,{lock:true});
+      if(!granted?.permissions.manageFunds)throw operationError('Você não pode movimentar fundos deste governo.',403);
+      const previous=await client.query('SELECT * FROM government_fund_transfers WHERE request_id=$1',[requestId]);
+      if(previous.rowCount){
+        const old=previous.rows[0];
+        if(old.government_id!==governmentId || old.from_fund!==fromFund
+            || old.to_fund!==toFund || Number(old.amount_bronze)!==amountBronze)
+          throw operationError('Esta referência já pertence a outra transferência.');
+        return {requestId,duplicate:true,amountBronze,fromFund,toFund};
+      }
+      const funds=await client.query(
+        'SELECT fund_code,balance_bronze,reserved_bronze FROM government_fund_accounts '+
+        'WHERE government_id=$1 AND fund_code=ANY($2::text[]) ORDER BY fund_code FOR UPDATE',
+        [governmentId,[fromFund,toFund]],
+      );
+      if(funds.rowCount!==2)throw operationError('Os fundos precisam estar configurados antes da transferência.');
+      const source=funds.rows.find(row=>row.fund_code===fromFund);
+      const dest=funds.rows.find(row=>row.fund_code===toFund);
+      if(Number(source.balance_bronze)-Number(source.reserved_bronze)<amountBronze)
+        throw operationError('Saldo disponível insuficiente; reservas de projetos não podem ser transferidas.');
+      if(!Number.isSafeInteger(Number(dest.balance_bronze)+amountBronze))
+        throw operationError('O saldo excederia o limite monetário seguro.');
+      await client.query(
+        'UPDATE government_fund_accounts SET balance_bronze=balance_bronze-$3,updated_at=now() '+
+        'WHERE government_id=$1 AND fund_code=$2',[governmentId,fromFund,amountBronze],
+      );
+      await client.query(
+        'UPDATE government_fund_accounts SET balance_bronze=balance_bronze+$3,updated_at=now() '+
+        'WHERE government_id=$1 AND fund_code=$2',[governmentId,toFund,amountBronze],
+      );
+      const journalId=randomUUID();
+      await client.query(
+        'INSERT INTO economy_journal_transactions(transaction_id,event_type,actor_profile_id,idempotency_key,reference_id) VALUES($1,$2,$3,$4,$5)',
+        [journalId,'government_fund_transfer',actorProfileId,'fund-transfer:'+requestId,governmentId],
+      );
+      for(const [line,fund,amount] of [[1,fromFund,-amountBronze],[2,toFund,amountBronze]]){
+        await client.query(
+          "INSERT INTO economy_journal_lines(transaction_id,line_number,account_code,government_id,fund_code,amount_bronze) VALUES($1,$2,'government_treasury',$3,$4,$5)",
+          [journalId,line,governmentId,fund,amount],
+        );
+      }
+      await client.query(
+        'INSERT INTO government_fund_transfers(request_id,government_id,from_fund,to_fund,amount_bronze,actor_profile_id,journal_transaction_id) '+
+        'VALUES($1,$2,$3,$4,$5,$6,$7)',
+        [requestId,governmentId,fromFund,toFund,amountBronze,actorProfileId,journalId],
+      );
+      return {requestId,duplicate:false,amountBronze,fromFund,toFund};
+    });
+  }
+
+  async function proposeGovernmentProject({
+    governmentId=DEFAULT_GOVERNMENT,actorProfileId,projectId,title,projectType,budgetBronze,
+  }={}) {
+    if (!UUID.test(projectId||'') || typeof title!=='string' || title.trim().length<4
+        || title.trim().length>80 || !Object.hasOwn(PROJECT_FUNDS,projectType)
+        || !Number.isSafeInteger(budgetBronze) || budgetBronze<1)
+      throw operationError('Dados do projeto público inválidos.',400);
+    return transaction(pool,async client=>{
+      const granted=await access(client,governmentId,actorProfileId,{lock:true});
+      if(!granted?.permissions.proposeProjects)throw operationError('Você não pode propor projetos deste governo.',403);
+      const prior=await client.query('SELECT government_id,title,project_type,budget_bronze,status FROM government_projects WHERE project_id=$1',[projectId]);
+      if(prior.rowCount){
+        const row=prior.rows[0];
+        if(row.government_id!==governmentId || row.title!==title.trim()
+            || row.project_type!==projectType || Number(row.budget_bronze)!==budgetBronze)
+          throw operationError('Esta referência já pertence a outro projeto.');
+        return {projectId,status:row.status,duplicate:true};
+      }
+      const fundCode=PROJECT_FUNDS[projectType];
+      const fund=await client.query('SELECT 1 FROM government_fund_accounts WHERE government_id=$1 AND fund_code=$2',
+        [governmentId,fundCode]);
+      if(!fund.rowCount)throw operationError('O fundo deste projeto não existe neste governo.');
+      await client.query(
+        'INSERT INTO government_projects(project_id,government_id,project_type,fund_code,title,budget_bronze,proposed_by) VALUES($1,$2,$3,$4,$5,$6,$7)',
+        [projectId,governmentId,projectType,fundCode,title.trim(),budgetBronze,actorProfileId],
+      );
+      await client.query(
+        'INSERT INTO government_project_events(event_id,project_id,government_id,actor_profile_id,event_type) VALUES($1,$2,$3,$4,$5)',
+        [randomUUID(),projectId,governmentId,actorProfileId,'proposed'],
+      );
+      return {projectId,status:'proposed',duplicate:false};
+    });
+  }
+
+  async function decideGovernmentProject({
+    governmentId=DEFAULT_GOVERNMENT,actorProfileId,projectId,decision,
+  }={}) {
+    if(!UUID.test(projectId||'') || !['fund','cancel'].includes(decision))
+      throw operationError('Decisão do projeto inválida.',400);
+    return transaction(pool,async client=>{
+      const granted=await access(client,governmentId,actorProfileId,{lock:true});
+      if(!granted?.permissions.approveProjects)throw operationError('Somente a liderança pode aprovar ou cancelar projetos.',403);
+      const found=await client.query(
+        'SELECT * FROM government_projects WHERE project_id=$1 AND government_id=$2 FOR UPDATE',
+        [projectId,governmentId],
+      );
+      if(!found.rowCount)throw operationError('Projeto não encontrado.',404);
+      const project=found.rows[0];
+      const status=decision==='fund'?'funded':'cancelled';
+      if(project.status===status)return {projectId,status,duplicate:true};
+      if(project.status!=='proposed' && project.status!=='funded')
+        throw operationError('O projeto já foi encerrado ou entrou em execução.');
+      if(decision==='fund' && project.status!=='proposed')
+        throw operationError('O projeto já foi reservado.');
+      const current=await client.query(
+        'SELECT balance_bronze,reserved_bronze FROM government_fund_accounts WHERE government_id=$1 AND fund_code=$2 FOR UPDATE',
+        [governmentId,project.fund_code],
+      );
+      if(!current.rowCount)throw operationError('Fundo do projeto não encontrado.');
+      const budget=Number(project.budget_bronze);
+      if(!Number.isSafeInteger(budget))throw operationError('Orçamento fora do limite monetário seguro.');
+      if(decision==='fund'){
+        if(Number(current.rows[0].balance_bronze)-Number(current.rows[0].reserved_bronze)<budget)
+          throw operationError('Saldo livre insuficiente para reservar o orçamento do projeto.');
+        await client.query(
+          'UPDATE government_fund_accounts SET reserved_bronze=reserved_bronze+$3,updated_at=now() '+
+          'WHERE government_id=$1 AND fund_code=$2',[governmentId,project.fund_code,budget],
+        );
+        await client.query(
+          "UPDATE government_projects SET status='funded',approved_by=$2,updated_at=now() WHERE project_id=$1",
+          [projectId,actorProfileId],
+        );
+      } else {
+        if(project.status==='funded'){
+          await client.query(
+            'UPDATE government_fund_accounts SET reserved_bronze=reserved_bronze-$3,updated_at=now() '+
+            'WHERE government_id=$1 AND fund_code=$2 AND reserved_bronze >= $3',
+            [governmentId,project.fund_code,budget-Number(project.spent_bronze)],
+          );
+        }
+        await client.query("UPDATE government_projects SET status='cancelled',updated_at=now() WHERE project_id=$1",
+          [projectId]);
+      }
+      await client.query(
+        'INSERT INTO government_project_events(event_id,project_id,government_id,actor_profile_id,event_type) VALUES($1,$2,$3,$4,$5)',
+        [randomUUID(),projectId,governmentId,actorProfileId,status],
+      );
+      return {projectId,status,duplicate:false};
+    });
   }
 
   async function setGovernmentEconomyRole({
@@ -224,5 +439,6 @@ export function createEconomyManagementStore(pool) {
     });
   }
 
-  return { getGovernmentEconomyPanel,setGovernmentEconomyRole };
+  return { getGovernmentEconomyPanel,listAuthorizedEconomyGovernments,setGovernmentEconomyRole,
+    transferGovernmentFunds,proposeGovernmentProject,decideGovernmentProject };
 }

@@ -1891,6 +1891,7 @@ test('dimension travel prefers each account last safe place and finds a nearby f
   const accounts=createAccountStore({directory:stateDirectory});
   const first=await accounts.register({username:'returnfirst',password:'senha-segura-de-teste'});
   const second=await accounts.register({username:'returnsecond',password:'senha-segura-de-teste'});
+  for(const account of [first,second])await saveAccountProgress(stateDirectory,account.profile.id,{learnedAbilities:['universalTeleport']});
   const locations=createJsonPlayerLocationStore(stateDirectory);
   const breu=DEFAULT_DIMENSIONS.find(item=>item.id==='breu');
   const remembered={x:breu.spawn.x+4,y:breu.spawn.y+4};
@@ -2034,7 +2035,7 @@ test('conhecimento mágico revela uma dimensão e libera a viagem no servidor', 
   const stateDirectory = await mkdtemp(path.join(os.tmpdir(), 'clareira-dimension-knowledge-'));
   const accountId = '5f6f1b60-f53b-4e73-9309-5440fa5d8ef1';
   const profile = { id: accountId, username: 'dimension-knowledge', guest: false,
-    inventory: { level: 12, skillPoints: 2, attributes: { magic: 8 }, learnedAbilities: ['fireballI'] } };
+    inventory: { level: 12, skillPoints: 2, attributes: { magic: 8 }, learnedAbilities: ['fireballI', 'universalTeleport'] } };
   const room = createTestServer(t, { ambientCampfire: false, port: 0, stateDirectory,
     allowedOrigin: TEST_ORIGIN, databaseUrl: null, redisUrl: null,
     resolveSession: async token => token === 'dimension-knowledge-account' ? { profile } : null,
@@ -2152,7 +2153,11 @@ test('Teleporte Universal leva a conta para outro ponto seguro da mesma dimensã
 });
 
 test('dimension arrival starts only after the traveler reports the destination scene ready', async t => {
-  const room = createTestServer(t, { ambientCampfire: false, port: 0, allowedOrigin: TEST_ORIGIN, resolveSession: testIdentity });
+  const travelerIdentity = async token => {
+    const identity = await testIdentity(token);
+    return identity && { profile: { ...identity.profile, inventory: { ...identity.profile.inventory, learnedAbilities: ['universalTeleport'] } } };
+  };
+  const room = createTestServer(t, { ambientCampfire: false, port: 0, allowedOrigin: TEST_ORIGIN, resolveSession: travelerIdentity });
   const address = await room.listen();
   t.after(() => room.close());
   const player = openTestPlayer(address);
@@ -2223,4 +2228,24 @@ test('dimension arrival starts only after the traveler reports the destination s
   const canMoveState = await canMovePromise;
   assert.ok(canMoveState.players.find(entry => entry.id === welcome.id).inputSeq >= 12);
   assert.ok(sourceState.serverTime < event.startAt);
+});
+
+test('viagem entre dimensões é recusada para quem não é da equipe nem aprendeu Teleporte Universal', async t => {
+  const room = createTestServer(t, { ambientCampfire: false, port: 0, allowedOrigin: TEST_ORIGIN, resolveSession: testIdentity });
+  const address = await room.listen();
+  t.after(() => room.close());
+  const player = openTestPlayer(address);
+  t.after(() => player.terminate());
+  const welcomePromise = waitFor(player, message => message.type === 'welcome', 2500, 'plain traveler identity');
+  await new Promise((resolve, reject) => { player.once('open', resolve); player.once('error', reject); });
+  const welcome = await welcomePromise;
+  player.send(JSON.stringify({ type: 'join', name: 'Viajante', compactWorld: 1 }));
+  const state = await waitFor(player, message => message.type === 'state' && message.dimensionId === 'surface'
+    && message.players.some(entry => entry.id === welcome.id), 2500, 'plain traveler snapshot');
+  assert.equal(state.dimensions.some(dimension => dimension.id === 'breu'), false, 'a viajante comum não vê outras dimensões');
+  const noticePromise = waitFor(player, message => message.type === 'notice'
+    && message.text?.includes('exclusivo da equipe'), 2500, 'travel rejection notice');
+  player.send(JSON.stringify({ type: 'dimensionTravel', dimensionId: 'breu', requestId: 'plain-traveler-denied' }));
+  const notice = await noticePromise;
+  assert.match(notice.text, /Teleporte Universal/);
 });

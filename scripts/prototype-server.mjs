@@ -726,9 +726,12 @@ export function createPrototypeServer({
   let activeWorldDimensionId = null;
   let activeWorldRevision = -1;
   const worldFor = dimensionId => worldDefinitions.get(dimensionId) || worldDefinitions.get('surface') || emptyWorldDefinition();
+  const canTravelBetweenDimensions = player => player.canStaffTravelDimensions === true
+    || player.inventory?.learnedAbilities?.includes('universalTeleport') === true;
   const dimensionsForPlayer = player => {
     const personal = personalArrivalDimension(player.sessionId);
     if (player.canStaffTravelDimensions) return [...dimensions, personal];
+    if (!canTravelBetweenDimensions(player)) return [...dimensions.filter(dimension => dimension.id === 'surface'), personal];
     const known = player.discoveredDimensionIds || new Set(['surface', 'breu']);
     return [...dimensions.filter(dimension => known.has(dimension.id)), personal];
   };
@@ -1948,6 +1951,11 @@ export function createPrototypeServer({
         const targetDimension = message.dimensionId === ownArrivalDimension.id
           ? ownArrivalDimension : dimensions.find(item => item.id === message.dimensionId);
         if (!targetDimension) { rejectTransit('Essa dimensão não está disponível.'); return; }
+        const onboardingToSurface = isPersonalArrivalDimensionId(player.dimensionId) && targetDimension.id === 'surface';
+        if (!canStaffTravel && !player.inventory?.learnedAbilities?.includes('universalTeleport')
+            && targetDimension.id !== ownArrivalDimension.id && !onboardingToSurface) {
+          rejectTransit('Viajar entre dimensões é exclusivo da equipe ou de quem aprendeu Teleporte Universal.'); return;
+        }
         if (!canStaffTravel && !player.discoveredDimensionIds?.has(targetDimension.id)
             && targetDimension.id !== ownArrivalDimension.id) {
           rejectTransit('Você ainda não descobriu um caminho para essa dimensão.'); return;

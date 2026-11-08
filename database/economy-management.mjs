@@ -135,7 +135,12 @@ export function createEconomyManagementStore(pool) {
              LEFT JOIN economy_journal_lines l USING(transaction_id)
             WHERE t.occurred_at >= $1 AND t.occurred_at <= $2`,
           [since,now],
-        ) : Promise.resolve({rows:[{transactions:0,journal_balance:0,npc_purchase_revenue:0}]}),
+        ) : pool.query(
+          `SELECT count(DISTINCT t.transaction_id)::bigint AS transactions
+             FROM economy_journal_lines l JOIN economy_journal_transactions t USING(transaction_id)
+            WHERE l.account_code='government_treasury' AND l.government_id=$1
+              AND t.occurred_at >= $2 AND t.occurred_at <= $3`,[governmentId,since,now],
+        ),
       pool.query(
         `SELECT g.world_id,g.settlement_id,g.government_type,
                 territory.parent_government_id,
@@ -208,11 +213,13 @@ export function createEconomyManagementStore(pool) {
            JOIN profiles p ON p.id=r.profile_id JOIN accounts a ON a.id=p.account_id
           WHERE r.government_id=$1 ORDER BY a.username`,[governmentId],
       ) : {rows:[]};
-    const summary = flows.reduce((total,day) => ({
-      soldToNpc:total.soldToNpc+(day.soldToNpc||0),
-      boughtFromNpc:total.boughtFromNpc+(day.boughtFromNpc||0),
-      grossSalesBronze:total.grossSalesBronze+(day.grossSalesBronze||0),
-    }),{soldToNpc:0,boughtFromNpc:0,grossSalesBronze:0});
+    const summary = governmentId===DEFAULT_GOVERNMENT
+      ? flows.reduce((total,day) => ({
+        soldToNpc:total.soldToNpc+(day.soldToNpc||0),
+        boughtFromNpc:total.boughtFromNpc+(day.boughtFromNpc||0),
+        grossSalesBronze:total.grossSalesBronze+(day.grossSalesBronze||0),
+      }),{soldToNpc:0,boughtFromNpc:0,grossSalesBronze:0})
+      : {soldToNpc:null,boughtFromNpc:null,grossSalesBronze:null};
     return {
       governmentId,worldId:gov.world_id,settlementId:gov.settlement_id,
       governmentType:gov.government_type,parentGovernmentId:gov.parent_government_id,
@@ -232,13 +239,14 @@ export function createEconomyManagementStore(pool) {
       })),
       roles:rolesResult.rows.map(row=>({profileId:row.profile_id,username:row.username,role:row.role})),
       kpis:{
-        ...summary,marketStock:stock.reduce((sum,item)=>sum+(item.available||0),0),
-        marketVarieties:stock.filter(item=>item.available>0).length,
-        npcPurchaseRevenueBronze:safeAmount(journal.npc_purchase_revenue),
+        ...summary,
+        marketStock:governmentId===DEFAULT_GOVERNMENT?stock.reduce((sum,item)=>sum+(item.available||0),0):null,
+        marketVarieties:governmentId===DEFAULT_GOVERNMENT?stock.filter(item=>item.available>0).length:null,
+        npcPurchaseRevenueBronze:governmentId===DEFAULT_GOVERNMENT?safeAmount(journal.npc_purchase_revenue):null,
         treasuryReceiptsBronze:safeAmount(financial.receipts),
         treasuryExpensesBronze:safeAmount(financial.expenses),
         transactions:safeAmount(journal.transactions),
-        journalBalanceBronze:safeAmount(journal.journal_balance),
+        journalBalanceBronze:governmentId===DEFAULT_GOVERNMENT?safeAmount(journal.journal_balance):null,
       },
     };
   }
@@ -268,9 +276,9 @@ export function createEconomyManagementStore(pool) {
       if(funds.rowCount!==2)throw operationError('Os fundos precisam estar configurados antes da transferência.');
       const source=funds.rows.find(row=>row.fund_code===fromFund);
       const dest=funds.rows.find(row=>row.fund_code===toFund);
-      if(Number(source.balance_bronze)-Number(source.reserved_bronze)<amountBronze)
+      if(BigInt(source.balance_bronze)-BigInt(source.reserved_bronze)<BigInt(amountBronze))
         throw operationError('Saldo disponível insuficiente; reservas de projetos não podem ser transferidas.');
-      if(!Number.isSafeInteger(Number(dest.balance_bronze)+amountBronze))
+      if(BigInt(dest.balance_bronze)+BigInt(amountBronze)>BigInt(Number.MAX_SAFE_INTEGER))
         throw operationError('O saldo excederia o limite monetário seguro.');
       await client.query(
         'UPDATE government_fund_accounts SET balance_bronze=balance_bronze-$3,updated_at=now() '+
@@ -374,11 +382,12 @@ export function createEconomyManagementStore(pool) {
         );
       } else {
         if(project.status==='funded'){
-          await client.query(
+          const released=await client.query(
             'UPDATE government_fund_accounts SET reserved_bronze=reserved_bronze-$3,updated_at=now() '+
             'WHERE government_id=$1 AND fund_code=$2 AND reserved_bronze >= $3',
             [governmentId,project.fund_code,budget-Number(project.spent_bronze)],
           );
+          if(!released.rowCount)throw operationError('A reserva do projeto diverge do saldo do fundo.');
         }
         await client.query("UPDATE government_projects SET status='cancelled',updated_at=now() WHERE project_id=$1",
           [projectId]);

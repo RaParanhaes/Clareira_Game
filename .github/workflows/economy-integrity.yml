@@ -41,6 +41,8 @@ jobs:
         run: npm ci
       - name: Syntax-check changed runtime and test files
         run: |
+          node --check database/store.mjs
+          node --check database/economy-contract-atomic.integration.test.mjs
           node --check database/economy-store.mjs
           node --check database/economy.integration.test.mjs
           node --check game/place-panel.mjs
@@ -50,4 +52,4 @@ jobs:
       - name: Validate game content contracts
         run: npm run content:check
       - name: Economy, wallet and commerce regression tests
-        run: node --test --test-concurrency=1 database/economy.integration.test.mjs game/wallet-range.test.mjs scripts/place-service-actions.test.mjs
+        run: node --test --test-concurrency=1 database/economy.integration.test.mjs database/economy-contract-atomic.integration.test.mjs game/wallet-range.test.mjs scripts/place-service-actions.test.mjs

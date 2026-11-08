@@ -49,7 +49,7 @@ test('government economic roles restrict KPI, tax, appointment and revocation pr
     );
     assert.equal(await management.getGovernmentEconomyPanel({governmentId,actorProfileId:outsider.profile.id}),null);
     const owner=await management.getGovernmentEconomyPanel({governmentId,actorProfileId:leaderId});
-    assert.deepEqual(owner.permissions,{view:true,manageTaxes:true,manageRoles:true});
+    assert.deepEqual(owner.permissions,{view:true,manageTaxes:true,manageRoles:true,manageFunds:true,proposeProjects:true,approveProjects:true});
     assert.equal(owner.role,'leader');
     assert.equal(owner.funds.find(item=>item.fundCode==='general').balanceBronze,1250);
     assert.equal(owner.funds.find(item=>item.fundCode==='general').reservedBronze,200);
@@ -72,15 +72,15 @@ test('government economic roles restrict KPI, tax, appointment and revocation pr
     })).changed,true);
     assert.deepEqual(
       (await management.getGovernmentEconomyPanel({governmentId,actorProfileId:minister.profile.id})).permissions,
-      {view:true,manageTaxes:true,manageRoles:false},
+      {view:true,manageTaxes:true,manageRoles:false,manageFunds:false,proposeProjects:true,approveProjects:false},
     );
     assert.deepEqual(
       (await management.getGovernmentEconomyPanel({governmentId,actorProfileId:treasurer.profile.id})).permissions,
-      {view:true,manageTaxes:false,manageRoles:false},
+      {view:true,manageTaxes:false,manageRoles:false,manageFunds:true,proposeProjects:true,approveProjects:false},
     );
     assert.deepEqual(
       (await management.getGovernmentEconomyPanel({governmentId,actorProfileId:auditor.profile.id})).permissions,
-      {view:true,manageTaxes:false,manageRoles:false},
+      {view:true,manageTaxes:false,manageRoles:false,manageFunds:false,proposeProjects:false,approveProjects:false},
     );
     assert.equal((await market.getGovernmentTaxPanel({
       governmentId,actorProfileId:minister.profile.id,
@@ -129,9 +129,9 @@ test('government economic roles restrict KPI, tax, appointment and revocation pr
 });
 
 test('economy permission rules are least privilege and never grant role administration to delegates',()=>{
-  assert.deepEqual(economyPermissions({role:'auditor'}),{view:true,manageTaxes:false,manageRoles:false});
-  assert.deepEqual(economyPermissions({role:'treasurer'}),{view:true,manageTaxes:false,manageRoles:false});
-  assert.deepEqual(economyPermissions({role:'minister'}),{view:true,manageTaxes:true,manageRoles:false});
+  assert.deepEqual(economyPermissions({role:'auditor'}),{view:true,manageTaxes:false,manageRoles:false,manageFunds:false,proposeProjects:false,approveProjects:false});
+  assert.deepEqual(economyPermissions({role:'treasurer'}),{view:true,manageTaxes:false,manageRoles:false,manageFunds:true,proposeProjects:true,approveProjects:false});
+  assert.deepEqual(economyPermissions({role:'minister'}),{view:true,manageTaxes:true,manageRoles:false,manageFunds:false,proposeProjects:true,approveProjects:false});
   assert.deepEqual(economyPermissions({role:'unexpected'}),{view:false,manageTaxes:false,manageRoles:false});
-  assert.deepEqual(economyPermissions({isLeader:true}),{view:true,manageTaxes:true,manageRoles:true});
+  assert.deepEqual(economyPermissions({isLeader:true}),{view:true,manageTaxes:true,manageRoles:true,manageFunds:true,proposeProjects:true,approveProjects:true});
 });

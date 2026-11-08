@@ -7,7 +7,7 @@ import { placeServiceAllowsAction,placeServicePoints } from './place-services.mj
 
 test('existing persisted reception catalog gains economic management without moving or replacing services',()=>{
   const catalog=structuredClone(BUILTIN_OBJECT_CATALOG);
-  const arrival=catalog.objects.find(item=>item.kind==='building'&&item.properties.id==='arrival');
+  const arrival=catalog.objects.find(item=>item.id==='building:arrival');
   assert.ok(arrival);
   const exchange=arrival.properties.services.find(service=>service.id==='exchange');
   assert.ok(exchange);

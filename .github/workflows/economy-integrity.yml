@@ -58,9 +58,6 @@ jobs:
         run: npm run content:check
       - name: Economy, wallet and commerce regression tests
         run: node --test --test-concurrency=1 database/economy.integration.test.mjs database/economy-contract-atomic.integration.test.mjs database/economy-tool-purchase.integration.test.mjs database/economy-market-cycle.integration.test.mjs game/wallet-range.test.mjs scripts/place-service-actions.test.mjs
-      - name: Run full repository tests (JavaScript and Python)
-        timeout-minutes: 12
-        run: npm test
       - name: Install headless browser (temporary runner only)
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1

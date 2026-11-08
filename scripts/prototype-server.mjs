@@ -854,13 +854,13 @@ export function createPrototypeServer({
     });
   };
 
-  const persistMarketSale = (player, itemId, quantity) => {
+  const persistMarketSale = (player, itemId, quantity, expectedPriceBronze = null) => {
     const profileId = player.accountId;
     if (!profileId || !storage.settleNpcSale) return Promise.reject(new Error('O mercado persistente não está disponível.'));
     const previous = progressWrites.get(profileId) || Promise.resolve();
     const inventoryAfter = inventorySnapshot(player.inventory);
     const next = previous.catch(() => {}).then(() => storage.settleNpcSale({
-      profileId, itemId, quantity, inventoryAfter, governmentId:marketGovernmentId,
+      profileId, itemId, quantity, inventoryAfter, governmentId:marketGovernmentId, expectedPriceBronze,
     }));
     progressWrites.set(profileId, next);
     return next.catch(error => {
@@ -2625,15 +2625,18 @@ export function createPrototypeServer({
         if (!player.accountId) { notice(socket, 'Entre com uma conta para guardar as moedas desta venda.'); return; }
         const item = typeof message.item === 'string' ? message.item : '';
         const quote = marketQuotes[item];
-        const price = Number.isSafeInteger(quote?.sellPrice) ? quote.sellPrice : TRADE_PRICES[item];
+        const price = Number.isSafeInteger(quote?.buyPrice) ? quote.buyPrice : TRADE_PRICES[item];
         const quantity = Number.isSafeInteger(message.quantity) && message.quantity >= 1 && message.quantity <= 50 ? message.quantity : 0;
         if (!quantity) { notice(socket, 'Informe uma quantidade inteira entre 1 e 50 para vender.'); return; }
         if (!price) { notice(socket, 'Esse material não está na tabela da recepção.'); return; }
+         if (message.expectedPriceBronze !== undefined && message.expectedPriceBronze !== price) {
+           notice(socket, 'A cotação mudou. Revise a venda antes de confirmar.'); return;
+         }
         if ((player.inventory[item] || 0) < quantity) { notice(socket, 'Você não tem essa quantidade no Inventário.'); return; }
         player.inventory[item] -= quantity;
         try {
           const settlement = storage.settleNpcSale
-            ? await persistMarketSale(player, item, quantity)
+            ? await persistMarketSale(player, item, quantity, message.expectedPriceBronze ?? null)
             : (await persistPlayer(player), {
               wallet:await storage.creditWallet(player.accountId, price * quantity), unitPrice:price, amount:price * quantity,
             });

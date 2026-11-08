@@ -17,6 +17,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
   const heading = dialog.querySelector('[data-panel-heading]');
   const back = dialog.querySelector('#lodging-back');
   const quantities = new Map();
+  const buyQuantities = new Map();
   const renewals = new Map();
   const rentalPeriods = new Map();
   const propertyDrafts = new Map();
@@ -248,6 +249,40 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
         total.dataset.unitPrice = String(price);
         row.append(label, quantity, total, button); fragment.append(row);
       }
+      const offers = Object.entries(state.marketQuotes || {}).filter(([item, quote]) =>
+        Object.hasOwn(TRADE_PRICES, item) && Number.isSafeInteger(quote?.availableStock)
+        && quote.availableStock > 0 && Number.isSafeInteger(quote.sellPrice) && quote.sellPrice > 0);
+      fragment.append(element('strong', 'Comprar materiais do estoque da vila'));
+      if (!offers.length) fragment.append(element('p', 'Nenhum material disponível para compra no momento. Os recursos vendidos por jogadores abastecem o balcão.', 'lodging-note'));
+      for (const [item, quote] of offers) {
+        const price = quote.sellPrice, available = quote.availableStock;
+        const row = element('div', '', 'lodging-trade commerce-purchase');
+        const label = element('label');
+        label.htmlFor = `buy-material-quantity-${item}`;
+        label.append(element('span', itemNames[item]), element('small',
+          `${formatCoins(price)} por unidade · ${available} disponíveis no balcão`));
+        const input = element('input');
+        input.type = 'number'; input.min = '1'; input.max = String(Math.min(50, available));
+        input.id = label.htmlFor; input.dataset.buyQuantityItem = item;
+        input.dataset.focusKey = `${item}-buy-quantity`; input.inputMode = 'numeric';
+        input.step = '1'; input.required = true;
+        input.value = String(Math.max(1, Math.min(50, available, buyQuantities.get(item) || 1)));
+        input.disabled = busy || state.guest;
+        input.setAttribute('aria-label', `Quantidade de ${itemNames[item]} para comprar`);
+        const quantity = element('div', '', 'commerce-quantity');
+        for (const [text, change] of [['−', -1], ['+', 1]]) {
+          const step = element('button', text); step.type = 'button'; step.dataset.quantityStep = String(change);
+          step.setAttribute('aria-label', `${change < 0 ? 'Diminuir' : 'Aumentar'} compra de ${itemNames[item]}`);
+          step.disabled = input.disabled; quantity.append(step);
+        }
+        quantity.insertBefore(input, quantity.lastChild);
+        const total = element('small', `Total da compra: ${formatCoins(price * Number(input.value))}`, 'commerce-total');
+        total.dataset.unitPrice = String(price);
+        const button = actionButton('Comprar', 'lodgeBuyMaterial', { item }, state.guest || balance(state) < price);
+        button.dataset.focusKey = `${item}-buy`;
+        row.append(label, quantity, total, button);
+        fragment.append(row);
+      }
     } else if (route === 'orders') {
       fragment.append(element('p', 'Cada pedido pode ser entregue uma vez por dia do jogo. A recompensa fica salva na carteira.', 'lodging-note'));
       for (const contract of state.contracts) {
@@ -328,7 +363,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
 
   controller.register('place', dialog, {
     initialFocus: '[data-service-section]', render,
-    onClose() { session = null; contentKey = ''; busy = false; keyRecipient = ''; draft = null; askingPrice = null; propertyDrafts.clear(); rentalPeriods.clear(); renewals.clear(); quantities.clear(); taxDrafts.clear(); },
+    onClose() { session = null; contentKey = ''; busy = false; keyRecipient = ''; draft = null; askingPrice = null; propertyDrafts.clear(); rentalPeriods.clear(); renewals.clear(); quantities.clear(); buyQuantities.clear(); taxDrafts.clear(); },
   });
   back.addEventListener('click', () => controller.back());
   dialog.querySelector('#lodging-close').addEventListener('click', () => controller.close());
@@ -337,6 +372,11 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
       quantities.set(event.target.dataset.quantityItem, Number(event.target.value));
       const total = event.target.closest('.commerce-sale').querySelector('[data-unit-price]');
       total.textContent = event.target.validity.valid ? `Total bruto: ${formatCoins(Number(total.dataset.unitPrice) * Number(event.target.value))}` : 'Escolha uma quantidade válida (até 50 por venda).';
+    }
+    if (event.target.dataset.buyQuantityItem) {
+      buyQuantities.set(event.target.dataset.buyQuantityItem, Number(event.target.value));
+      const total = event.target.closest('.commerce-purchase').querySelector('[data-unit-price]');
+      total.textContent = event.target.validity.valid ? `Total da compra: ${formatCoins(Number(total.dataset.unitPrice) * Number(event.target.value))}` : 'Escolha uma quantidade válida disponível no balcão.';
     }
     if (event.target.dataset.taxDraft) taxDrafts.set(event.target.dataset.taxDraft, event.target.value);
     if (event.target.dataset.autoRenew) renewals.set(event.target.dataset.autoRenew, event.target.checked);
@@ -361,7 +401,11 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
       const pending = draft; draft = null;
       const state = getState();
       const priceNow = operationPrice(pending.message, state);
-      if (priceNow !== pending.price || (pending.message.name === 'lodgeSell' ? (state.inventory[pending.message.item] || 0) < pending.message.quantity : pending.cost > balance(state))) {
+      if (priceNow !== pending.price || (pending.message.name === 'lodgeSell'
+        ? (state.inventory[pending.message.item] || 0) < pending.message.quantity
+        : pending.message.name === 'lodgeBuyMaterial'
+          ? (state.marketQuotes?.[pending.message.item]?.availableStock || 0) < pending.message.quantity || pending.cost > balance(state)
+          : pending.cost > balance(state))) {
         status.textContent = 'Os dados mudaram. Confira novamente o preço, o saldo e a quantidade.'; controller.back(); return;
       }
       if (onAction(pending.message, session.point)) { busy = true; status.textContent = 'Aguarde a confirmação do servidor…'; controller.back(); controller.refresh(); }
@@ -371,7 +415,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
     const { serviceAction: name, ...fields } = button.dataset;
     const message = { type: 'action', name, ...fields };
     delete message.focusKey;
-    if (name === 'lodgeSell') {
+    if (name === 'lodgeSell' || name === 'lodgeBuyMaterial') {
       const input = button.closest('.lodging-trade').querySelector('input');
       if (!input.reportValidity()) return;
       message.quantity = Number(input.value);
@@ -421,16 +465,17 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
           : name === 'propertyDelist' ? 'Retirar a propriedade da venda. Você continuará dono e poderá anunciar novamente.' : `Revogar a chave de ${recipient}. A conta perde o acesso à cabana; visitantes sem outra chave serão retirados pelo servidor.` };
       controller.navigate('commerce-review'); return;
     }
-    if (['lodgeClaim', 'propertyBuy', 'propertyRent', 'propertyList', 'lodgeBuyTool', 'lodgeSell'].includes(name)) {
+    if (['lodgeClaim', 'propertyBuy', 'propertyRent', 'propertyList', 'lodgeBuyTool', 'lodgeSell', 'lodgeBuyMaterial'].includes(name)) {
       const state = getState(), price = operationPrice(message, state);
       if (!Number.isSafeInteger(price) || price < 1) { status.textContent = 'Preço indisponível. Atualize e tente novamente.'; return; }
       if(name==='lodgeClaim') message.requestId=crypto.randomUUID();
       message.expectedPriceBronze=price;
       const selling = name === 'lodgeSell', listing = name === 'propertyList';
-      const cost = selling || listing ? 0 : price;
+      const cost = selling || listing ? 0 : name === 'lodgeBuyMaterial' ? price * message.quantity : price;
       if (cost > balance(state)) { status.textContent = 'Saldo insuficiente para esta operação.'; return; }
       draft = { message, price, cost, title: selling ? 'Revisar venda' : listing ? 'Revisar anúncio' : name === 'lodgeClaim' && message.mode === 'rent' ? 'Revisar aluguel' : 'Revisar compra',
         summary: selling ? `${message.quantity} × ${itemNames[message.item]} · total bruto ${formatCoins(price * message.quantity)}. O imposto vigente será descontado pelo servidor.`
+          : name === 'lodgeBuyMaterial' ? `${message.quantity} × ${itemNames[message.item]} · ${formatCoins(price)} por unidade. Total ${formatCoins(cost)}. Saldo após compra: ${formatCoins(balance(state) - cost)}.`
           : listing ? `Anunciar a propriedade por ${formatCoins(price)}. Você continua dono até a venda ser concluída.`
           : `${VILLAGE_BUILDINGS.find(place => place.id === message.buildingId)?.name || (message.tool === 'stoneAxe' ? 'Machado de pedra' : 'Picareta de pedra')} · ${formatCoins(price)}. Saldo após pagamento: ${formatCoins(balance(state) - price)}.`,
         detail: message.mode === 'rent' || name==='propertyRent' ? `Período de ${gameDurationLabel(gameDaysToMs(message.rentalDays || 1))}. Renovação automática ${message.autoRenew ? 'ativada: novas diárias serão cobradas se houver saldo' : 'desativada'}.` : '' };
@@ -446,6 +491,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
     if(['propertyQuote','propertyRentList'].includes(message.name))return message.askingPriceBronze || 0;
     if (['setLodgingAutoRenew', 'propertyDelist', 'cabinRevokeKey'].includes(message.name)) return 0;
     if (message.name === 'lodgeSell') return state.marketQuotes?.[message.item]?.buyPrice ?? TRADE_PRICES[message.item];
+    if (message.name === 'lodgeBuyMaterial') return state.marketQuotes?.[message.item]?.sellPrice;
     if (message.name === 'propertyList') return message.askingPriceBronze;
     if(message.name==='propertyRent')return state.propertyRentalListings?.find(l=>l.buildingId===message.buildingId)?.rentBronze * Number(message.rentalDays||1);
     if (message.name === 'propertyBuy') return message.requestId ? state.propertyRequests?.find(r=>r.requestId===message.requestId)?.askingPriceBronze : state.propertyListings?.find(item => item.buildingId === message.buildingId)?.askingPriceBronze;

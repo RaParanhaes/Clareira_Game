@@ -153,8 +153,10 @@ test('PostgreSQL seeds quotes and settles NPC sale wallet plus measured demand a
     });
     profileId = account.profile.id;
     await market.ensureGoods();
+    await pool.query("UPDATE economy_quotes SET buy_price_bronze=51 WHERE item_id='copperIngot' AND region_id='global'");
     const quotes = await market.getQuotes();
     assert.equal(quotes.copperIngot.sellPrice, 60);
+    assert.equal(quotes.copperIngot.buyPrice, 51, 'the NPC purchase quote is below the displayed resale quote');
     assert.equal(quotes.copperIngot.marketSaleTaxBps, 200);
     assert.equal(await market.refreshGovernmentTaxQuote({ force:true }), 220,
       'low treasury raises the rate gradually within the government policy limits');
@@ -162,24 +164,31 @@ test('PostgreSQL seeds quotes and settles NPC sale wallet plus measured demand a
     inventory.copperIngot = 3;
     await accounts.saveProgress(profileId, inventorySnapshot(inventory));
     inventory.copperIngot = 1;
-    const result = await market.settleNpcSale({ profileId, itemId:'copperIngot', quantity:2, inventoryAfter:inventorySnapshot(inventory) });
-    assert.equal(result.unitPrice, 60);
-    assert.equal(result.grossAmount, 120);
+    await assert.rejects(
+      market.settleNpcSale({ profileId, itemId:'copperIngot', quantity:2, inventoryAfter:inventorySnapshot(inventory), expectedPriceBronze:60 }),
+      /cotação mudou/,
+      'a stale confirmed price cannot debit materials or credit currency',
+    );
+    const beforeSale = await pool.query("SELECT COALESCE(sum(quantity),0)::integer AS quantity FROM inventory_items WHERE profile_id=$1 AND item_id LIKE 'slot:%:copperIngot'", [profileId]);
+    assert.equal(Number(beforeSale.rows[0].quantity), 3, 'stale quote rejection preserves inventory');
+    const result = await market.settleNpcSale({ profileId, itemId:'copperIngot', quantity:2, inventoryAfter:inventorySnapshot(inventory), expectedPriceBronze:51 });
+    assert.equal(result.unitPrice, 51);
+    assert.equal(result.grossAmount, 102);
     assert.equal(result.taxAmount, 2);
     assert.equal(result.taxRateBps, 220);
-    assert.equal(result.amount, 118);
+    assert.equal(result.amount, 100);
     assert.equal(result.wallet.silver, 1);
-    assert.equal(result.wallet.bronze, 18);
+    assert.equal(result.wallet.bronze, 0);
     inventory.copperIngot = 0;
-    const smallSale = await market.settleNpcSale({ profileId, itemId:'copperIngot', quantity:1, inventoryAfter:inventorySnapshot(inventory) });
-    assert.equal(smallSale.grossAmount, 60);
+    const smallSale = await market.settleNpcSale({ profileId, itemId:'copperIngot', quantity:1, inventoryAfter:inventorySnapshot(inventory), expectedPriceBronze:51 });
+    assert.equal(smallSale.grossAmount, 51);
     assert.equal(smallSale.taxAmount, 1, 'the prior fractional tax remainder eventually becomes a whole bronze');
     assert.equal(smallSale.wallet.silver, 1);
-    assert.equal(smallSale.wallet.bronze, 77);
+    assert.equal(smallSale.wallet.bronze, 50);
     const taxRemainder = await pool.query(
       "SELECT remainder_numerator FROM government_tax_remainders WHERE government_id='surface:arrival' AND tax_code='market_sale'",
     );
-    assert.equal(Number(taxRemainder.rows[0].remainder_numerator), 9_600);
+    assert.equal(Number(taxRemainder.rows[0].remainder_numerator), 3_660);
     const saved = await pool.query(
       "SELECT COALESCE(sum(quantity),0)::integer AS quantity FROM inventory_items WHERE profile_id=$1 AND item_id LIKE 'slot:%:copperIngot'",
       [profileId],
@@ -189,7 +198,7 @@ test('PostgreSQL seeds quotes and settles NPC sale wallet plus measured demand a
       'SELECT units_sold_to_npc, gross_bronze FROM economy_daily_flows WHERE item_id=$1 AND region_id=$2 AND flow_day=$3::date',
       ['copperIngot', 'global', gameDayKey()],
     );
-    assert.deepEqual(rows.map(row => [Number(row.units_sold_to_npc), Number(row.gross_bronze)]), [[3, 180]]);
+    assert.deepEqual(rows.map(row => [Number(row.units_sold_to_npc), Number(row.gross_bronze)]), [[3, 153]]);
     const marketStock = await pool.query(
       "SELECT quantity FROM economy_market_stock WHERE market_id='arrival:market' AND item_id='copperIngot' AND region_id='global'",
     );

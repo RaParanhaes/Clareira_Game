@@ -216,6 +216,7 @@ html:not(.clareira-styles-ready) .shell{visibility:hidden}
         <div class="presence"><span id="connection-dot" class="status-dot"></span><span id="connection-label" role="status" aria-live="polite">Conectando…</span><span id="player-count">0 aqui</span></div>
         <button id="hud-edit-toggle" class="icon-button" type="button" aria-pressed="false" title="Arraste a barra rápida, o minimapa e os controles de construção. Com o teclado, use Alt + setas.">Mover painéis</button>
         <button id="hud-reset" class="icon-button" type="button">Restaurar painéis</button>
+        <button id="appearance-open" class="icon-button" type="button" aria-haspopup="dialog" aria-controls="appearance-dialog">Aparência do personagem</button>
         <button id="logout-button" class="icon-button logout-button" type="button">Sair</button>
       </details>
       <details class="dimension-travel"><summary>Destinos</summary><div class="destination-menu">
@@ -414,7 +415,6 @@ html:not(.clareira-styles-ready) .shell{visibility:hidden}
       <section class="settings-group" aria-labelledby="settings-sound-title"><h3 id="settings-sound-title">Som</h3><p>Ambiente e música começam após sua primeira interação.</p><button id="sound-toggle" class="settings-action" type="button" aria-pressed="true" title="Desligar som">♫ <span>Ligado</span></button></section>
       <section class="settings-group" aria-labelledby="settings-view-title"><h3 id="settings-view-title">Tela e câmera</h3><label class="camera-zoom-control" for="camera-zoom"><span class="camera-zoom-heading">Zoom da câmera <output id="camera-zoom-value" for="camera-zoom">100%</output></span><input id="camera-zoom" type="range" min="70" max="125" step="5" value="100" aria-describedby="camera-zoom-hint"><small id="camera-zoom-hint">Afaste a câmera até 70%.</small></label><button id="fullscreen-toggle" class="settings-action" type="button" aria-pressed="false" title="Tela inteira">⛶ <span>Tela inteira</span></button></section>
       <section class="settings-group" aria-labelledby="settings-performance-title"><h3 id="settings-performance-title">Desempenho</h3><p>Confira a fluidez e a conexão. Exporte os últimos dados para análise.</p><button id="performance-toggle" class="settings-action" type="button" aria-pressed="false" aria-controls="performance-overlay">Mostrar FPS e conexão</button><button id="performance-export" class="settings-action" type="button">Baixar log de desempenho</button></section>
-      <section class="settings-group" aria-labelledby="settings-character-title"><h3 id="settings-character-title">Personagem</h3><p>Troque roupa e efeito visual.</p><button id="appearance-open" class="settings-action" type="button">Aparência</button></section>
     </div>
   </dialog>
   <dialog id="staff-tools-dialog" class="inventory-dialog staff-tools-dialog" aria-labelledby="staff-tools-title">

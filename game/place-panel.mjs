@@ -348,6 +348,10 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
         }
         fragment.append(selector);
       }
+      if(panel.governmentId!=='surface:arrival')
+        fragment.append(element('p',
+          'Os números do balcão da Vila da Chegada não pertencem a este governo. Compras, estoque e preços locais ficarão indisponíveis até existir mercado regional próprio.',
+          'lodging-note'));
       const summary=element('div','','economy-kpi-grid');
       const values=[
         ['Materiais entregues ao NPC',formatCount(kpis.soldToNpc)],
@@ -618,6 +622,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
       return;
     }
     const { serviceAction: name, ...fields } = button.dataset;
+    status.textContent='';
     const message = { type: 'action', name, ...fields };
     delete message.focusKey;
     if (name === 'lodgeSell' || name === 'lodgeBuyMaterial') {
@@ -653,7 +658,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
       }
       message.requestId=crypto.randomUUID();message.governmentId=panel.governmentId;
       draft={message,price:0,cost:0,title:'Revisar transferência pública',
-        summary:`Movimentar ${formatMoney(message.amountBronze)} de ${message.fromFund} para ${message.toFund} no tesouro ${panel.governmentId}.`,
+        summary:`Movimentar ${formatMoney(message.amountBronze)} do fundo ${({general:'Geral',donations:'Doações',materials:'Materiais',construction:'Construção',territory:'Território',diplomacy:'Diplomacia'})[message.fromFund]} para ${({general:'Geral',donations:'Doações',materials:'Materiais',construction:'Construção',territory:'Território',diplomacy:'Diplomacia'})[message.toFund]} no tesouro ${panel.governmentId}.`,
         detail:'Movimentação interna sem emissão ou gasto de moedas. O servidor verifica o saldo não reservado e registra duas linhas contábeis.'};
       controller.navigate('commerce-review');return;
     }

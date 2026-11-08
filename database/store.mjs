@@ -10,8 +10,9 @@ import { isCabin, MAX_CABIN_KEYS } from '../game/cabin-access.mjs';
 import { normalizeAppearance } from '../game/appearance.mjs';
 import { WORLD_DIMENSION_ID, WORLD_DOCUMENT_ID, emptyWorldDefinition, normalizeWorldDefinition } from '../game/world-edits.mjs';
 import { normalizePlayerLocation, normalizePlayerDimensionPosition } from '../scripts/player-location-store.mjs';
-import { CURRENCY_KEYS, MAX_WALLET_VALUE, currencyValue, formatCoins, walletFromValue } from '../game/lodging-catalog.mjs';
-import { inventoryFromRows, inventoryRows } from '../game/inventory.mjs';
+import { CURRENCY_KEYS, MAX_WALLET_VALUE, TOOL_PRICES, currencyValue, formatCoins, walletFromValue } from '../game/lodging-catalog.mjs';
+import { STONE_AXE_DURABILITY, STONE_PICKAXE_DURABILITY, addInventoryItem, canAddInventoryItems, createInventory, findInventorySlot, inventoryFromRows, inventoryRows, inventorySnapshot } from '../game/inventory.mjs';
+import { AXE_TOOL_IDS, PICKAXE_TOOL_IDS, axeToolFor, pickaxeToolFor } from '../game/tool-progression.mjs';
 import { RESOURCE_CONTRACTS, normalizeResourceContractState, resourceContractDayKey } from '../game/resource-contracts.mjs';
 import { normalizeInteractionEvent } from './interaction-events.mjs';
 import { accumulateGovernmentTax } from './tax-remainders.mjs';
@@ -781,6 +782,66 @@ export function createPostgresStore(pool) {
         const nextWallet = walletFromValue(balance - amount);
         await storeWallet(client, profileId, nextWallet);
         return nextWallet;
+      });
+    },
+
+    async settleToolPurchase({ profileId, toolId, inventoryBefore, expectedPriceBronze = null }) {
+      const price = TOOL_PRICES[toolId];
+      if (typeof profileId !== 'string' || !/^[0-9a-f-]{36}$/i.test(profileId)
+          || !['stoneAxe', 'stonePickaxe'].includes(toolId) || !Number.isSafeInteger(price)
+          || !inventoryBefore || typeof inventoryBefore !== 'object'
+          || (expectedPriceBronze !== null && expectedPriceBronze !== price)) {
+        throw Object.assign(new Error('Esta ferramenta ou cotação não está disponível.'), { status:400 });
+      }
+      const expected = validateInventory(inventoryBefore);
+      return withTransaction(pool, async client => {
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', ['lodging-profile', profileId]);
+        const profile = await client.query('SELECT id FROM profiles WHERE id=$1 AND is_guest=false', [profileId]);
+        if (!profile.rowCount) throw Object.assign(new Error('Entre com uma conta para guardar a ferramenta.'), { status:403 });
+        const saved = await loadInventory(client, profileId);
+        if (JSON.stringify(saved) !== JSON.stringify(expected)) {
+          throw Object.assign(new Error('A mochila mudou. Atualize a compra e tente novamente.'), { status:409 });
+        }
+        const inventory = createInventory(saved);
+        if (inventory[toolId] || (AXE_TOOL_IDS.includes(toolId) && axeToolFor(inventory))
+            || (PICKAXE_TOOL_IDS.includes(toolId) && pickaxeToolFor(inventory))) {
+          throw Object.assign(new Error('Você já tem uma ferramenta desse tipo no Inventário.'), { status:409 });
+        }
+        if (!canAddInventoryItems(inventory, { [toolId]:1 })) {
+          throw Object.assign(new Error('Libere um espaço no Inventário antes de comprar a ferramenta.'), { status:409 });
+        }
+        const balance = currencyValue(inventory);
+        if (balance < price) {
+          throw Object.assign(new Error(`Faltam ${formatCoins(price - balance)} para esta compra.`), { status:402 });
+        }
+        if (addInventoryItem(inventory, toolId, 1) !== 1) {
+          throw Object.assign(new Error('Não foi possível guardar esta ferramenta.'), { status:409 });
+        }
+        if (toolId === 'stoneAxe') {
+          inventory.axeSharpness = 100;
+          inventory.axeDurability = STONE_AXE_DURABILITY;
+        } else {
+          inventory.pickaxeDurability = STONE_PICKAXE_DURABILITY;
+        }
+        inventory.selectedSlot = findInventorySlot(inventory, toolId);
+        const wallet = walletFromValue(balance - price);
+        for (const key of CURRENCY_KEYS) inventory[key] = wallet[key] || 0;
+        await writeProgress(client, profileId, validateInventory(inventory));
+        await storeWallet(client, profileId, wallet);
+        const transactionId = randomUUID();
+        await client.query(
+          'INSERT INTO economy_journal_transactions(transaction_id,event_type,actor_profile_id,reference_id) VALUES($1,$2,$3,$4)',
+          [transactionId, 'npc_tool_purchase', profileId, toolId],
+        );
+        await client.query(
+          "INSERT INTO economy_journal_lines(transaction_id,line_number,account_code,profile_id,amount_bronze) VALUES($1,1,'profile',$2,$3)",
+          [transactionId, profileId, -price],
+        );
+        await client.query(
+          "INSERT INTO economy_journal_lines(transaction_id,line_number,account_code,amount_bronze) VALUES($1,2,'market_treasury',$2)",
+          [transactionId, price],
+        );
+        return { wallet, inventory:inventorySnapshot(inventory), price };
       });
     },
 

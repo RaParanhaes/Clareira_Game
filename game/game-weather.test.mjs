@@ -75,3 +75,28 @@ test('weather labels are short Portuguese names for the HUD', () => {
  assert.equal(weatherLabel({ kind: 'clear', extremeSun: true }), 'sol escaldante');
  assert.equal(weatherLabel({ kind: 'clear', extremeSun: false }), 'céu limpo');
 });
+
+import { rainTierFor, windLevelAt, windLabel } from './game-weather.mjs';
+import { rainStrengthFor, precipitationCount } from './weather-renderer.mjs';
+test('rain comes in four strengths: drizzle, rain, heavy rain and storm', () => {
+ assert.equal(rainTierFor(0.2), 'chuvisco');
+ assert.equal(rainTierFor(0.55), 'chuva');
+ assert.equal(rainTierFor(0.9), 'chuva forte');
+ assert.equal(rainStrengthFor('storm', 0.1), 'tempestade');
+ assert.equal(rainStrengthFor('rain', 0.2), 'chuvisco');
+});
+test('drizzle has fewer drops than heavy rain, and a storm more than both', () => {
+ const drizzle = precipitationCount('rain', 0.2, 1440, 900);
+ const heavy = precipitationCount('rain', 0.9, 1440, 900);
+ const storm = precipitationCount('storm', 0.9, 1440, 900);
+ assert.ok(drizzle < heavy && heavy < storm);
+});
+test('wind is calm on clear days and stronger in storms, and it breathes through the day', () => {
+ const stormDay = (() => { for (let d = 0; d < GAME_YEAR_DAYS; d++) if (dailyWeatherAt(at(d)).kind === 'storm') return d; })();
+ const clearDay = (() => { for (let d = 0; d < GAME_YEAR_DAYS; d++) if (dailyWeatherAt(at(d)).kind === 'clear') return d; })();
+ assert.ok(windLevelAt(at(stormDay, 12)) > windLevelAt(at(clearDay, 12)));
+ const levels = new Set([0, 3, 6, 9, 12, 15, 18, 21].map(h => windLevelAt(at(clearDay, h)).toFixed(3)));
+ assert.ok(levels.size > 1, 'the wind changes through the day');
+ assert.equal(windLabel(0.9), 'vento calmo');
+ assert.equal(windLabel(2.6), 'vento de tempestade');
+});

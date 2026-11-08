@@ -61,10 +61,37 @@ export function moonAt(timestampMs) {
   };
 }
 
+// Rain comes in tiers by intensity (0..1): drizzle, rain and heavy rain.
+export function rainTierFor(intensity) {
+  const value = Number.isFinite(intensity) ? intensity : 0.55;
+  if (value < 0.4) return 'chuvisco';
+  if (value < 0.7) return 'chuva';
+  return 'chuva forte';
+}
+
+// Wind multiplier of a moment: calm, breeze, rain gusts or storm. Hourly gusts
+// make it breathe through the day, deterministically for every player.
+const WIND_BY_KIND = Object.freeze({ clear: 1.0, rain: 1.5, snowing: 1.3, storm: 2.8 });
+export function windLevelAt(timestampMs) {
+  const weather = dailyWeatherAt(timestampMs);
+  const hourOfDay = (Number(timestampMs) - GAME_EPOCH_MS) / GAME_DAY_DURATION_MS;
+  const gust = 0.82 + 0.18 * Math.sin(hourOfDay * Math.PI * 2 * 9 + weather.dayIndex) + 0.08 * Math.sin(hourOfDay * Math.PI * 2 * 23);
+  const kindLevel = WIND_BY_KIND[weather.kind] ?? 1;
+  return Math.max(0.5, kindLevel * (0.7 + 0.3 * weather.intensity + 0.3 * (gust - 0.82)));
+}
+
+// The wind described for the HUD.
+export function windLabel(level) {
+  if (level >= 2.4) return 'vento de tempestade';
+  if (level >= 1.6) return 'vento forte';
+  if (level >= 1.1) return 'vento moderado';
+  return 'vento calmo';
+}
+
 // Short Portuguese label for the sky, used in the HUD.
 export function weatherLabel(weather) {
   if (weather.kind === 'storm') return 'tempestade';
-  if (weather.kind === 'rain') return 'chuva';
+  if (weather.kind === 'rain') return rainTierFor(weather.intensity);
   if (weather.kind === 'snowing') return 'neve';
   if (weather.extremeSun) return 'sol escaldante';
   return 'céu limpo';

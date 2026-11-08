@@ -134,11 +134,11 @@ let lastCameraFrame=0;
 let lastMotion={x:0,y:0};
 import { CLAREIRA } from './theme.mjs';
 import { ENTRY_COPY_VARIANTS, getDailyEntryCopy } from './entry-copy.mjs';
-import { windDescriptionAt, windDirectionAt, windStrengthAt, windSwayAt } from './wind.mjs';
+import { windDescriptionAt, windDirectionAt, windStrengthAt, windSwayAt, setWeatherWind } from './wind.mjs';
 import { WATER_BANK_WIDTH, WATER_WADING_DEPTH, waterBankDepthAt, waterStateAt, waterSurfaceBankDepthAt, waterSurfaceDepthAt, waterwayRoutesForDimension } from './waterways.mjs';
 import { getGameDayState } from './day-night.mjs';
 import { gameDateTimeLabel } from './game-calendar.mjs';
-import { dailyWeatherAt, moonAt, weatherLabel } from './game-weather.mjs';
+import { dailyWeatherAt, moonAt, weatherLabel, windLevelAt, windLabel } from './game-weather.mjs';
 import { drawWeatherSky } from './weather-renderer.mjs';
 
 const canvas = document.querySelector('#world');
@@ -7198,6 +7198,7 @@ function drawDaylightAtmosphere() {
       night: gameDay.night,
       seconds: worldClock,
       reducedMotion,
+      wind: windLevelAt(skyTime),
     });
   }
   teleportEffects.drawOver(ctx,worldDimensionId,clientServerTime(),(x,y)=>point(x,y,camera,0),spriteScale);
@@ -8121,9 +8122,11 @@ function advanceFrame(now) {
       : '';
     const skySymbol=gameDay.hasMoon&&gameDay.moonOpacity>.15?'☾ ✦':gameDay.daylight>.02&&gameDay.sunPosition?'☀':'✦';
     const skyTime=gameDayTimestampMs(),sky=dailyWeatherAt(skyTime);
+    const windNow=windLevelAt(skyTime);
+    setWeatherWind(windNow);
     const moon=gameDay.hasMoon&&gameDay.night>.5?moonAt(skyTime):null;
     const moonText=moon?` · ${moon.phaseName}${moon.redMoon?' (lua vermelha)':''}`:'';
-    ui.weatherText.textContent=`${skySymbol} ${gameDateTimeLabel(skyTime)} · ${gameDay.period} · ${weatherLabel(sky)}${moonText}${weather?` · ${weather}`:''}`;
+    ui.weatherText.textContent=`${skySymbol} ${gameDateTimeLabel(skyTime)} · ${gameDay.period} · ${weatherLabel(sky)} · ${windLabel(windNow)}${moonText}${weather?` · ${weather}`:''}`;
   }
   sendInputIfChanged(now);
   const drawStartedAt=performance.now();

@@ -12,6 +12,9 @@ const itemNames = Object.freeze({ wood: 'Graveto seco', timber: 'Madeira bruta',
 
 export function createPlacePanel({ dialog, controller, getState, onAction }) {
   const doc = dialog.ownerDocument;
+  const formatCount = value => Number.isSafeInteger(value) ? new Intl.NumberFormat('pt-BR').format(value) : '—';
+  const formatMoney = value => Number.isSafeInteger(value) ? formatCoins(value) : '—';
+  const economyRoleNames = Object.freeze({admin:'Administrador',leader:'Líder',minister:'Ministro da Economia',treasurer:'Tesoureiro',auditor:'Auditor'});
   const content = dialog.querySelector('#lodging-options');
   const status = dialog.querySelector('#lodging-status');
   const heading = dialog.querySelector('[data-panel-heading]');
@@ -102,6 +105,10 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
     if (!session) return;
     if (route !== 'home' && route !== 'commerce-review' && !session.point.sections.includes(route)) return;
     const state = getState();
+    if (route === 'economy' && !state.economyManagementPanel) {
+      content.replaceChildren(); heading.textContent='Gestão econômica';
+      status.textContent='Sua conta não tem permissão para consultar os indicadores econômicos.'; return;
+    }
     if (route === 'government' && !state.governmentTaxPanel) {
       content.replaceChildren(); heading.textContent = 'Governo e impostos';
       status.textContent = 'Sua conta não tem acesso à gestão de impostos deste governo.'; return;
@@ -137,6 +144,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
       for (const section of session.point.sections) {
         if (section === 'keys' && !ownsCabin) continue;
         if (section === 'government' && !state.governmentTaxPanel) continue;
+        if (section === 'economy' && !state.economyManagementPanel) continue;
         const button = element('button', '', 'service-choice'); button.type = 'button';
         button.dataset.serviceSection = section;
         button.append(element('strong', SERVICE_SECTIONS[section].label), element('small', SERVICE_SECTIONS[section].description));
@@ -312,6 +320,93 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
         fragment.append(card);
       }
       if (!recipients.length) fragment.append(element('p', 'Você ainda não entregou chaves para outras contas.', 'lodging-note'));
+    } else if (route === 'economy') {
+      const panel=state.economyManagementPanel;
+      const kpis=panel.kpis||{};
+      fragment.append(element('p',
+        `${economyRoleNames[panel.role]||'Equipe econômica'} · últimos ${panel.periodGameDays||7} dias do jogo · atualizado ${new Date(panel.sampledAt||Date.now()).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`,
+        'lodging-note'));
+      const summary=element('div','','economy-kpi-grid');
+      const values=[
+        ['Materiais entregues ao NPC',formatCount(kpis.soldToNpc)],
+        ['Materiais comprados do NPC',formatCount(kpis.boughtFromNpc)],
+        ['Valor bruto das entregas',formatMoney(kpis.grossSalesBronze)],
+        ['Receita de revenda do NPC',formatMoney(kpis.npcPurchaseRevenueBronze)],
+        ['Estoque disponível',`${formatCount(kpis.marketStock)} unidades · ${formatCount(kpis.marketVarieties)} tipos`],
+        ['Entradas no tesouro',formatMoney(kpis.treasuryReceiptsBronze)],
+        ['Saídas do tesouro',formatMoney(kpis.treasuryExpensesBronze)],
+        ['Lançamentos financeiros',formatCount(kpis.transactions)],
+      ];
+      for(const [label,value] of values){
+        const tile=element('div','','economy-kpi');
+        tile.append(element('small',label),element('strong',value));
+        summary.append(tile);
+      }
+      fragment.append(summary);
+      if(panel.monetary)fragment.append(element('p',
+        `Fator monetário de preços: ${Number(panel.monetary.priceFactor).toLocaleString('pt-BR',{maximumFractionDigits:3})}× · última amostragem da moeda: ${formatMoney(panel.monetary.referenceSupplyBronze)}.`,
+        'lodging-note'));
+      const imbalance=kpis.journalBalanceBronze;
+      fragment.append(element('p',Number.isSafeInteger(imbalance)
+        ? imbalance===0?'Diário financeiro conciliado na janela consultada (diferença zero).'
+          : `Atenção: diferença contábil de ${formatMoney(imbalance)} na janela consultada.`
+        : 'Conciliação contábil indisponível para esta janela.','lodging-note'));
+      fragment.append(element('strong','Tesouro e fundos públicos'));
+      for(const fund of panel.funds||[]){
+        const row=element('div','','economy-list-row');
+        row.append(element('strong',({general:'Geral',donations:'Doações',materials:'Materiais',construction:'Construção',territory:'Território',diplomacy:'Diplomacia'})[fund.fundCode]||fund.fundCode),
+          element('small',`Saldo ${formatMoney(fund.balanceBronze)} · reservado ${formatMoney(fund.reservedBronze)}`));
+        fragment.append(row);
+      }
+      if((panel.daily||[]).length) {
+        fragment.append(element('strong','Compras e entregas por dia do jogo'));
+        const max=Math.max(1,...panel.daily.map(day=>(day.soldToNpc||0)+(day.boughtFromNpc||0)));
+        for(const day of panel.daily){
+          const count=(day.soldToNpc||0)+(day.boughtFromNpc||0);
+          const row=element('div','','economy-day-row');
+          row.append(element('small',`${day.day.slice(5)} · ${formatCount(day.soldToNpc)} entregues / ${formatCount(day.boughtFromNpc)} comprados`));
+          const track=element('div','','economy-trend-track');
+          const bar=element('span','','economy-trend-bar');bar.style.width=`${100*count/max}%`;
+          track.append(bar);row.append(track);fragment.append(row);
+        }
+      }
+      if((panel.stock||[]).length){
+        fragment.append(element('strong','Preços e disponibilidade do balcão'));
+        for(const item of panel.stock){
+          const row=element('div','','economy-list-row');
+          row.append(element('strong',itemNames[item.itemId]||item.itemId),
+            element('small',`${formatCount(item.available)} disponíveis · compra NPC ${formatMoney(item.buyPrice)} · venda NPC ${formatMoney(item.sellPrice)}`));
+          fragment.append(row);
+        }
+      }
+      if(panel.permissions?.manageRoles){
+        fragment.append(element('strong','Nomear cargos de economia'));
+        fragment.append(element('p','Somente o líder ou administrador pode nomear e revogar cargos. Todas as mudanças são registradas.','lodging-note'));
+        const form=element('div','','economy-role-form');
+        const accountLabel=element('label','Usuário');
+        const accountInput=element('input');accountInput.name='username';accountInput.type='text';
+        accountInput.minLength=3;accountInput.maxLength=20;accountInput.pattern='[a-zA-Z0-9_]{3,20}';
+        accountInput.placeholder='nome_da_conta';accountInput.autocomplete='off';
+        accountInput.dataset.focusKey='economy-role-username';accountInput.required=true;
+        accountLabel.append(accountInput);form.append(accountLabel);
+        const roleLabel=element('label','Cargo');
+        const roleSelect=element('select');roleSelect.name='role';roleSelect.dataset.focusKey='economy-role-select';
+        for(const [value,label]of [['minister','Ministro da Economia · impostos e KPIs'],
+          ['treasurer','Tesoureiro · KPIs e fundos'],['auditor','Auditor · somente leitura']]){
+          const option=element('option',label);option.value=value;roleSelect.append(option);
+        }
+        roleLabel.append(roleSelect);form.append(roleLabel);
+        form.append(actionButton('Nomear ou atualizar','economyRoleSet'));
+        fragment.append(form);
+        for(const member of panel.roles||[]){
+          const row=element('div','','economy-list-row economy-staff-row');
+          row.append(element('strong',member.username),
+            element('small',economyRoleNames[member.role]||member.role),
+            actionButton('Revogar cargo','economyRoleSet',{username:member.username,role:'none'}));
+          fragment.append(row);
+        }
+      }
+      fragment.append(actionButton('Atualizar indicadores','economyRefresh'));
     } else if (route === 'government') {
       const panel = state.governmentTaxPanel;
       fragment.append(element('p', `${({village:'Vila',kingdom:'Reino',realm:'Domínio',castle:'Castelo'})[panel.governmentType] || panel.governmentType} · ${placeName} · Tesouro geral: ${formatCoins(panel.treasuryBalanceBronze)}`, 'lodging-note'));
@@ -401,6 +496,9 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
       const pending = draft; draft = null;
       const state = getState();
       const priceNow = operationPrice(pending.message, state);
+      if (pending.message.name==='economyRoleSet' && !state.economyManagementPanel?.permissions?.manageRoles) {
+        status.textContent='Sua autorização para administrar cargos mudou.';controller.back();return;
+      }
       if (priceNow !== pending.price || (pending.message.name === 'lodgeSell'
         ? (state.inventory[pending.message.item] || 0) < pending.message.quantity
         : pending.message.name === 'lodgeBuyMaterial'
@@ -426,6 +524,24 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
       if (!input?.reportValidity()) return;
       message.askingPriceBronze = Number(input.value);
       if (!Number.isSafeInteger(message.askingPriceBronze) || message.askingPriceBronze < 1) return;
+    }
+    if (name === 'economyRoleSet') {
+      const permissions=getState().economyManagementPanel?.permissions;
+      if (!permissions?.manageRoles) { status.textContent='Cargo econômico não autorizado.'; return; }
+      if (!message.username) {
+        const form=button.closest('.economy-role-form');
+        const input=form?.querySelector('[name="username"]');
+        const role=form?.querySelector('[name="role"]');
+        if (!input?.reportValidity() || !role?.value) return;
+        message.username=input.value.trim().toLowerCase();
+        message.role=role.value;
+      }
+      draft={message,price:0,cost:0,title:'Revisar cargo econômico',
+        summary:message.role==='none'
+          ? `Revogar o cargo econômico de ${message.username}? O acesso aos painéis será removido imediatamente.`
+          : `Atribuir a ${message.username} o cargo de ${economyRoleNames[message.role]||'não reconhecido'} neste governo?`,
+        detail:'Somente o líder ou administrador pode confirmar. O servidor registra a alteração.'};
+      controller.navigate('commerce-review');return;
     }
     if (name === 'governmentTaxPolicySet') {
       const form = button.parentElement;
@@ -487,7 +603,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
   });
 
   function operationPrice(message, state) {
-    if(['propertyRequest','propertyRentDelist'].includes(message.name))return 0;
+    if(['propertyRequest','propertyRentDelist','economyRoleSet','economyRefresh'].includes(message.name))return 0;
     if(['propertyQuote','propertyRentList'].includes(message.name))return message.askingPriceBronze || 0;
     if (['setLodgingAutoRenew', 'propertyDelist', 'cabinRevokeKey'].includes(message.name)) return 0;
     if (message.name === 'lodgeSell') return state.marketQuotes?.[message.item]?.buyPrice ?? TRADE_PRICES[message.item];

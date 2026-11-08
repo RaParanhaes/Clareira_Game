@@ -2162,7 +2162,7 @@ export function createPrototypeServer({
         notice(socket,'A fagulha deixou um galho e uma folha para você. O Bosque das Brasas espera.','chime',{arrivalReady:true});
         broadcast(false);return;
       }
-      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew'].includes(message.name)) return;
+      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyMaterial', 'lodgeBuyTool', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew'].includes(message.name)) return;
       if (message.name === 'allocateAttribute') {
         const key = typeof message.attribute === 'string' ? message.attribute : '';
         if (!ATTRIBUTE_KEYS.includes(key)) { notice(socket, 'Esse atributo não existe.'); return; }
@@ -2339,6 +2339,7 @@ export function createPrototypeServer({
         broadcast(false);
         return;
       }
+      if (player.marketPurchasePending) { notice(socket, 'Aguarde a confirmação da sua compra anterior.', 'soft'); return; }
       if (player.woodworkBusy) { notice(socket, 'Termine esta etapa do trabalho antes de começar outra.', 'soft'); return; }
       if (now() - player.lastActionAt < ACTION_COOLDOWN_MS) {
         const rejectedInteraction = ['collect', 'interact', 'useFurniture'].includes(message.name)
@@ -2650,6 +2651,10 @@ export function createPrototypeServer({
             coal:['carvão mineral','carvões minerais'], charcoal:['carvão vegetal','carvões vegetais'],
             copperIngot:['lingote de cobre','lingotes de cobre'], ironIngot:['lingote de ferro','lingotes de ferro'],
           };
+          if (storage.getQuotes) {
+            try { marketQuotes = await storage.getQuotes(); }
+            catch (refreshError) { process.stderr.write(`Could not refresh market availability: ${refreshError.message}\n`); }
+          }
           notice(socket, `Venda concluída: ${quantity} ${itemLabels[item][quantity === 1 ? 0 : 1]} por ${formatCoins(settlement.amount)}.`, 'chime');
           broadcast();
         } catch (error) {
@@ -2657,6 +2662,44 @@ export function createPrototypeServer({
           try { await persistPlayer(player); } catch {}
           notice(socket, error.message || 'Não consegui salvar esta venda. Seus materiais foram devolvidos.');
         }
+        return;
+      }
+
+      if (message.name === 'lodgeBuyMaterial') {
+        if (player.location !== 'room' || player.roomKind !== 'lobby' || player.roomBuildingId !== 'arrival') {
+          notice(socket, 'A compra de materiais está disponível somente no balcão da vila.'); return;
+        }
+        if (!player.accountId) { notice(socket, 'Entre com uma conta para comprar materiais.'); return; }
+        if (!storage.settleNpcPurchase) { notice(socket, 'O mercado de materiais requer PostgreSQL.'); return; }
+        const itemId = typeof message.item === 'string' ? message.item : '';
+        const quantity = message.quantity;
+        if (!Object.hasOwn(TRADE_PRICES, itemId)) { notice(socket, 'Este material não está disponível no balcão.'); return; }
+        if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 50) {
+          notice(socket, 'Informe uma quantidade inteira entre 1 e 50 para comprar.'); return;
+        }
+        if (!Number.isSafeInteger(message.expectedPriceBronze) || message.expectedPriceBronze < 1) {
+          notice(socket, 'Atualize o balcão para consultar o preço da compra.'); return;
+        }
+        const profileId = player.accountId;
+        const inventoryBefore = inventorySnapshot(player.inventory);
+        const previous = progressWrites.get(profileId) || Promise.resolve();
+        const next = previous.catch(() => {}).then(() => storage.settleNpcPurchase({
+          profileId, itemId, quantity, inventoryBefore, expectedPriceBronze:message.expectedPriceBronze,
+        }));
+        progressWrites.set(profileId, next);
+        player.marketPurchasePending = true;
+        try {
+          const result = await next;
+          restoreInventory(player.inventory, result.inventory);
+          if (storage.getQuotes) {
+            try { marketQuotes = await storage.getQuotes(); }
+            catch (refreshError) { process.stderr.write(`Could not refresh market availability: ${refreshError.message}\n`); }
+          }
+          notice(socket, `Compra concluída: ${quantity} × ${itemId} por ${formatCoins(result.grossAmount)}.`, 'chime');
+          broadcast(false);
+        } catch (error) {
+          notice(socket, error.message || 'Não foi possível comprar o material. Nenhuma moeda foi cobrada.');
+        } finally { player.marketPurchasePending = false; }
         return;
       }
 

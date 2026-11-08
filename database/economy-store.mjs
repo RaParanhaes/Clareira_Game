@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { CURRENCY_KEYS, MAX_WALLET_VALUE, TRADE_PRICES, currencyValue, formatCoins, walletFromValue } from '../game/lodging-catalog.mjs';
 import { calculateDynamicQuote, calculateGovernmentTaxRate, calculateInputCost, calculateMoneySupplyPriceFactor, ECONOMY_RECIPES, MONEY_SUPPLY_POLICY } from '../game/economy.mjs';
 import { addInventoryItem, canAddInventoryItems, createInventory, inventoryFromRows, inventoryRows, inventorySnapshot, removeInventoryItem } from '../game/inventory.mjs';
-import { validateInventory } from '../scripts/account-store.mjs';
+import { EMPTY_INVENTORY, validateInventory } from '../scripts/account-store.mjs';
 import { isCabin } from '../game/cabin-access.mjs';
 import { accumulateGovernmentTax } from './tax-remainders.mjs';
 
@@ -374,7 +374,7 @@ export function createEconomyStore(pool) {
         [profileId],
       );
       const persisted = validateInventory(inventoryFromRows(
-        savedRows.rows.map(row => ({ itemId:row.item_id, quantity:Number(row.quantity) })),
+        savedRows.rows.map(row => ({ itemId:row.item_id, quantity:Number(row.quantity) })), EMPTY_INVENTORY,
       ));
       const expectedAfter = createInventory(persisted);
       if (removeInventoryItem(expectedAfter, itemId, quantity) !== quantity
@@ -501,7 +501,7 @@ export function createEconomyStore(pool) {
         'SELECT item_id,quantity FROM inventory_items WHERE profile_id=$1 ORDER BY item_id FOR UPDATE', [profileId],
       );
       const saved = validateInventory(inventoryFromRows(
-        savedRows.rows.map(row => ({ itemId:row.item_id, quantity:Number(row.quantity) })),
+        savedRows.rows.map(row => ({ itemId:row.item_id, quantity:Number(row.quantity) })), EMPTY_INVENTORY,
       ));
       if (JSON.stringify(saved) !== JSON.stringify(expected)) {
         throw Object.assign(new Error('O Inventário mudou. Atualize a compra e tente novamente.'), { status:409 });

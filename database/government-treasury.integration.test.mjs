@@ -77,8 +77,11 @@ test('village and kingdom treasuries keep independent balances, audited allocati
     assert.equal(after.funds.reduce((n,f)=>n+(f.balanceBronze||0),0),1300);
     assert.equal(after.kpis.treasuryReceiptsBronze,0,'internal transfers are not external tax revenue');
     assert.equal(after.kpis.treasuryExpensesBronze,0,'internal transfers are not public expenditure');
-    assert.equal((await treasury.getGovernmentEconomyPanel({governmentId:kingdom,actorProfileId:king.id}))
-      .funds.find(f=>f.fundCode==='general').balanceBronze,700);
+    const kingdomPanel=await treasury.getGovernmentEconomyPanel({governmentId:kingdom,actorProfileId:king.id});
+    assert.equal(kingdomPanel.funds.find(f=>f.fundCode==='general').balanceBronze,700);
+    assert.equal(kingdomPanel.kpis.soldToNpc,null,'a kingdom without a regional market has no borrowed village sales');
+    assert.equal(kingdomPanel.kpis.marketStock,null,'global NPC stock must not appear as a local kingdom holding');
+    assert.equal(kingdomPanel.kpis.journalBalanceBronze,null,'government-only lines are not a complete journal reconciliation');
 
     const p1=randomUUID(),p2=randomUUID();
     const proposal={governmentId:village,actorProfileId:treasurer.id,projectId:p1,

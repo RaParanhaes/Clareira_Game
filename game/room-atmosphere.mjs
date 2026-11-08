@@ -28,7 +28,7 @@ const ATMOSPHERES = Object.freeze({
 const BUILTIN_PALETTES = Object.freeze({
   cedar: Object.freeze({ floor: '#846449', wall: '#866f56' }),
   pine: Object.freeze({ floor: '#776747', wall: '#79694e' }),
-  hotel: Object.freeze({ floor: '#8b6c4d', wall: '#756d5e' }),
+  hotel: Object.freeze({ floor: '#a57a52', wall: '#756d5e' }),
   vista: Object.freeze({ floor: '#77705d', wall: '#6e6a70' }),
 });
 

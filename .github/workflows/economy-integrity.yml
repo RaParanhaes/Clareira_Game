@@ -53,7 +53,22 @@ jobs:
           node --check scripts/prototype-server.mjs
           node --check scripts/browser-commerce-ui-check.mjs
           node --check scripts/browser-commerce-functions-check.mjs
+          node --check scripts/browser-economy-local-check.mjs
       - name: Validate game content contracts
         run: npm run content:check
       - name: Economy, wallet and commerce regression tests
         run: node --test --test-concurrency=1 database/economy.integration.test.mjs database/economy-contract-atomic.integration.test.mjs database/economy-tool-purchase.integration.test.mjs database/economy-market-cycle.integration.test.mjs game/wallet-range.test.mjs scripts/place-service-actions.test.mjs
+      - name: Install headless browser (temporary runner only)
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install chromium --only-shell --with-deps
+      - name: Validate economy UI in desktop and mobile Chromium
+        run: node scripts/browser-economy-local-check.mjs logs/economy-visual
+      - name: Upload economy screenshots and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: economy-ui-visual-${{ github.run_number }}
+          path: logs/economy-visual/
+          retention-days: 3
+          if-no-files-found: ignore

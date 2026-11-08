@@ -92,12 +92,11 @@ try {
         name+' has clipped/overflowing dialog: '+JSON.stringify(geometry));
     };
     await click('[data-service-section="trade"]');
+    await page.screenshot({path:`${output}/${name}-market.png`,fullPage:true});
     await assertLayout();
     assert.equal(await page.locator('[data-service-action="lodgeSell"]').count(),1);
     assert.equal(await page.locator('[data-service-action="lodgeBuyMaterial"]').count(),2);
     assert.ok((await page.locator('#lodging-options').textContent()).includes('5 disponíveis'));
-    await page.screenshot({path:`${output}/${name}-market.png`,fullPage:true});
-
     const buy=page.locator('.commerce-purchase').filter({has:page.locator('[data-service-action="lodgeBuyMaterial"][data-item="wood"]')});
     await buy.locator('[data-buy-quantity-item="wood"]').fill('2');
     assert.ok((await buy.textContent()).includes('6 bronzes'));

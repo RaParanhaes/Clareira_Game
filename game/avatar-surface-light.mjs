@@ -1,7 +1,7 @@
 // Keep most of the original material color: light must not replace dark clothes
 // with an almost solid pastel silhouette. Source-atop preserves sprite alpha.
 export function avatarLightTintOpacity(amount){
-  return Number.isFinite(amount)?Math.max(0,Math.min(.16,amount*.22)):0;
+  return Number.isFinite(amount)?Math.max(0,Math.min(.24,amount*.22)):0;
 }
 // Apply light only to pixels already occupied by the actor. Transparent atlas
 // margins must stay transparent, and the result is drawn in normal depth order.

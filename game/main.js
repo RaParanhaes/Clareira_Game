@@ -19,7 +19,7 @@ import { DIMENSION_THEMES } from './dimension-themes.mjs';
 import {applyObjectCatalog,getObjectCatalog,objectCatalogRevision} from './object-state.mjs';
 import {roomView} from './room-view.mjs';
 import { drawNight, carriedLanternSources, setNightDeps } from './lighting-renderer.mjs';
-import { exteriorEmitters, interiorEmitters, roomLightObstacles, lightAmount, roomGlowProfile, actorWindowLight } from './scene-lights.mjs';
+import { actorRimSource, exteriorEmitters, interiorEmitters, roomLightObstacles, lightAmount, roomGlowProfile, actorWindowLight } from './scene-lights.mjs';
 import { buildingWindows, buildingArchitecture } from './architectural-elements.mjs';
 import { lightmapFor, paintLightmap, processLightmapQueue, lightmapStats } from './lightmap-renderer.mjs';
 import { BUILDING_STANDARD, fixtureBounds, roomWallDecor, roofGeometry } from './building-standard.mjs';
@@ -137,6 +137,9 @@ import { ENTRY_COPY_VARIANTS, getDailyEntryCopy } from './entry-copy.mjs';
 import { windDescriptionAt, windDirectionAt, windStrengthAt, windSwayAt } from './wind.mjs';
 import { WATER_BANK_WIDTH, WATER_WADING_DEPTH, waterBankDepthAt, waterStateAt, waterSurfaceBankDepthAt, waterSurfaceDepthAt, waterwayRoutesForDimension } from './waterways.mjs';
 import { getGameDayState } from './day-night.mjs';
+import { gameDateTimeLabel } from './game-calendar.mjs';
+import { dailyWeatherAt, moonAt, weatherLabel } from './game-weather.mjs';
+import { drawWeatherSky } from './weather-renderer.mjs';
 
 const canvas = document.querySelector('#world');
 let ctx = canvas.getContext('2d', { alpha: false });
@@ -6244,6 +6247,31 @@ function drawAvatarGroundShadow(player,isSelf=false){
   }
 }
 
+// Rim light: the actor's silhouette is repainted in the light colour on a separate
+// canvas, offset toward its strongest light, and drawn under the body. Only the edge
+// on the lit side shows. The body is drawn on the scratch canvas only, never on the
+// main context, so the shared avatar caches are not disturbed.
+const actorRimCanvas=document.createElement('canvas');
+function drawActorRimLight(px,py,source,origin,drawBody){
+  const amount=Math.max(0,Math.min(1,source.amount));
+  if(amount<.02)return;
+  const s=spriteScale*AVATAR_BODY_SCALE;
+  const bx=Math.floor(px-60*s),by=Math.floor(py-130*s),bw=Math.ceil(120*s),bh=Math.ceil(150*s);
+  if(actorRimCanvas.width!==canvas.width||actorRimCanvas.height!==canvas.height){actorRimCanvas.width=canvas.width;actorRimCanvas.height=canvas.height;}
+  const rc=actorRimCanvas.getContext('2d');
+  const savedCtx=ctx,lightPoint=point(source.x,source.y,camera,source.height);
+  let dx=lightPoint.x-origin.x,dy=lightPoint.y-origin.y;const length=Math.hypot(dx,dy)||1;dx/=length;dy/=length;
+  const shift=2.4*s;
+  rc.setTransform(1,0,0,1,0,0);rc.clearRect(bx,by,bw,bh);
+  rc.save();rc.setTransform(savedCtx.getTransform());rc.beginPath();rc.rect(bx,by,bw,bh);rc.clip();
+  ctx=rc;
+  try{drawBody();}finally{ctx=savedCtx;rc.restore();}
+  rc.save();rc.setTransform(1,0,0,1,0,0);rc.globalCompositeOperation='source-in';
+  const [r,g,b]=[1,3,5].map(offset=>parseInt(source.color.slice(offset,offset+2),16));
+  rc.fillStyle='rgba('+r+','+g+','+b+',1)';rc.fillRect(bx,by,bw,bh);rc.restore();
+  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.globalCompositeOperation='screen';ctx.globalAlpha=.85*amount;
+  ctx.drawImage(actorRimCanvas,bx,by,bw,bh,bx+dx*shift,by+dy*shift,bw,bh);ctx.restore();
+}
 function drawAvatar(player, time, isSelf = false, shareTarget = false, pickupFrame = null, visibleNameplateIds = new Set()) {
   const position = isSelf ? localRenderPosition : player;
   const restingBed=worldLocation==='room'&&player.furnitureUse?.action==='lie'
@@ -6362,7 +6390,12 @@ function drawAvatar(player, time, isSelf = false, shareTarget = false, pickupFra
     transition:motionState.transition,transitionProgress:motionState.transitionProgress,suppressAura:true};
   const smoothAvatar=worldLocation==='clearing'&&!isTerrainPixelationActive();
   const windowScene=worldLocation==='clearing'&&gameDay.night>=.08?currentSceneLights():null;
-  const surfaceLight=windowScene?actorWindowLight(position,windowScene.lights,windowScene.obstacles,surfaceHeight(position.x,position.y,'clearing'),AVATAR_SPRITE_SPEC.baseHeight*AVATAR_BODY_SCALE/HEIGHT_PIXELS):null;
+  // Campfires are not scene lights, so they warm actors here through the same sampler.
+  const actorFireLights=windowScene?[...fires.values()].map(fire=>({kind:'fire',id:fire.id,x:fire.x,y:fire.y,height:1.1,nx:0,ny:0,
+    reach:CAMPFIRE_LIGHT_RADIUS_TILES,falloffExponent:1.4,strength:.85*gameDay.night,color:'#ffb35c'})):[];
+  const actorLights=windowScene?[...windowScene.lights,...actorFireLights]:[];
+  const rimSource=windowScene?actorRimSource(position,actorLights,windowScene.obstacles,surfaceHeight(position.x,position.y,'clearing'),AVATAR_SPRITE_SPEC.baseHeight*AVATAR_BODY_SCALE/HEIGHT_PIXELS):null;
+  const surfaceLight=windowScene?actorWindowLight(position,actorLights,windowScene.obstacles,surfaceHeight(position.x,position.y,'clearing'),AVATAR_SPRITE_SPEC.baseHeight*AVATAR_BODY_SCALE/HEIGHT_PIXELS):null;
   const pngOnlyAvatar=['outfit.commoner','outfit.white-base'].includes(appearance.outfitId);
   const idlePngFrame={...selected,action:'idle',group:'idle',frame:0};
   const drawCanvasFallback=()=>{
@@ -6372,6 +6405,7 @@ function drawAvatar(player, time, isSelf = false, shareTarget = false, pickupFra
     drawAvatarSprite(ctx,px,py,selected,appearance,{layerRoles:['aura-front'],smooth:smoothAvatar});
   };
   const drawBody=()=>{if(!drawAvatarSprite(ctx,px,py,selected,appearance,{smooth:smoothAvatar,surfaceLight}))drawCanvasFallback();};
+  if(rimSource&&!pose.lying&&!swimming)drawActorRimLight(px,py,rimSource,p,drawBody);
   if(pose.lying){
     const skew=Math.atan2(TILE_Y,TILE_X),angles=[-Math.PI/2+skew,Math.PI/2-skew,Math.PI/2+skew,-Math.PI/2-skew];
     ctx.save();ctx.translate(px,py);ctx.rotate(angles[(player.furnitureUse?.rotation||0)%4]);ctx.scale(.64,.64);ctx.translate(-px,-py);drawBody();ctx.restore();
@@ -7156,6 +7190,16 @@ function drawDaylightAtmosphere() {
   drawBerryOfferResponses();
   drawNight();
   drawDaylightAtmosphere();
+  if (worldLocation === 'clearing' && worldDimensionId === 'surface') {
+    const skyTime = gameDayTimestampMs();
+    drawWeatherSky(ctx, viewWidth, viewHeight, {
+      weather: dailyWeatherAt(skyTime),
+      moon: gameDay.night > .5 ? moonAt(skyTime) : null,
+      night: gameDay.night,
+      seconds: worldClock,
+      reducedMotion,
+    });
+  }
   teleportEffects.drawOver(ctx,worldDimensionId,clientServerTime(),(x,y)=>point(x,y,camera,0),spriteScale);
   drawWaterReflections();
   drawCampfireAfterglow(worldClock);
@@ -8076,7 +8120,10 @@ function advanceFrame(now) {
       ? (({dark:'uma fogueira no breu',sky:'vento das alturas',inferno:'calor profundo',magic:'brisa encantada',energy:'correntes de energia',giants:'vento das montanhas'})[dimensionTheme]||windDescriptionAt(localPosition.x,localPosition.y))
       : '';
     const skySymbol=gameDay.hasMoon&&gameDay.moonOpacity>.15?'☾ ✦':gameDay.daylight>.02&&gameDay.sunPosition?'☀':'✦';
-    ui.weatherText.textContent=`${skySymbol} ${gameDay.period}${gameDay.label?` · ${gameDay.label}`:''}${weather?` · ${weather}`:''}`;
+    const skyTime=gameDayTimestampMs(),sky=dailyWeatherAt(skyTime);
+    const moon=gameDay.hasMoon&&gameDay.night>.5?moonAt(skyTime):null;
+    const moonText=moon?` · ${moon.phaseName}${moon.redMoon?' (lua vermelha)':''}`:'';
+    ui.weatherText.textContent=`${skySymbol} ${gameDateTimeLabel(skyTime)} · ${gameDay.period} · ${weatherLabel(sky)}${moonText}${weather?` · ${weather}`:''}`;
   }
   sendInputIfChanged(now);
   const drawStartedAt=performance.now();

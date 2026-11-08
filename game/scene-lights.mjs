@@ -82,7 +82,8 @@ export function actorWindowLight(position,lights,obstacles=[],ground=0,bodyHeigh
     const height=fraction*bodyHeight;
     let amount=0,color='#efbc79';
     for(const light of lights){
-      if(light.kind!=='window')continue;
+      // Windows and campfires both warm the actor: the body reads lit by its surroundings.
+      if(light.kind!=='window'&&light.kind!=='fire')continue;
       const value=lightAmount(light,{x:position.x,y:position.y,height:ground+(position.z||0)+height},obstacles);
       if(value>amount){amount=value;color=light.color||color;}
     }
@@ -96,4 +97,16 @@ export function roomLightObstacles(layout,furniture=[]){
     ...(layout.counter?[{...layout.counter,base,height:base+1.45}]:[]),
     ...furniture.map(item=>{const visual=furnitureVisual(item),floor=layout.elevation==='raised'&&item.y<=7?base:0;
       return {...fixtureBounds(visual),owner:item.id,base:floor+(item.baseZ||0),height:floor+(item.baseZ||0)+visual.height};})];
+}
+
+// The strongest light reaching an actor, used to place its rim light. Returns the
+// source position, colour and sampled amount, or null when no light touches it.
+export function actorRimSource(position,lights,obstacles=[],ground=0,bodyHeight=1.8){
+  let best=null;
+  for(const light of lights){
+    if(light.kind!=='window'&&light.kind!=='fire')continue;
+    const amount=lightAmount(light,{x:position.x,y:position.y,height:ground+(position.z||0)+bodyHeight*.6},obstacles);
+    if(amount>0.001&&(!best||amount>best.amount))best={x:light.x,y:light.y,height:light.height||0,color:light.color||'#efbc79',amount};
+  }
+  return best;
 }

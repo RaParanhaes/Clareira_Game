@@ -2,7 +2,7 @@ import { incomingKnockbackMultiplier } from './progression.mjs';
 // Server-owned wildlife rules and shared species metadata. No browser or save state.
 export const WILDLIFE_ZONE_SIZE = 24;
 export const WILDLIFE_POPULATION_LIMIT = 60;
-export const GAME_DAY_DURATION_MS = 24 * 60 * 1000;
+import { GAME_DAY_DURATION_MS } from './day-night.mjs';
 
 const species = [
   {

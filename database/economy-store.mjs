@@ -274,11 +274,11 @@ export function createEconomyStore(pool) {
         return quoteMapFromRows(cached.rows, taxRateBps);
       }
       const flowResult = await client.query(
-        'SELECT item_id, COALESCE(sum(units_sold_to_npc), 0)::bigint AS units_sold ' +
+        'SELECT item_id, COALESCE(sum(units_bought_from_npc), 0)::bigint AS units_bought ' +
         'FROM economy_daily_flows WHERE region_id = $1 AND flow_day >= $2::date - 6 GROUP BY item_id',
         [REGION, utcDay(now)],
       );
-      const flowByItem = new Map(flowResult.rows.map(row => [row.item_id, Number(row.units_sold)]));
+      const flowByItem = new Map(flowResult.rows.map(row => [row.item_id, Number(row.units_bought)]));
       const stockResult = await client.query(
         'SELECT item_id, COALESCE(sum(quantity-reserved), 0)::bigint AS quantity FROM economy_market_stock ' +
         'WHERE region_id=$1 AND item_id = ANY($2::text[]) GROUP BY item_id',

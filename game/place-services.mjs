@@ -40,7 +40,10 @@ subscribeObjectCatalog(()=>{
  for(const key of Object.keys(PLACE_SERVICES))delete PLACE_SERVICES[key];
  for(const key of Object.keys(CABIN_EXTERIOR_SERVICES))delete CABIN_EXTERIOR_SERVICES[key];
  for(const b of objectBuildings()){
-  if(b.services?.length)PLACE_SERVICES[b.id]=b.services;
+  if(b.services?.length)PLACE_SERVICES[b.id]=b.id==='arrival'
+    ? b.services.map(service=>service.id==='exchange'
+      ? {...service,sections:[...new Set([...(service.sections||[]),'economy'])]} : service)
+    : b.services;
   if(b.kind==='cabin')CABIN_EXTERIOR_SERVICES[b.id]={id:'property-sign',label:'Placa da cabana',prompt:'Consultar',sections:['properties','keys'],radius:1.05,anchor:{kind:'building-sign',x:b.door.x-1.8,y:b.door.y+1.1}};
  }
 });

@@ -3,7 +3,7 @@ import { gameDayKey } from '../game/game-calendar.mjs';
 import { randomUUID } from 'node:crypto';
 import { CURRENCY_KEYS, MAX_WALLET_VALUE, TRADE_PRICES, currencyValue, formatCoins, walletFromValue } from '../game/lodging-catalog.mjs';
 import { calculateDynamicQuote, calculateGovernmentTaxRate, calculateInputCost, calculateMoneySupplyPriceFactor, ECONOMY_RECIPES, MONEY_SUPPLY_POLICY } from '../game/economy.mjs';
-import { createInventory, inventoryFromRows, inventoryRows, inventorySnapshot, removeInventoryItem } from '../game/inventory.mjs';
+import { addInventoryItem, canAddInventoryItems, createInventory, inventoryFromRows, inventoryRows, inventorySnapshot, removeInventoryItem } from '../game/inventory.mjs';
 import { validateInventory } from '../scripts/account-store.mjs';
 import { isCabin } from '../game/cabin-access.mjs';
 import { accumulateGovernmentTax } from './tax-remainders.mjs';
@@ -31,6 +31,7 @@ function quoteMapFromRows(rows, marketSaleTaxBps = 0) {
     demandRatio: Number(row.demand_ratio), stockRatio: Number(row.stock_ratio),
     inputCost: Number(row.input_cost_bronze), marketSaleTaxBps, calculatedAt: new Date(row.calculated_at).getTime(),
     moneySupplyFactor: Number(row.money_supply_factor ?? 1),
+    availableStock: Number(row.available_stock ?? 0),
   }]));
 }
 
@@ -142,8 +143,10 @@ export function createEconomyStore(pool) {
 
   async function getQuotesForGovernment(regionId, governmentId) {
     const [{ rows }, rateBps] = await Promise.all([pool.query(
-      'SELECT item_id, buy_price_bronze, sell_price_bronze, demand_ratio, stock_ratio, input_cost_bronze, money_supply_factor, calculated_at ' +
-      'FROM economy_quotes WHERE region_id = $1', [regionId],
+      'SELECT q.item_id, q.buy_price_bronze, q.sell_price_bronze, q.demand_ratio, q.stock_ratio, q.input_cost_bronze, ' +
+      'q.money_supply_factor, q.calculated_at, COALESCE(s.quantity-s.reserved,0) AS available_stock ' +
+      "FROM economy_quotes q LEFT JOIN economy_market_stock s ON s.item_id=q.item_id AND s.region_id=q.region_id AND s.market_id='arrival:market' " +
+      'WHERE q.region_id = $1', [regionId],
     ), getGovernmentTaxRate(governmentId)]);
     return quoteMapFromRows(rows, rateBps);
   }
@@ -262,8 +265,10 @@ export function createEconomyStore(pool) {
       const latest = goodsResult.rows.reduce((max, row) => Math.max(max, new Date(row.calculated_at).getTime()), 0);
       if (!force && latest && now.getTime() - latest < DAY_MS) {
         const cached = await client.query(
-          'SELECT item_id, buy_price_bronze, sell_price_bronze, demand_ratio, stock_ratio, input_cost_bronze, money_supply_factor, calculated_at ' +
-          'FROM economy_quotes WHERE region_id = $1', [REGION],
+          'SELECT q.item_id, q.buy_price_bronze, q.sell_price_bronze, q.demand_ratio, q.stock_ratio, q.input_cost_bronze, ' +
+          'q.money_supply_factor, q.calculated_at, COALESCE(s.quantity-s.reserved,0) AS available_stock ' +
+          "FROM economy_quotes q LEFT JOIN economy_market_stock s ON s.item_id=q.item_id AND s.region_id=q.region_id AND s.market_id='arrival:market' " +
+          'WHERE q.region_id = $1', [REGION],
         );
         await client.query('COMMIT');
         return quoteMapFromRows(cached.rows, taxRateBps);
@@ -321,8 +326,10 @@ export function createEconomyStore(pool) {
       }
       await client.query('COMMIT');
       const refreshed = await client.query(
-        'SELECT item_id, buy_price_bronze, sell_price_bronze, demand_ratio, stock_ratio, input_cost_bronze, money_supply_factor, calculated_at ' +
-        'FROM economy_quotes WHERE region_id = $1', [REGION],
+        'SELECT q.item_id, q.buy_price_bronze, q.sell_price_bronze, q.demand_ratio, q.stock_ratio, q.input_cost_bronze, ' +
+        'q.money_supply_factor, q.calculated_at, COALESCE(s.quantity-s.reserved,0) AS available_stock ' +
+        "FROM economy_quotes q LEFT JOIN economy_market_stock s ON s.item_id=q.item_id AND s.region_id=q.region_id AND s.market_id='arrival:market' " +
+        'WHERE q.region_id = $1', [REGION],
       );
       return quoteMapFromRows(refreshed.rows, taxRateBps);
     } catch (error) {
@@ -461,6 +468,100 @@ export function createEconomyStore(pool) {
       try { await client.query('ROLLBACK'); } catch {}
       throw error;
     } finally { client.release(); }
+  }
+
+  async function settleNpcPurchase({ profileId, itemId, quantity, inventoryBefore, expectedPriceBronze, at = new Date() }) {
+    if (typeof profileId !== 'string' || !/^[0-9a-f-]{36}$/i.test(profileId)
+        || !Object.hasOwn(TRADE_PRICES, itemId) || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 50
+        || !inventoryBefore || typeof inventoryBefore !== 'object'
+        || !Number.isSafeInteger(expectedPriceBronze) || expectedPriceBronze < 1) {
+      throw Object.assign(new Error('Esta compra de materiais não é válida.'), { status:400 });
+    }
+    const expected = validateInventory(inventoryBefore);
+    return withTransaction(pool, async client => {
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', ['lodging-profile', profileId]);
+      const profile = await client.query('SELECT id FROM profiles WHERE id=$1 AND is_guest=false', [profileId]);
+      if (!profile.rowCount) throw Object.assign(new Error('Entre com uma conta para comprar materiais.'), { status:403 });
+      const quote = await client.query(
+        'SELECT sell_price_bronze FROM economy_quotes WHERE item_id=$1 AND region_id=$2 FOR SHARE',
+        [itemId, REGION],
+      );
+      const unitPrice = Number(quote.rows[0]?.sell_price_bronze);
+      if (!Number.isSafeInteger(unitPrice) || unitPrice < 1 || unitPrice !== expectedPriceBronze) {
+        throw Object.assign(new Error('A cotação mudou. Revise a compra antes de confirmar.'), { status:409 });
+      }
+      const stock = await client.query(
+        "SELECT quantity-reserved AS available FROM economy_market_stock WHERE market_id='arrival:market' AND item_id=$1 AND region_id=$2 FOR UPDATE",
+        [itemId, REGION],
+      );
+      if (!stock.rowCount || Number(stock.rows[0].available) < quantity) {
+        throw Object.assign(new Error('Estoque insuficiente no balcão. Confira a disponibilidade.'), { status:409 });
+      }
+      const savedRows = await client.query(
+        'SELECT item_id,quantity FROM inventory_items WHERE profile_id=$1 ORDER BY item_id FOR UPDATE', [profileId],
+      );
+      const saved = validateInventory(inventoryFromRows(
+        savedRows.rows.map(row => ({ itemId:row.item_id, quantity:Number(row.quantity) })),
+      ));
+      if (JSON.stringify(saved) !== JSON.stringify(expected)) {
+        throw Object.assign(new Error('O Inventário mudou. Atualize a compra e tente novamente.'), { status:409 });
+      }
+      const inventory = createInventory(saved);
+      if (!canAddInventoryItems(inventory, { [itemId]:quantity })
+          || addInventoryItem(inventory, itemId, quantity) !== quantity) {
+        throw Object.assign(new Error('Libere espaço na mochila antes de comprar materiais.'), { status:409 });
+      }
+      const grossAmount = unitPrice * quantity;
+      const balance = currencyValue(saved);
+      if (!Number.isSafeInteger(grossAmount) || grossAmount < 1 || grossAmount > balance) {
+        throw Object.assign(new Error('Você não tem moedas suficientes para esta compra.'), { status:402 });
+      }
+      const wallet = walletFromValue(balance - grossAmount);
+      for (const key of CURRENCY_KEYS) inventory[key] = wallet[key];
+      const reduced = await client.query(
+        "UPDATE economy_market_stock SET quantity=quantity-$3,updated_at=$4 " +
+        "WHERE market_id='arrival:market' AND item_id=$1 AND region_id=$2 AND quantity-reserved >= $3 RETURNING quantity-reserved AS available",
+        [itemId, REGION, quantity, at],
+      );
+      if (!reduced.rowCount) {
+        throw Object.assign(new Error('Estoque insuficiente no balcão. Confira a disponibilidade.'), { status:409 });
+      }
+      await client.query('DELETE FROM inventory_items WHERE profile_id=$1 AND NOT (item_id=ANY($2::text[]))',
+        [profileId, CURRENCY_KEYS]);
+      for (const { itemId:storedItem, quantity:storedQuantity } of inventoryRows(inventorySnapshot(inventory))) {
+        await client.query(
+          'INSERT INTO inventory_items(profile_id,item_id,quantity) VALUES($1,$2,$3) ' +
+          'ON CONFLICT(profile_id,item_id) DO UPDATE SET quantity=EXCLUDED.quantity,updated_at=now()',
+          [profileId, storedItem, storedQuantity],
+        );
+      }
+      for (const key of CURRENCY_KEYS) {
+        await client.query(
+          'INSERT INTO inventory_items(profile_id,item_id,quantity) VALUES($1,$2,$3) ' +
+          'ON CONFLICT(profile_id,item_id) DO UPDATE SET quantity=EXCLUDED.quantity,updated_at=now()',
+          [profileId, key, wallet[key]],
+        );
+      }
+      await client.query(
+        'INSERT INTO economy_daily_flows(item_id,region_id,flow_day,units_bought_from_npc) VALUES($1,$2,$3::date,$4) ' +
+        'ON CONFLICT(item_id,region_id,flow_day) DO UPDATE SET units_bought_from_npc=economy_daily_flows.units_bought_from_npc+EXCLUDED.units_bought_from_npc',
+        [itemId, REGION, utcDay(at), quantity],
+      );
+      const transactionId = randomUUID();
+      await client.query(
+        'INSERT INTO economy_journal_transactions(transaction_id,event_type,actor_profile_id,reference_id,occurred_at) VALUES($1,$2,$3,$4,$5)',
+        [transactionId, 'npc_market_purchase', profileId, itemId, at],
+      );
+      await client.query(
+        "INSERT INTO economy_journal_lines(transaction_id,line_number,account_code,profile_id,amount_bronze) VALUES($1,1,'profile',$2,$3)",
+        [transactionId, profileId, -grossAmount],
+      );
+      await client.query(
+        "INSERT INTO economy_journal_lines(transaction_id,line_number,account_code,amount_bronze) VALUES($1,2,'market_treasury',$2)",
+        [transactionId, grossAmount],
+      );
+      return { wallet, inventory:inventorySnapshot(inventory), unitPrice, grossAmount, quantity, availableStock:Number(reduced.rows[0].available) };
+    });
   }
 
   async function getPropertyListings() {
@@ -786,7 +887,7 @@ export function createEconomyStore(pool) {
     });
   }
 
-  return { ensureGoods, getQuotes, refreshQuotes, refreshGovernmentTaxQuote, getGovernmentTaxPanel, updateGovernmentTaxPolicy, recordSaleFlow, settleNpcSale,
+  return { ensureGoods, getQuotes, refreshQuotes, refreshGovernmentTaxQuote, getGovernmentTaxPanel, updateGovernmentTaxPolicy, recordSaleFlow, settleNpcSale, settleNpcPurchase,
     getPropertyListings, listOwnedProperty, removePropertyListing, buyListedProperty,
     getLodgingLease, getLodgingLeases, setLodgingAutoRenew, processDueLodgingLeases };
 }

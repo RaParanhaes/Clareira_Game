@@ -150,9 +150,66 @@ try {
     assert.ok(await page.locator('[data-service-action="lodgeClaim"]').count()>=1);
     await click('[data-service-action="lodgeClaim"]');
     assert.ok((await page.locator('.commerce-review').textContent()).includes('Revisar'));
+    await page.evaluate(()=>{
+      economyController.close();
+      economyState.economyManagementPanel={
+        governmentId:'surface:arrival',role:'leader',
+        permissions:{view:true,manageTaxes:true,manageRoles:true},
+        sampledAt:Date.now(),periodGameDays:7,periodEndDay:'2026-11-08',
+        monetary:{priceFactor:1.05,referenceSupplyBronze:13000,sampledAt:Date.now()},
+        kpis:{soldToNpc:90,boughtFromNpc:35,grossSalesBronze:2800,
+          npcPurchaseRevenueBronze:1600,marketStock:47,marketVarieties:2,
+          treasuryReceiptsBronze:60,treasuryExpensesBronze:10,transactions:12,journalBalanceBronze:0},
+        funds:[{fundCode:'general',balanceBronze:4250,reservedBronze:200}],
+        daily:[{day:'2026-11-07',soldToNpc:15,boughtFromNpc:10},
+          {day:'2026-11-08',soldToNpc:20,boughtFromNpc:12}],
+        stock:[{itemId:'wood',available:45,buyPrice:2,sellPrice:3},
+          {itemId:'copperIngot',available:2,buyPrice:51,sellPrice:60}],
+        roles:[{profileId:'11111111-1111-4111-8111-111111111111',username:'fiscal_teste',role:'auditor'}],
+      };
+      window.economyPoint={key:'visual-government',placeId:'arrival',label:'Trocas da vila',
+        sections:['trade','economy','government']};
+      economyPanel.open(economyPoint,'visual-government');
+    });
+    await click('[data-service-section="economy"]');
+    await assertLayout();
+    assert.equal(await page.locator('.economy-kpi').count(),8);
+    assert.ok((await page.locator('#lodging-options').textContent()).includes('Tesouro e fundos públicos'));
+    await page.screenshot({path:`${output}/${name}-economy-dashboard.png`,fullPage:true});
+    await page.locator('.economy-role-form input[name="username"]').fill('conta_teste');
+    await page.locator('.economy-role-form select[name="role"]').selectOption('minister');
+    await click('[data-service-action="economyRoleSet"]');
+    assert.equal(await page.locator('.commerce-review').count(),1,'role appointment requires review');
+    await page.screenshot({path:`${output}/${name}-economy-appointment.png`,fullPage:true});
+    await click('[data-service-action="__confirm"]');
+    const appointment=await page.evaluate(()=>economyActions.at(-1));
+    assert.deepEqual({name:appointment.name,username:appointment.username,role:appointment.role},
+      {name:'economyRoleSet',username:'conta_teste',role:'minister'});
+    await page.evaluate(()=>economyPanel.notice('Cargo salvo no servidor de teste.'));
+    await click('[data-service-action="economyRoleSet"][data-role="none"]');
+    await click('[data-service-action="__confirm"]');
+    const revocation=await page.evaluate(()=>economyActions.at(-1));
+    assert.equal(revocation.username,'fiscal_teste');
+    assert.equal(revocation.role,'none');
+    await page.evaluate(()=>{
+      economyPanel.notice('Cargo revogado no servidor de teste.');
+      economyState.economyManagementPanel.role='auditor';
+      economyState.economyManagementPanel.permissions={view:true,manageTaxes:false,manageRoles:false};
+      economyPanel.refresh(economyPoint,'visual-government');
+    });
+    assert.equal(await page.locator('.economy-role-form').count(),0,'read-only delegates never see appointment controls');
+    await assertLayout();
+    await page.screenshot({path:`${output}/${name}-economy-auditor.png`,fullPage:true});
+    await page.evaluate(()=>{
+      economyController.close();
+      economyState.economyManagementPanel=null;
+      economyPanel.open(economyPoint,'visual-government');
+    });
+    assert.equal(await page.locator('[data-service-section="economy"]').count(),0,'unauthorized accounts cannot see dashboard entry');
     assert.deepEqual(errors,[],'no uncaught browser exceptions');
     records.push({viewport:name,marketGoods:2,buyConfirmed:true,staleStockBlocked:true,
-      stalePriceBlocked:true,sellReview:true,rentReview:true,overflow:false,errors:0});
+      stalePriceBlocked:true,sellReview:true,rentReview:true,economyDashboard:true,
+      roleConfirmation:true,roleReadOnly:true,overflow:false,errors:0});
     await context.close();
   }
   await writeFile(path.join(output,'result.json'),

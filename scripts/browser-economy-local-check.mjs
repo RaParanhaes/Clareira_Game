@@ -238,7 +238,7 @@ try {
     assert.equal(funding.decision,'fund');
     await page.evaluate(()=>economyPanel.notice('Verba reservada no teste.'));
 
-    await click('[data-service-action="economyProjectDecide"][data-decision="cancel"]');
+    await click('[data-service-action="economyProjectDecide"][data-decision="cancel"][data-project-id="33333333-3333-4333-8333-333333333333"]');
     await click('[data-service-action="__confirm"]');
     const cancellation=await page.evaluate(()=>economyActions.at(-1));
     assert.equal(cancellation.decision,'cancel');

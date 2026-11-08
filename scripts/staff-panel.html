@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Housekeeping · Clareira</title>
+  <link rel="stylesheet" href="staff-panel.css">
+  <script type="module" src="staff-panel.mjs"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navegação do Housekeeping">
+      <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">C</span><span>Clareira<strong>Housekeeping</strong></span></a>
+      <div class="nav-label">FERRAMENTAS</div>
+      <nav class="navigation" aria-label="Seções">
+        <button class="nav-item" data-view="moderation" hidden><span aria-hidden="true">⚑</span>Moderação</button>
+        <button class="nav-item" data-view="roles" aria-current="page" hidden><span aria-hidden="true">▦</span>Cargos e permissões</button>
+        <button class="nav-item" data-view="assignments" hidden><span aria-hidden="true">♙</span>Atribuições</button>
+        <button class="nav-item" data-view="audit" hidden><span aria-hidden="true">◷</span>Auditoria</button>
+        <button class="nav-item" data-view="players" hidden><span aria-hidden="true">♙</span>Ficha de jogador</button>
+        <button class="nav-item" data-view="economy" hidden><span aria-hidden="true">¤</span>Economia</button>
+        <button class="nav-item" data-view="realms" hidden><span aria-hidden="true">♜</span>Reinos e cofres</button>
+        <button class="nav-item" data-view="map" hidden><span aria-hidden="true">▦</span>Mapa e territórios</button>
+      </nav>
+      <div class="sidebar-bottom"><span class="status-dot"></span> Gestão de equipe <span class="db-label">PostgreSQL</span></div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar"><div><span class="eyebrow">ADMINISTRAÇÃO</span><h1>Housekeeping</h1></div><div class="user-chip"><span class="avatar">E</span><span><strong id="operator-name">Equipe autorizada</strong><small>Operações da Clareira</small></span></div></header>
+      <section id="notice" class="notice" role="status" aria-live="polite" hidden></section>
+
+      <section class="view" id="view-moderation" aria-labelledby="moderation-heading" hidden>
+        <div class="page-heading"><div><span class="eyebrow">CASOS E MEDIDAS</span><h2 id="moderation-heading">Moderação</h2><p id="moderation-description">Analise denúncias e registre medidas com motivo e histórico.</p></div><button class="button button-secondary" id="reports-refresh">Atualizar denúncias</button></div>
+        <div class="panel moderation-panel" id="reports-panel"><div class="panel-heading"><div><h3>Fila de denúncias</h3><p>Casos recentes enviados pelos jogadores.</p></div><label class="filter-box">Estado<select id="reports-status"><option value="open">Abertas</option><option value="claimed">Em análise</option><option value="resolved">Resolvidas</option><option value="dismissed">Arquivadas</option></select></label></div>
+          <p class="role-table-hint">Deslize a tabela para ver o relato e as ações.</p><div class="table-wrap" role="region" aria-label="Fila de denúncias; use a rolagem horizontal para ver todas as colunas" tabindex="0"><table><thead><tr><th>Recebida</th><th>Denunciante</th><th>Conta denunciada</th><th>Categoria e relato</th><th>Estado</th><th>Ações</th></tr></thead><tbody id="reports-body"><tr><td colspan="6" class="table-state">Carregando denúncias…</td></tr></tbody></table></div>
+        </div>
+        <div class="panel moderation-player-panel" id="moderation-player-panel">
+          <div class="panel-heading"><div><h3>Conta e sanções</h3><p id="sanction-description">Consulte o histórico e aplique uma medida autorizada ao seu cargo.</p></div></div>
+          <form id="sanction-lookup-form" class="lookup-form"><label>Nome da conta<input id="sanction-username" autocomplete="off" minlength="3" maxlength="20" pattern="[a-z0-9_]+" placeholder="ex.: jogador_01" required></label><button class="button button-primary" type="submit">Consultar histórico</button></form>
+          <div id="sanction-account" class="sanction-account" hidden></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-roles" aria-labelledby="roles-heading" hidden>
+        <div class="page-heading"><div><span class="eyebrow">ACESSO E RESPONSABILIDADES</span><h2 id="roles-heading">Cargos e permissões</h2><p>Defina o que cada cargo pode fazer e acompanhe sua hierarquia.</p></div><button class="button button-primary" id="create-role-open">+ Criar cargo</button></div>
+        <div class="summary-grid" id="role-summary" aria-label="Resumo dos cargos"></div>
+        <div class="panel">
+          <div class="panel-heading"><div><h3>Cargos cadastrados</h3><p>Selecione um cargo para consultar permissões diretas e herdadas.</p></div><label class="search-box"><span aria-hidden="true">⌕</span><input id="role-search" type="search" placeholder="Buscar cargo" aria-label="Buscar cargo"></label></div>
+          <p class="role-table-hint" id="role-table-hint">No celular, deslize a tabela para ver as outras colunas.</p>
+          <div class="table-wrap role-table-wrap" role="region" aria-label="Tabela de cargos; use a rolagem horizontal para ver todas as colunas" tabindex="0"><table><thead><tr><th>Cargo</th><th>Nível</th><th>Integrantes</th><th>Capacidades diretas</th><th>Estado</th></tr></thead><tbody id="roles-body"><tr><td colspan="5" class="table-state">Carregando cargos…</td></tr></tbody></table></div>
+          <div id="role-detail" class="role-detail" hidden></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-assignments" aria-labelledby="assignments-heading" hidden>
+        <div class="page-heading"><div><span class="eyebrow">EQUIPE E ACESSO</span><h2 id="assignments-heading">Atribuições</h2><p>Consulte os cargos de uma conta e registre alterações com motivo.</p></div></div>
+        <div class="panel lookup-panel"><form id="lookup-form" class="lookup-form"><label>Nome da conta<input id="lookup-username" name="username" autocomplete="off" minlength="3" maxlength="20" pattern="[a-z0-9_]+" placeholder="ex.: moderador_01" required></label><button class="button button-primary" type="submit">Consultar conta</button></form></div>
+        <div id="account-panel" class="panel" hidden></div>
+      </section>
+
+      <section class="view" id="view-audit" aria-labelledby="audit-heading" hidden>
+        <div class="page-heading"><div><span class="eyebrow">RASTREABILIDADE</span><h2 id="audit-heading">Auditoria</h2><p>Histórico cronológico de alterações administrativas e seus motivos.</p></div><button class="button button-secondary" id="audit-refresh">Atualizar</button></div>
+        <div class="panel"><p class="role-table-hint">Deslize a tabela para ver todas as colunas.</p><div class="table-wrap" role="region" aria-label="Histórico de auditoria; use a rolagem horizontal para ver todas as colunas" tabindex="0"><table><thead><tr><th>Data</th><th>Ação</th><th>Responsável</th><th>Conta afetada</th><th>Motivo</th></tr></thead><tbody id="audit-body"><tr><td colspan="5" class="table-state">Carregando histórico…</td></tr></tbody></table></div><div class="panel-footer"><button class="button button-secondary" id="audit-more" hidden>Carregar anteriores</button></div></div>
+      </section>
+      <section class="view" id="view-players" aria-labelledby="players-heading" hidden>
+        <div class="page-heading"><div><span class="eyebrow">SUPORTE AO JOGADOR</span><h2 id="players-heading">Ficha de jogador</h2><p>Consulte a progressão e os imóveis salvos de uma conta.</p></div></div>
+        <div class="panel"><form id="player-overview-form" class="lookup-form"><label>Nome da conta<input id="player-overview-username" autocomplete="off" minlength="3" maxlength="20" pattern="[a-z0-9_]+" required></label><button class="button button-primary" type="submit">Consultar</button></form><div id="player-overview-result" role="status" aria-live="polite"></div></div>
+      </section>
+      <section class="view" id="view-realms" aria-labelledby="realms-heading" hidden>
+        <div class="page-heading"><div><span class="eyebrow">GOVERNANÇA</span><h2 id="realms-heading">Reinos e cofres</h2><p>Crie governos, distribua moedas e ajuste juros, salário e tarifas. Valores em bronze; toda ação exige motivo e entra na auditoria.</p></div></div>
+        <div class="panel"><div class="panel-heading"><div><h3>Governos</h3><p>Reinos, cidades, vilas e castelos com o cofre geral. Clique em Selecionar para operar.</p></div><button class="button button-secondary" id="realms-refresh" type="button">Atualizar</button></div>
+          <p id="realms-status" role="status" aria-live="polite"></p>
+          <div class="table-wrap" tabindex="0" aria-label="Governos"><table><thead><tr><th>Governo</th><th>Tipo</th><th>Lugar</th><th>Cofre geral</th><th>Total</th><th></th></tr></thead><tbody id="realms-body"></tbody></table></div></div>
+        <div class="panel" id="realms-selected-panel" hidden>
+          <div class="panel-heading"><div><h3 id="realms-selected-title">Governo</h3><p id="realms-policies"></p></div></div>
+          <form id="realms-issue-form" class="lookup-form" hidden>
+            <label>Emitir moedas (bronze)<input id="realms-issue-amount" type="number" min="1" step="1" required></label>
+            <label>Motivo<input id="realms-issue-reason" maxlength="500" required></label>
+            <button class="button button-primary" type="submit">Emitir</button>
+          </form>
+          <form id="realms-distribute-form" class="lookup-form" hidden>
+            <label>Total a repartir (bronze)<input id="realms-distribute-total" type="number" min="1" step="1" required></label>
+            <label>Pesos por destino (id=peso, vírgula)<input id="realms-distribute-weights" placeholder="cidade-a=3, vila-b=1" required></label>
+            <label>Motivo<input id="realms-distribute-reason" maxlength="500" required></label>
+            <button class="button button-primary" type="submit">Repartir</button>
+          </form>
+          <form id="realms-wage-form" class="lookup-form" hidden>
+            <label>Salário mínimo por turno (bronze)<input id="realms-wage" type="number" min="0" step="1" required></label>
+            <label>Motivo<input id="realms-wage-reason" maxlength="500" required></label>
+            <button class="button button-primary" type="submit">Salvar salário</button>
+          </form>
+          <form id="realms-tariff-form" class="lookup-form" hidden>
+            <label>Direção<select id="realms-tariff-direction"><option value="import">Importação</option><option value="export">Exportação</option></select></label>
+            <label>Base (bps)<input id="realms-tariff-base" type="number" min="0" max="10000" required></label>
+            <label>Mínima (bps)<input id="realms-tariff-min" type="number" min="0" max="10000" required></label>
+            <label>Máxima (bps)<input id="realms-tariff-max" type="number" min="0" max="10000" required></label>
+            <label>Motivo<input id="realms-tariff-reason" maxlength="500" required></label>
+            <button class="button button-primary" type="submit">Salvar tarifa</button>
+          </form>
+          <form id="realms-interest-form" class="lookup-form" hidden>
+            <label>Banco<select id="realms-interest-bank"></select></label>
+            <label>Base (bps)<input id="realms-interest-base" type="number" min="0" max="10000" required></label>
+            <label>Mínima (bps)<input id="realms-interest-min" type="number" min="0" max="10000" required></label>
+            <label>Máxima (bps)<input id="realms-interest-max" type="number" min="0" max="10000" required></label>
+            <label>Motivo<input id="realms-interest-reason" maxlength="500" required></label>
+            <button class="button button-primary" type="submit">Salvar juros</button>
+          </form>
+        </div>
+        <div class="panel" id="realms-create-panel" hidden>
+          <div class="panel-heading"><div><h3>Criar governo</h3><p>O lugar precisa existir em Lugares. Pai opcional (um filho tem tipo menor que o pai).</p></div></div>
+          <form id="realms-create-form" class="lookup-form">
+            <label>Id do governo<input id="realms-create-id" pattern="[a-z0-9][a-z0-9_:/\-]{0,95}" required></label>
+            <label>Dimensão<input id="realms-create-world" value="surface" required></label>
+            <label>Id do lugar<input id="realms-create-place" required></label>
+            <label>Tipo<select id="realms-create-type"><option value="realm">Império</option><option value="kingdom">Reino</option><option value="city">Cidade</option><option value="castle">Castelo</option><option value="village">Vila</option></select></label>
+            <label>Governo pai<input id="realms-create-parent" placeholder="opcional"></label>
+            <label>Título do governante<input id="realms-create-title" placeholder="opcional"></label>
+            <label>Motivo<input id="realms-create-reason" maxlength="500" required></label>
+            <button class="button button-primary" type="submit">Criar</button>
+          </form>
+        </div>
+        <div class="panel" id="realms-budget-panel" hidden>
+          <div class="panel-heading"><div><h3>Orçamento inicial por tipo</h3><p id="realms-budget-missing"></p></div></div>
+          <div class="table-wrap" tabindex="0" aria-label="Modelos de orçamento"><table><thead><tr><th>Dimensão</th><th>Tipo</th><th>Cofre inicial</th><th>Capital do banco</th><th>Versão</th></tr></thead><tbody id="realms-budget-body"></tbody></table></div>
+          <form id="realms-budget-form" class="lookup-form">
+            <label>Dimensão<input id="realms-budget-world" value="surface" required></label>
+            <label>Tipo<select id="realms-budget-type"><option value="village">Vila</option><option value="city">Cidade</option><option value="castle">Castelo</option><option value="kingdom">Reino</option><option value="realm">Império</option></select></label>
+            <label>Cofre inicial (bronze)<input id="realms-budget-treasury" type="number" min="0" step="1" required></label>
+            <label>Capital do banco (bronze)<input id="realms-budget-bank" type="number" min="0" step="1" value="0" required></label>
+            <label>Motivo<input id="realms-budget-reason" maxlength="500" required></label>
+            <button class="button button-primary" type="submit">Salvar modelo</button>
+          </form>
+        </div>
+      </section>
+      <section class="view" id="view-map" aria-labelledby="map-heading" hidden>
+        <div class="page-heading"><div><span class="eyebrow">MAPA</span><h2 id="map-heading">Mapa e territórios</h2><p>Clique no mapa para marcar os vértices de um território. A borda amarela mostra a prévia. O servidor confere sobreposição e versão antes de salvar.</p></div></div>
+        <div class="panel">
+          <form id="map-load-form" class="lookup-form"><label>Dimensão<input id="map-dimension" value="surface" maxlength="96" autocomplete="off" required></label><label>Reino (filtro opcional)<input id="map-realm-filter" maxlength="96" autocomplete="off"></label><button class="button button-secondary" type="submit">Carregar</button></form>
+          <p id="map-status" role="status" aria-live="polite"></p>
+          <fieldset class="map-mode"><legend>Ferramenta do mapa</legend>
+            <label><input type="radio" name="map-mode" value="territory" checked> Território</label>
+            <label><input type="radio" name="map-mode" value="tile"> Piso · editar tile</label>
+            <label>Superfície<select id="tile-surface"><option value="path">Caminho de terra</option><option value="ground">Solo natural</option><option value="reset">Restaurar piso original</option></select></label>
+            <label><input type="radio" name="map-mode" value="tree-place"> Vegetação · colocar árvore</label>
+            <label><input type="radio" name="map-mode" value="tree-move"> Vegetação · mover árvore plantada</label>
+            <label><input type="radio" name="map-mode" value="tree-remove"> Vegetação · remover árvore</label>
+          </fieldset>
+          <div class="map-editor-layout">
+            <div>
+              <canvas id="map-canvas" width="600" height="600" aria-label="Mapa do editor"></canvas>
+              <div class="map-legend" aria-label="Legenda do mapa">
+                <span><i class="legend-ground"></i>Floresta e relevo</span><span><i class="legend-path"></i>Trilha e praça</span>
+                <span><i class="legend-water"></i>Água</span><span><i class="legend-building"></i>Construção</span>
+                <span><i class="legend-resource"></i>Recursos e rochas</span><span><i class="legend-tree"></i>Árvore staff</span>
+              </div>
+              <p>Vista superior usa o mesmo mapa do jogo. A região editada fica centralizada; alterações aparecem em prévia antes de salvar.</p>
+            </div>
+            <div>
+              <form id="map-territory-form">
+                <label>ID do território<input id="map-territory-id" maxlength="96" pattern="[a-z0-9][a-z0-9_/-]*" autocomplete="off" required></label>
+                <label>Reino<input id="map-realm" maxlength="96" autocomplete="off" required></label>
+                <label>Nome<input id="map-name" maxlength="80" autocomplete="off" required></label>
+                <label>Posse<select id="map-tenure"><option value="core">Núcleo</option><option value="claimed">Reivindicado</option><option value="vassal">Vassalo</option><option value="protectorate">Protetorado</option><option value="disputed">Disputado</option></select></label>
+                <label>Motivo<input id="map-reason" maxlength="500" autocomplete="off" required></label>
+                <label><input id="map-archive" type="checkbox"> Arquivar este território</label>
+                <p>Vértices: <span id="map-point-count">0</span></p>
+                <div class="button-row"><button class="button button-secondary" id="map-undo" type="button">Desfazer última marca</button><button class="button button-secondary" id="map-clear" type="button">Novo / limpar</button><button class="button button-primary" type="submit">Salvar território</button></div>
+              </form>
+              <div class="table-wrap" tabindex="0" aria-label="Territórios"><table><thead><tr><th>Território</th><th>Reino</th><th>Posse</th><th>Pontos</th><th>Versão</th><th></th></tr></thead><tbody id="map-body"></tbody></table></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" id="trees-panel">
+          <div class="panel-heading"><div><h3>Piso e árvores</h3><p>Escolha uma área de 1×1 até 100×100 tiles. A câmera amplia automaticamente para você inspecionar e editar cada tile; salvar aplica a prévia após validar a revisão.</p></div></div>
+          <form id="trees-load-form" class="lookup-form">
+            <label>Tile inicial X<input id="trees-left" type="number" min="0" max="5932" step="1" value="80" required></label>
+            <label>Tile inicial Y<input id="trees-top" type="number" min="0" max="5932" step="1" value="80" required></label>
+            <label>Largura em tiles<input id="trees-width" type="number" min="1" max="100" step="1" value="100" required></label>
+            <label>Altura em tiles<input id="trees-height" type="number" min="1" max="100" step="1" value="100" required></label>
+            <button class="button button-secondary" type="submit">Carregar área</button>
+          </form>
+          <p id="trees-status" role="status" aria-live="polite"></p>
+          <p>Alterações pendentes: <span id="trees-pending">0</span> (máximo de 200 por envio).</p>
+          <div class="button-row"><button class="button button-secondary" id="trees-discard" type="button">Descartar pendentes</button><button class="button button-primary" id="trees-save" type="button">Salvar alterações do mapa</button></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-economy" aria-labelledby="economy-heading" hidden>
+        <div class="page-heading"><div><span class="eyebrow">OPERAÇÃO DO PROPRIETÁRIO</span><h2 id="economy-heading">Economia</h2><p>Ajuste o saldo de uma conta. Toda alteração exige motivo e entra na auditoria.</p></div></div>
+        <div class="panel"><div class="panel-heading"><div><h3>Mercado e bancos</h3><p>Estoque disponível e vendas para o mercado nos últimos sete dias. Valores em bronze.</p></div><button class="button button-secondary" id="economy-refresh" type="button">Atualizar</button></div>
+          <p id="economy-status" role="status" aria-live="polite"></p><div class="table-wrap" tabindex="0" aria-label="Mercado"><table><thead><tr><th>Produto</th><th>Compra do mercado</th><th>Venda ao jogador</th><th>Estoque disponível</th><th>Vendido ao mercado · 7 dias do jogo</th></tr></thead><tbody id="economy-goods"></tbody></table></div><div id="economy-banks"></div></div>
+        <div class="panel wallet-panel">
+          <form id="wallet-form" class="lookup-form wallet-form">
+            <label>Nome da conta<input id="wallet-username" autocomplete="off" minlength="3" maxlength="20" pattern="[a-z0-9_]+" placeholder="ex.: jogador_01" required></label>
+            <label>Operação<select id="wallet-operation"><option value="credit">Adicionar saldo</option><option value="debit">Retirar saldo</option></select></label>
+            <label>Valor em moedas<input id="wallet-amount" type="number" min="1" max="21474836479999" step="1" inputmode="numeric" required></label>
+            <button class="button button-primary" type="submit">Revisar ajuste</button>
+          </form>
+          <div id="wallet-result" class="wallet-result" role="status" aria-live="polite" hidden></div>
+        </div>
+      </section>
+      <footer class="footer"><span>Clareira · Ferramentas da equipe</span><a href="./">Voltar ao jogo ↗</a></footer>
+    </main>
+  </div>
+
+  <dialog id="role-dialog" class="dialog">
+    <form id="role-form" method="dialog">
+      <div class="dialog-head"><div><span class="eyebrow">NOVO ACESSO</span><h2>Criar cargo</h2></div><button class="icon-button" id="role-dialog-close" type="button" aria-label="Fechar">×</button></div>
+      <p class="dialog-copy">O cargo começa sem permissões. Você pode concedê-las depois na matriz de capacidades.</p>
+      <label>Identificador<input name="roleKey" pattern="[a-z][a-z0-9_]{1,47}" maxlength="48" placeholder="ex.: suporte_evento" required></label>
+      <label>Nome visível<input name="displayName" maxlength="80" placeholder="ex.: Suporte de evento" required></label>
+      <label>Nível hierárquico<select name="hierarchyLevel" required><option value="1">1 · Apoio</option><option value="2">2 · Moderação</option><option value="3">3 · Gerência</option><option value="4">4 · Administração</option><option value="5">5 · Proprietário</option></select></label>
+      <label>Motivo da criação<textarea name="reason" maxlength="500" rows="3" required placeholder="Descreva por que este cargo é necessário"></textarea></label>
+      <div class="dialog-actions"><button class="button button-secondary" id="role-cancel" type="button">Cancelar</button><button class="button button-primary" id="role-submit" value="default">Criar cargo</button></div>
+    </form>
+  </dialog>
+  <dialog id="confirm-dialog" class="dialog">
+    <form id="confirm-form" method="dialog">
+      <div class="dialog-head"><div><span class="eyebrow">REGISTRO ADMINISTRATIVO</span><h2 id="confirm-title">Confirmar alteração</h2></div><button class="icon-button" id="confirm-dialog-close" type="button" aria-label="Fechar">×</button></div>
+      <p id="confirm-copy" class="dialog-copy"></p>
+      <label>Motivo obrigatório<textarea id="confirm-reason" maxlength="500" minlength="1" rows="3" required placeholder="Este motivo ficará no histórico de auditoria"></textarea></label>
+      <div class="dialog-actions"><button class="button button-secondary" id="confirm-cancel" type="button">Cancelar</button><button class="button button-primary" id="confirm-submit" value="default">Confirmar</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

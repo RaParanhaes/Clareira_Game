@@ -1,0 +1,111 @@
+{
+  "id": "building.medieval-cottage-3d",
+  "source": "medieval-cottage.blend",
+  "generator": "scripts/blender/build-medieval-cottage.py",
+  "generatorVersion": "Blender 4.0.2",
+  "footprint": {
+    "width": 7,
+    "depth": 7,
+    "units": "world"
+  },
+  "modelBounds": {
+    "dimensions": [
+      8.19,
+      8.65,
+      8.405
+    ],
+    "max": [
+      4.095,
+      4.63,
+      8.405
+    ],
+    "min": [
+      -4.095,
+      -4.02,
+      0.0
+    ],
+    "units": "world"
+  },
+  "sourceMetrics": {
+    "meshObjects": 852,
+    "triangles": 45544,
+    "uvMappedMeshes": 852,
+    "degenerateFaces": 0,
+    "nonManifoldEdges": 0,
+    "zeroLengthEdges": 0
+  },
+  "windowContract": {
+    "bedrooms": 1,
+    "glazedOpenings": 1,
+    "bedroomWindowWorldSize": [
+      1.2,
+      1.8
+    ],
+    "wallOpeningIsBooleanCut": true,
+    "dormer": "round blind timber gable vent, no glass"
+  },
+  "pixelScale": {
+    "planePixelsPerUnit": 16,
+    "heightPixelsPerUnit": 12
+  },
+  "frame": {
+    "width": 320,
+    "height": 320,
+    "pivot": [
+      160,
+      207
+    ],
+    "sampling": "nearest"
+  },
+  "atlas": {
+    "file": "cottage-pixel-uv-atlas.png",
+    "columns": 8,
+    "rows": 2,
+    "tileSize": [
+      64,
+      64
+    ],
+    "cells": [
+      "stone",
+      "plaster",
+      "oak",
+      "darkwood",
+      "cedar-shingle",
+      "slate",
+      "glass",
+      "soot",
+      "stone-light",
+      "cedar-shingle-light",
+      "leaf",
+      "sage",
+      "flower",
+      "gold",
+      "clay",
+      "iron"
+    ]
+  },
+  "runtime": {
+    "buildingId": "cabin-cedar-one",
+    "day": "frames/iso-rot0-shell.png",
+    "night": "frames/iso-rot0-shell-night.png",
+    "renderer": "Canvas 2D",
+    "depthAnchor": "shell: door plane; posts: own footprint; canopy: forward canopy corner",
+    "canopy": "frames/iso-rot0-canopy.png",
+    "postLeft": "frames/iso-rot0-post-left.png",
+    "postRight": "frames/iso-rot0-post-right.png"
+  },
+  "reviewViews": [
+    "iso-rot0",
+    "iso-rot1",
+    "iso-rot2",
+    "iso-rot3",
+    "front",
+    "back",
+    "left",
+    "right",
+    "top",
+    "hero-three-quarter"
+  ],
+  "sourceAndReferenceNotes": "BUILD-CONTRACT.md",
+  "revision": 2
+}

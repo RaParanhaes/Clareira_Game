@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" shape-rendering="crispEdges" role="img" aria-label="Trilha, folha e três brasas">
+  <path d="M7 38h12v-4h6v-4h5v-5h5v-5h4v-6h4v4h-2v5h-4v5h-5v5h-6v4h-6v4H7z" fill="#111a35"/>
+  <path class="brand-trail" d="M10 35h8v-4h6v-4h5v-5h5v-5h4v-3h2v3h-3v5h-4v5h-5v4h-5v4h-6v3h-7z" fill="#756355"/>
+  <path d="M22 25h-4v-4h3v-5h4v-4h5V9h7v4h5v5h-4v4h-6v4h-6v3h-4z" fill="#527b70"/>
+  <path class="brand-leaf" d="M24 21h-3v-4h4v-4h5v-3h6v4h4v4h-4v4h-6v4h-6v-3h-3v-2z" fill="#9fc38d"/>
+  <path d="M24 21h4v-3h4v-4h4v-2h2v3h-4v4h-4v4h-6z" fill="#d0d795"/>
+  <path class="brand-ember" d="M11 12h3v3h-3z" fill="#f2c877"/>
+  <path class="brand-ember" d="M29 5h3v3h-3z" fill="#eb9871"/>
+  <path class="brand-ember" d="M41 25h2v2h-2z" fill="#f2c877"/>
+</svg>

@@ -1,0 +1,698 @@
+{
+  "expectedRevision": 2,
+  "actor": "codex-room-physics",
+  "operations": [
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "fixture.bed",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "bed",
+          "height": 1.1,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "fixture.bookshelf",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "bookshelf",
+          "height": 2.9,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "fixture.chair",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "chair",
+          "height": 2.2,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "fixture.chest",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "chest",
+          "height": 1,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "fixture.counter",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "counter",
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "fixture.desk",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "desk",
+          "height": 1.5,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "fixture.fireplace",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "fireplace",
+          "height": 2.8,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "fixture.nightstand",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "nightstand",
+          "height": 1.05,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "fixture.plant",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "plant",
+          "height": 1.9,
+          "palette": "cedar",
+          "physics": {
+            "shape": "circle",
+            "authority": "server",
+            "radiusRatio": 0.42
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "fixture.sofa",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "sofa",
+          "height": 1.9,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "fixture.table",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "table",
+          "height": 1.5,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "fixture.wardrobe",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "wardrobe",
+          "height": 3,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "furniture.bed",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "bed",
+          "depth": 1.25,
+          "width": 1.9,
+          "height": 1.1,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "furniture.bookshelf",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "bookshelf",
+          "depth": 0.65,
+          "width": 1.15,
+          "height": 2.9,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "furniture.chair",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "use": "sit",
+          "kind": "chair",
+          "depth": 0.52,
+          "width": 0.52,
+          "height": 2.2,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 2,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "furniture.chest",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "chest",
+          "depth": 0.65,
+          "width": 1,
+          "height": 1,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "supports": {
+            "top": {
+              "depth": 0.43,
+              "width": 0.78,
+              "accepts": [
+                "plant"
+              ]
+            }
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "furniture.desk",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "desk",
+          "depth": 0.8,
+          "width": 1.4,
+          "height": 1.5,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "supports": {
+            "top": {
+              "depth": 0.58,
+              "width": 1.16,
+              "accepts": [
+                "plant"
+              ]
+            }
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "furniture.lamp",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "use": "light",
+          "kind": "lamp",
+          "depth": 0.52,
+          "light": {
+            "nx": 0,
+            "ny": 0,
+            "color": "#ffcf88",
+            "reach": 5.5,
+            "height": 2.4,
+            "strength": 1
+          },
+          "width": 0.52,
+          "height": 2.8,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 2,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "furniture.nightstand",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "nightstand",
+          "depth": 0.65,
+          "width": 0.7,
+          "height": 1.05,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "supports": {
+            "top": {
+              "depth": 0.48,
+              "width": 0.54,
+              "accepts": [
+                "plant"
+              ]
+            }
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "furniture.plant",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "plant",
+          "depth": 0.52,
+          "width": 0.52,
+          "height": 1.9,
+          "palette": "cedar",
+          "physics": {
+            "shape": "circle",
+            "authority": "server",
+            "radiusRatio": 0.42
+          },
+          "stackable": true,
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "furniture.sofa",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "sofa",
+          "depth": 0.9,
+          "width": 1.7,
+          "height": 1.9,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "furniture.stool",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "use": "sit",
+          "kind": "stool",
+          "depth": 0.76,
+          "width": 0.76,
+          "height": 1.05,
+          "palette": "cedar",
+          "physics": {
+            "shape": "circle",
+            "authority": "server",
+            "radiusRatio": 0.5
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 2,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "furniture.table",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "table",
+          "depth": 1,
+          "width": 1.5,
+          "height": 1.5,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "supports": {
+            "top": {
+              "depth": 0.8,
+              "width": 1.3,
+              "accepts": [
+                "plant"
+              ]
+            }
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "furniture.wardrobe",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "wardrobe",
+          "depth": 0.9,
+          "width": 1.1,
+          "height": 3,
+          "palette": "cedar",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 1,
+            "colliderDepthRatio": 1
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    }
+  ]
+}

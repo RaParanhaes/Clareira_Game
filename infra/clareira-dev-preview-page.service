@@ -1,0 +1,23 @@
+[Unit]
+Description=Clareira development preview and feedback page
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/game-agent
+Environment=PORT=8100
+StateDirectory=clareira-dev
+StateDirectoryMode=0700
+Environment=STATE_DIRECTORY=/var/lib/clareira-dev
+ExecStart=/usr/bin/node /opt/game-agent/scripts/dev-preview-page.mjs
+Restart=on-failure
+RestartSec=3s
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

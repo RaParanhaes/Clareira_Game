@@ -1,0 +1,69 @@
+{
+  "version": 3,
+  "format": "png-frame-atlas",
+  "frameSize": 192,
+  "width": 768,
+  "height": 13824,
+  "anchor": {
+    "x": 96,
+    "y": 145
+  },
+  "canonicalProjection": {
+    "tileX": 32,
+    "tileY": 18,
+    "heightPixels": 32
+  },
+  "rotations": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "palettes": [
+    "cedar",
+    "pine",
+    "hotel",
+    "vista"
+  ],
+  "rows": [
+    "stool",
+    "chair",
+    "chair-back",
+    "chair-front",
+    "lamp",
+    "lamp-off",
+    "bed",
+    "bed-open",
+    "bed-cover",
+    "shower",
+    "nightstand",
+    "wardrobe",
+    "bookshelf",
+    "desk",
+    "table",
+    "sofa",
+    "chest",
+    "plant"
+  ],
+  "materials": {
+    "url": "art/room-furniture/room-materials-v1.png",
+    "manifest": "art/room-furniture/materials-manifest.json",
+    "sha256": "009c5f3f10f0449d3ac7480e75b7c587a4ae837be2902df8ab8151cec42ff8ec",
+    "baked": true
+  },
+  "authoredModels": {
+    "bed": {
+      "source": "art/room-furniture/bed-3d-prototype/medieval-bed.blend",
+      "method": "orthographic-3d-render-with-UV-texture",
+      "layers": [
+        "bed",
+        "bed-open",
+        "bed-cover"
+      ],
+      "palette": "cedar",
+      "cameraMirrorX": true
+    }
+  },
+  "sha256": "85c9e1f38fbb09f00fd29b35dc8e8c9442b4cbc7a38c3da2d41779b1ca12968c",
+  "bytes": 1375625
+}

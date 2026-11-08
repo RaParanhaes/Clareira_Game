@@ -1,0 +1,11 @@
+# Referências observadas — revisão da Cabana do Cedro
+
+Consulta em 27/10/2026. Fotografias e desenhos foram abertos e inspecionados; usados somente para estudo, sem redistribuição nem uso como textura. Cópias temporárias em `/tmp/clareira-cottage-reference/`, fora do conteúdo publicado. Nenhuma licença de reutilização de assets é presumida.
+
+- **Hangleton, Weald & Downland Museum** — https://www.wealddown.co.uk/buildings/medieval-building-hangleton/ — fotografia https://www.wealddown.co.uk/wp-content/uploads/2020/12/Hangleton-cottage.jpg. Vista em três quartos: cobertura muito mais espessa que uma folha plana, beiral contínuo, fundação mineral e paredes baixas. Informa apoio e hierarquia de massas; a reconstrução tem hipóteses explícitas e não fornece medidas para esta casa.
+- **Bayleaf, mesmo museu** — https://www.wealddown.co.uk/buildings/bayleaf-farmstead-chiddingstone/ — fotografia https://www.wealddown.co.uk/wp-content/uploads/2020/12/bayleaf-1024x512.jpg. Vista elevada: telhas sobrepostas, cobertura ligeiramente varrida, contraste entre estrutura de madeira e painéis de enchimento, grandes peças conectadas e vãos livres. A casa real é maior e de outra tipologia; usamos gramática construtiva, não planta nem capacidade.
+- **Bayleaf, corte e esquema** — mesma página, imagens `Cutaway-drawing-of-Bayleaf-showing-structure-and-plan.jpg` e `Bayleaf_Wealden_House.jpg`. O corte esclarece continuidade entre pilares, travessas e cobertura; o esquema mostra vãos organizados entre os apoios. A nova cabana não replica o pavimento superior nem o desenho histórico.
+
+Direção: as referências sugerem cobertura dominante com bordas contínuas e madeira com função estrutural; na Clareira isso vira uma cabana de cumeeira deslocada, cobertura de cedro, reboco claro, pedra na base e alpendre centrado na porta. Evitar grade de ripas sobre o telhado, peças flutuantes, cor aleatória por telha e vigas atravessando esquadrias.
+
+Suposições autorais: telhado assimétrico, uma janela de quarto, chaminé com pote cerâmico e floreira pertencem à adaptação de fantasia medieval. Não são uma reconstrução histórica de uma casa específica. Frente e fundos repetem a estrutura principal; o verso é inferido e não fotografado como se fosse a mesma casa.

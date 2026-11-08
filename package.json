@@ -1,0 +1,37 @@
+{
+  "name": "clareira-game",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 game/*.test.mjs database/*.test.mjs scripts/*.test.mjs && python3 -m unittest discover -s scripts -p '*_test.py'",
+    "preview": "node scripts/dev-preview-page.mjs",
+    "room": "node scripts/prototype-server.mjs",
+    "scale:baseline": "node scripts/scale-baseline.mjs",
+    "player:saves:audit": "node scripts/audit-player-saves.mjs",
+    "account:role": "node scripts/set-account-role.mjs",
+    "staff:owner": "node scripts/provision-owner.mjs",
+    "db:migrate": "node database/migrate.mjs",
+    "db:import": "node database/import-json.mjs",
+    "test:redis": "node --test database/redis-coordination.test.mjs",
+    "test:postgres": "node --test database/postgres.integration.test.mjs",
+    "content:check": "node scripts/validate-content.mjs",
+    "backends:up": "node scripts/setup-backends.mjs",
+    "test:backends": "node scripts/test-backends.mjs",
+    "backends:activate-preview": "node database/activate-preview.mjs",
+    "backends:status": "node database/check-backends.mjs",
+    "objects": "node scripts/scene-objects.mjs",
+    "objects:seed": "node database/seed-scene-objects.mjs",
+    "art:cottage:build": "blender --background --factory-startup --python scripts/blender/build-medieval-cottage.py",
+    "art:cottage:check": "node scripts/check-cottage-art.mjs",
+    "art:fern:build": "blender --background --factory-startup --threads 4 --python-exit-code 1 --python scripts/blender/build-fern-cabin.py",
+    "art:fern:check": "node scripts/check-fern-art.mjs",
+    "forest:inventory": "node scripts/export-initial-forest-inventory.mjs"
+  },
+  "dependencies": {
+    "gsap": "3.15.0",
+    "pg": "8.23.1",
+    "redis": "5.12.1",
+    "ws": "8.22.0"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "physicalShell": [
+    7,
+    7
+  ],
+  "frame": {
+    "width": 320,
+    "height": 320,
+    "pivot": [
+      160,
+      207
+    ]
+  },
+  "window": {
+    "count": 1,
+    "clearWidth": 1.2,
+    "clearHeight": 1.8,
+    "center": [
+      2.15,
+      3.5,
+      1.95
+    ]
+  },
+  "porchPosts": [
+    [
+      -1,
+      4.25
+    ],
+    [
+      1,
+      4.25
+    ]
+  ],
+  "doorCenter": [
+    0,
+    3.5
+  ],
+  "dayNightOnlyGlazing": true,
+  "sourceHashes": {
+    "scripts/blender/build-medieval-cottage.py": "9566fd71591f5cb3b533c17df2b21291ba24ec26854b02b5692ada2ae7c176a1",
+    "scripts/blender/cottage_pixels.py": "7ad4c81ff724cd62a39658724bb8a0b87876e65d45ae7078308050f174d6d976"
+  },
+  "exportHashes": {
+    "iso-rot0-shell.png": "823fe84cca69b6f241c145136980f2f0395126a1f8c480f2e4dcc2dfa391cdca",
+    "iso-rot0-shell-night.png": "d491ba9f62445e290ba3daf2a41eb50a19607d540da5ae464949e568871ed657",
+    "iso-rot0-canopy.png": "64bc9cabd920bcb14d52842307d9be4032595bcb2c28e479cf4ea7dfdcf217cc",
+    "iso-rot0-post-left.png": "e7fa7fc5106e8040ccc056cf3abca831f1da5de3fa029a1909181e1a637c0723",
+    "iso-rot0-post-right.png": "2b982472ab266dbd017de7162ecc6bbbf0206864d51ce8bef2b5876fc3543f34"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "asset": "campfire-flame-frames.png",
+  "source": "campfire-flame-source.png",
+  "sourceGenerator": "scripts/build-campfire-flame-atlas.py",
+  "frameCount": 16,
+  "frameWidth": 16,
+  "frameHeight": 24,
+  "frameOrder": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "frameDurationMs": 80,
+  "loop": true,
+  "anchor": {
+    "x": 8,
+    "y": 24
+  },
+  "displaySize": {
+    "width": 14,
+    "height": 24
+  },
+  "palette": [
+    "#a93a28",
+    "#d64c27",
+    "#ed6927",
+    "#f58d2e",
+    "#ffc04a",
+    "#ffe987"
+  ],
+  "alphaThreshold": 1,
+  "sourceCanvas": [
+    3072,
+    288
+  ],
+  "sourceFrameWidth": 192,
+  "silhouette": "compact layered flame with two independently swaying tongues and broken golden hot spots"
+}

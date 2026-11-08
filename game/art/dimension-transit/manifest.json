@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "style": "pixel-art celestial dimensional transit",
+  "runes": {
+    "file": "runic-circle.png",
+    "format": "transparent PNG",
+    "canvas": "single isometric ellipse; game rotates continuously and layers three rune rings from the painted asset",
+    "anchor": "ellipse center"
+  },
+  "sequence": [
+    {
+      "phase": "charge",
+      "visual": "rune circles form and rotate around the traveler"
+    },
+    {
+      "phase": "descent",
+      "visual": "light column descends until its foot touches the ground"
+    },
+    {
+      "phase": "depart",
+      "visual": "traveler lifts and dissolves while the source circles remain"
+    },
+    {
+      "phase": "arrival-descent",
+      "visual": "the destination beam touches down before the traveler is revealed"
+    },
+    {
+      "phase": "arrival-reveal",
+      "visual": "the traveler appears only after the destination beam touches the ground"
+    },
+    {
+      "phase": "dissipate",
+      "visual": "beam retracts; runes break into drifting pixels after the traveler appears"
+    }
+  ],
+  "animation_sampling": {
+    "source_frames": 30,
+    "runtime_frames": 60,
+    "duration_ms": 2700,
+    "sample_interval_ms": 45,
+    "method": "alpha-aware midpoint blend between adjacent official PNG frames; the last frame is held for the second sample",
+    "sync": "server timestamps, transfer/apex markers, and audio duration remain on the original 2700 ms timeline"
+  }
+}

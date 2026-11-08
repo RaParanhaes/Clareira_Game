@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000;overflow:hidden}*{box-sizing:border-box}.stage{position:relative;width:100vw;height:100vh;overflow:hidden}.base,.auth-ambient-animation{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.auth-ambient-animation{overflow:hidden}
+.auth-dragon-flight{animation:flight 30s linear infinite}.auth-dragon-wings{transform-origin:0 4px;animation:wings 1s ease-in-out infinite}
+@keyframes flight{0%{opacity:.9;transform:translate(525px,118px) scale(1.25)}25%{transform:translate(650px,89px) scale(1.1)}45%{opacity:.9;transform:translate(720px,80px) scale(.8)}49%{opacity:0;transform:translate(750px,75px) scale(.6)}51%{opacity:0;transform:translate(750px,75px) scale(-.6,.6)}55%{opacity:.9;transform:translate(720px,80px) scale(-.8,.8)}75%{transform:translate(650px,89px) scale(-1.1,1.1)}98%{opacity:.9;transform:translate(525px,118px) scale(-1.25,1.25)}99%{opacity:0;transform:translate(525px,118px) scale(-1.25,1.25)}100%{opacity:.9;transform:translate(525px,118px) scale(1.25)}}
+@keyframes wings{0%,100%{transform:scaleY(1)}50%{transform:scaleY(-.45)}}
+.auth-window{mix-blend-mode:multiply;animation:window 10s linear infinite;opacity:0}.window-b{animation-delay:-3s}.window-c{animation-delay:-7s}.window-d{animation-delay:-5s}
+@keyframes window{0%,100%{opacity:0}15%{opacity:.15}20%,37%{opacity:.82}43%,79%{opacity:0}85%,91%{opacity:.65}95%{opacity:0}}
+.auth-light{animation:light 6s ease-in-out infinite}.light-b{animation-delay:-1s}.light-c{animation-delay:-2.5s}.light-d{animation-delay:-3s}.light-e{animation-delay:-4s}.light-f{animation-delay:-5s}.light-g{animation-delay:-1.5s}.light-h{animation-delay:-3.5s}
+@keyframes light{0%,100%{opacity:.15}15%{opacity:.9}35%{opacity:.3}50%{opacity:.7}65%{opacity:.12}82%{opacity:.8}}
+.auth-fire-glow{transform-origin:1065px 639px;animation:fire 1s linear infinite}.auth-flame-outer{transform-origin:1065px 639px;animation:flame 1.5s ease-in-out infinite}.auth-flame-inner{transform-origin:1065px 639px;animation:flame 1s ease-in-out infinite reverse}
+@keyframes fire{0%,100%{opacity:.85;transform:scale(1)}25%{opacity:.65;transform:scale(.94,1.12)}55%{opacity:1;transform:scale(1.07,.92)}80%{opacity:.8;transform:scale(.96,1.06)}}
+@keyframes flame{0%,100%{transform:scale(1,1)}35%{transform:scale(.8,1.4) skewX(-8deg)}70%{transform:scale(1.14,.85) skewX(5deg)}}
+.auth-spark{animation:spark 3s linear infinite;opacity:0}.spark-b{animation-delay:-.6s}.spark-c{animation-delay:-1.2s}.spark-d{animation-delay:-1.8s}.spark-e{animation-delay:-2.4s}
+@keyframes spark{0%{opacity:0;transform:translate(0,0)}12%{opacity:1}75%{opacity:.6;transform:translate(9px,-65px)}99%{opacity:0;transform:translate(14px,-85px)}100%{opacity:0;transform:translate(0,0)}}
+.auth-guitar-hand{transform-origin:1195px 595px;animation:strum .5s ease-in-out infinite}
+@keyframes strum{0%,100%{transform:translate(0,-3px) rotate(-8deg)}50%{transform:translate(-1px,4px) rotate(9deg)}}
+</style></head><body><div class="stage"><img class="base" src="/dev/art/clareira-login-vila-v2.webp"><svg class="auth-ambient-animation" viewBox="0 0 1672 941" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+          <defs><clipPath id="auth-dragon-sky"><rect x="587" y="72" width="76" height="65"/></clipPath>
+            <radialGradient id="auth-lantern-glow"><stop stop-color="#ffd285" stop-opacity=".7"/><stop offset="1" stop-color="#ff9c42" stop-opacity="0"/></radialGradient>
+          </defs>
+          <image href="/dev/art/clareira-login-vila-v1.webp" x="0" y="0" width="1672" height="941" clip-path="url(#auth-dragon-sky)"/>
+          <g class="auth-dragon-flight"><g class="auth-dragon-wings" fill="#162239" opacity=".9"><path d="M0 4 L-16 -8 -35 -17 -27 -4 -19 2 -32 5 -14 9 -3 7 7 13 13 17 7 8 18 5 26 1 16 2 8 -2 2 -1Z"/><path d="M-1 4 L-10 15 -18 17 -12 11 -8 5Z"/></g></g>
+          <g class="auth-window-dimming" fill="#142432">
+<path class="auth-window window-a" d="M895 300h30v35h-30z"/>
+<path class="auth-window window-b" d="M1085 251h25v41h-25z"/>
+<path class="auth-window window-c" d="M1035 94h17v26h-17z"/>
+<path class="auth-window window-d" d="M1458 289h22v28h-22z"/>
+</g><g class="auth-lights" fill="url(#auth-lantern-glow)">
+            <circle class="auth-light light-a" cx="160" cy="300" r="44"/><circle class="auth-light light-b" cx="537" cy="608" r="48"/><circle class="auth-light light-c" cx="914" cy="318" r="40"/><circle class="auth-light light-d" cx="1096" cy="276" r="44"/><circle class="auth-light light-e" cx="1233" cy="256" r="35"/><circle class="auth-light light-f" cx="1504" cy="174" r="48"/><circle class="auth-light light-g" cx="1468" cy="305" r="36"/><circle class="auth-light light-h" cx="1600" cy="454" r="34"/>
+          </g>
+          <g class="auth-fire-glow"><circle cx="1063" cy="620" r="94" fill="url(#auth-lantern-glow)"/><path class="auth-flame-outer" d="M1047 636l4-12 5-4-1-13 8 6 4-17 5 14 6-5-1 16 7 13-11 7-19-1z" fill="#f3a43f" opacity=".82"/><path class="auth-flame-inner" d="M1058 635l4-11 4 4 3-10 4 15-5 7z" fill="#ffe5a3" opacity=".85"/></g>
+          <g fill="#ffd27d"><rect class="auth-spark spark-a" x="1043" y="600" width="4" height="5"/><rect class="auth-spark spark-b" x="1080" y="594" width="4" height="5"/><rect class="auth-spark spark-c" x="1061" y="582" width="3" height="4"/><rect class="auth-spark spark-d" x="1075" y="608" width="3" height="4"/><rect class="auth-spark spark-e" x="1053" y="617" width="3" height="4"/></g>
+          <path class="auth-guitar-hand" d="M1192 596l7-5 5 2-4 6-6 3z" fill="#c88a54" opacity=".8"/>
+        </svg></div></body></html>

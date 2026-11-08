@@ -1,0 +1,13 @@
+{
+  "catalogRevision": 4,
+  "blend": "d324eea3ee5e7ecfcbbb686c88caecc29447d3c8a7c96e474268fdb12fb334de",
+  "materialAtlas": "15122965704b9e2c352802b9e666a21ebd7f45dcb78069ba2ed4bfdbc2da1136",
+  "construction": "53a6242c72baf5ff1fd6b415f2b2888900b1dff880ce929398979832e0b1acd9",
+  "runtime": {
+    "iso-rot0-shell.png": "376e6d6bd385d40fe8daa7378eb563b553858b5f5697abeeeef25691bf510ad6",
+    "iso-rot0-shell-night.png": "9c34fbcaf0ed8d4e1a94c9e42212730228e54775f3d8bea7151e2c51f7b2cf41",
+    "iso-rot0-canopy.png": "fea5b0a3a04d64ae1731319d1ed2482354ad0dd54023b584ee38267aa8380882",
+    "iso-rot0-post-left.png": "49f1b067c728db4df8696d85199dd78a22cff8ea31726b0e6935d149a3f3c5c6",
+    "iso-rot0-post-right.png": "e959f1c4c51027a42a6f0eb8ffb34d5897ceeccefe353e0b503a8bdc0d263755"
+  }
+}

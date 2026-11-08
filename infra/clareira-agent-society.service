@@ -1,0 +1,44 @@
+[Unit]
+Description=Clareira continuous game-analysis agent society
+Wants=network-online.target
+After=network-online.target clareira-dev-preview-room.service
+StartLimitIntervalSec=1h
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/game-agent
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=AGENT_TIMEZONE=Europe/Berlin
+Environment=AGENT_STATE_DIRECTORY=/var/lib/clareira-agent-society
+Environment=GAME_AGENT_ROOT=/opt/game-agent
+StateDirectory=clareira-agent-society
+StateDirectoryMode=0700
+ExecStartPre=/usr/bin/python3 /opt/game-agent/ops/agent-society/runner.py preflight
+ExecStart=/usr/bin/python3 /opt/game-agent/ops/agent-society/runner.py daemon
+Restart=on-failure
+RestartSec=300s
+KillMode=mixed
+TimeoutStopSec=45s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+PrivateUsers=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryMax=2G
+TasksMax=256
+LimitNOFILE=8192
+ReadWritePaths=/root/.codex /opt/game-agent/game /opt/game-agent/scripts /opt/game-agent/database /opt/game-agent/.git/objects /opt/game-agent/.git/objects/pack /var/lib/clareira-agent-society
+
+[Install]
+WantedBy=multi-user.target

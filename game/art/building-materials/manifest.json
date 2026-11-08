@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "format": "grayscale-repeatable-uv-tiles",
+  "file": "architecture-uv-v1.png",
+  "tileSize": [
+    16,
+    16
+  ],
+  "columns": [
+    "timber",
+    "masonry",
+    "shingles",
+    "foundation",
+    "daub",
+    "thatch"
+  ],
+  "uv": "one tile per material face; repeat by surface dimensions",
+  "tint": "grayscale material clusters map to each building palette at runtime"
+}

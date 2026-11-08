@@ -1,0 +1,65 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { mkdtemp, rm, mkdir } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import WebSocket from 'ws';
+import { chromium } from '/opt/clareira-browser/node_modules/playwright-core/index.mjs';
+import { createPreviewServer } from './dev-preview-page.mjs';
+import { createDevPreviewBridge } from './dev-preview-bridge.mjs';
+import { createPrototypeServer } from './prototype-server.mjs';
+const dir = await mkdtemp(path.join(os.tmpdir(), 'clareira-mobile-transit-'));
+const output = process.argv[2] || 'logs/mobile-tutorial-transit';
+await mkdir(output, {recursive:true});
+const base='http://127.0.0.1:18392';
+const preview=createPreviewServer({port:0,stateDirectory:dir,allowedOrigin:base});
+const room=createPrototypeServer({port:18393,stateDirectory:dir,allowedOrigin:base});
+const address=await preview.listen();
+const bridge=createDevPreviewBridge(address,{port:18392});
+await bridge.listen(); await room.listen();
+const browser=await chromium.launch({executablePath:'/root/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome',args:['--no-sandbox','--autoplay-policy=no-user-gesture-required']});
+try {
+ const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ const registration=await context.request.post(`${base}/auth/guest`,{headers:{origin:base}});
+ assert.equal(registration.status(),201);
+ const token=registration.headers()['set-cookie'].match(/clareira_session=([^;]+)/)[1];
+ await context.addCookies([{name:'clareira_session',value:token,url:base+'/dev/',httpOnly:true,sameSite:'Strict'}]);
+ await context.addInitScript(() => { const worker={controller:{},ready:Promise.resolve({}),register:async()=>({}),addEventListener(){},removeEventListener(){}}; Object.defineProperty(navigator,'serviceWorker',{configurable:true,value:worker}); });
+ const page=await context.newPage(); const errors=[];
+ const version=createHash('sha256').update('[]').digest('hex');
+ await page.route('**/dev/game-assets', route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({version,files:[]})}));
+ await page.route('**/dev/update-version', route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({version})}));
+ page.on('pageerror',error=>errors.push(error.message));
+ await page.routeWebSocket('**/dev/room',async socket=>{
+  const cookies=await context.cookies(base+'/dev/');const session=cookies.find(cookie=>cookie.name==='clareira_session')?.value;
+  const upstream=new WebSocket('ws://127.0.0.1:18393/room',{headers:{origin:base,cookie:`clareira_session=${session}`}});const queued=[];
+  socket.onMessage(message=>upstream.readyState===WebSocket.OPEN?upstream.send(message):queued.push(message));
+  upstream.on('open',()=>queued.forEach(message=>upstream.send(message)));
+  upstream.on('message',message=>{setTimeout(()=>{try{socket.send(message.toString())}catch{}},200)});
+  upstream.on('error',error=>errors.push(error.message));socket.onClose(()=>upstream.close());
+ });
+ await page.goto(base+'/dev/');
+ await page.evaluate(async()=>{window.inspectTutorial=(await import('/dev/main.js')).inspectMovement});
+ await page.waitForFunction(()=>{const s=window.inspectTutorial();return s.readiness.sceneReady&&!s.readiness.loading&&s.arrivalTutorial},null,{timeout:60000});
+ await page.waitForSelector('#scene-loading',{state:'hidden',timeout:20000}).catch(async error=>{console.log('DEBUG',JSON.stringify({errors,state:await page.evaluate(async()=>({loading:document.querySelector('#scene-loading').outerHTML.slice(0,400),game:(await import('/dev/main.js')).inspectMovement().readiness}))}));throw error;});
+ await page.touchscreen.tap(195,420);
+ await page.waitForFunction(()=>window.inspectTutorial().arrivalCinematicAgeMs>4000,null,{timeout:60000});
+ // Trigger the existing skip action: this fixture exercises the real tutorial
+ // server transition, even though the cinematic hides its button.
+ await page.locator('#arrival-tutorial-skip').evaluate(button=>button.click());
+ await page.waitForFunction(()=>document.querySelector('#teleport-travel-overlay')?.dataset.phase==='loading',null,{timeout:20000});
+ assert.equal(await page.locator('#teleport-travel-overlay').isVisible(),true);
+ await page.screenshot({path:path.join(output,'tutorial-para-bosque.png')});
+ await page.waitForFunction(()=>window.inspectTutorial().dimensionId==='surface'&&document.querySelector('#teleport-travel-overlay')?.hidden,null,{timeout:30000});
+ await page.waitForFunction(()=>[...document.querySelectorAll('#dimension-destinations button')].some(button=>button.dataset.dimensionId?.startsWith('arrival-')&&!button.disabled),null,{timeout:30000});
+ await page.locator('.mobile-menu-toggle').tap();
+ await page.locator('.dimension-travel summary').tap();
+ await page.locator('#dimension-destinations button[data-dimension-id^="arrival-"]').tap();
+ await page.waitForFunction(()=>document.querySelector('#teleport-travel-overlay')?.dataset.phase==='loading',null,{timeout:20000});
+ assert.equal(await page.locator('#teleport-travel-overlay').isVisible(),true);
+ await page.screenshot({path:path.join(output,'bosque-para-tutorial.png')});
+ await page.waitForFunction(()=>window.inspectTutorial().dimensionId.startsWith('arrival-')&&document.querySelector('#teleport-travel-overlay')?.hidden,null,{timeout:30000});
+ assert.deepEqual(errors,[]);
+ console.log(JSON.stringify({tutorialToForest:true,forestToTutorial:true,errors}));
+ await context.close();
+} finally {await browser.close();await bridge.close();await preview.close();await room.close();await rm(dir,{recursive:true,force:true});}

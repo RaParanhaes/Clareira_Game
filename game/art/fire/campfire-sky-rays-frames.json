@@ -1,0 +1,23 @@
+{
+  "asset": "campfire-sky-rays-frames.png",
+  "source": "campfire-sky-rays-source.png",
+  "sourceGenerator": "scripts/build-campfire-sky-rays-atlas.py",
+  "frameCount": 16,
+  "frameWidth": 128,
+  "frameHeight": 384,
+  "frameDurationMs": 60,
+  "loop": true,
+  "sourceFrameCount": 8,
+  "interpolation": "50-percent-crossfade-between-source-frames",
+  "emission": {
+    "bakedIntoFrames": true,
+    "coreOpacity": 0.78,
+    "outerGlowBlurPx": 18,
+    "innerGlowBlurPx": 6
+  },
+  "anchor": {
+    "x": 64,
+    "y": 384
+  },
+  "description": "Pixel-art golden lightning bolts with turquoise accents; warm inner and outer emission glows are baked into every animation frame."
+}

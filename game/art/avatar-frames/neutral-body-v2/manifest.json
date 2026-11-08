@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "assetVersion": 2,
+  "name": "neutral-body-v2",
+  "description": "Adult male and female directional bases in a plain fitted opaque white layer; every frame shares scale and a ground pivot.",
+  "sourceGrid": {
+    "columns": 4,
+    "rows": 2,
+    "readingOrder": [
+      "south",
+      "southeast",
+      "east",
+      "northeast",
+      "north",
+      "northwest",
+      "west",
+      "southwest"
+    ]
+  },
+  "canvas": {
+    "width": 96,
+    "height": 96
+  },
+  "artHeight": 80,
+  "pivot": {
+    "x": 48,
+    "y": 84,
+    "anchor": "sole-center"
+  },
+  "facings": [
+    "south",
+    "southeast",
+    "east",
+    "northeast",
+    "north",
+    "northwest",
+    "west",
+    "southwest"
+  ],
+  "bodies": {
+    "male": {
+      "baseSource": "source/male-base.png",
+      "actions": {
+        "idle": {
+          "atlas": "atlases/male/idle.png",
+          "frameCount": 1,
+          "layout": "direction-left-to-right",
+          "loop": true,
+          "durationMs": 100,
+          "frames": {
+            "south": [
+              "frames/male/idle/south/frame-01.png"
+            ],
+            "southeast": [
+              "frames/male/idle/southeast/frame-01.png"
+            ],
+            "east": [
+              "frames/male/idle/east/frame-01.png"
+            ],
+            "northeast": [
+              "frames/male/idle/northeast/frame-01.png"
+            ],
+            "north": [
+              "frames/male/idle/north/frame-01.png"
+            ],
+            "northwest": [
+              "frames/male/idle/northwest/frame-01.png"
+            ],
+            "west": [
+              "frames/male/idle/west/frame-01.png"
+            ],
+            "southwest": [
+              "frames/male/idle/southwest/frame-01.png"
+            ]
+          }
+        }
+      }
+    },
+    "female": {
+      "baseSource": "source/female-base.png",
+      "actions": {
+        "idle": {
+          "atlas": "atlases/female/idle.png",
+          "frameCount": 1,
+          "layout": "direction-left-to-right",
+          "loop": true,
+          "durationMs": 100,
+          "frames": {
+            "south": [
+              "frames/female/idle/south/frame-01.png"
+            ],
+            "southeast": [
+              "frames/female/idle/southeast/frame-01.png"
+            ],
+            "east": [
+              "frames/female/idle/east/frame-01.png"
+            ],
+            "northeast": [
+              "frames/female/idle/northeast/frame-01.png"
+            ],
+            "north": [
+              "frames/female/idle/north/frame-01.png"
+            ],
+            "northwest": [
+              "frames/female/idle/northwest/frame-01.png"
+            ],
+            "west": [
+              "frames/female/idle/west/frame-01.png"
+            ],
+            "southwest": [
+              "frames/female/idle/southwest/frame-01.png"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "sequenceConvention": "frame-01 is the first pose; frame numbers increase in play order with two digits."
+}

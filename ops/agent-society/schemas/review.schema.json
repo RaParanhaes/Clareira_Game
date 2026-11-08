@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "verdict": {"type": "string", "enum": ["accept", "revise", "reject", "blocked"]},
+    "findings": {"type": "array", "items": {"type": "string"}},
+    "code_evidence": {"type": "string"},
+    "gameplay_evidence": {"type": "string"},
+    "visual_evidence": {"type": "string"},
+    "ui_ux_evidence": {"type": "string"},
+    "performance_evidence": {"type": "string"},
+    "required_repairs": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["verdict", "findings", "code_evidence", "gameplay_evidence", "visual_evidence", "ui_ux_evidence", "performance_evidence", "required_repairs"]
+}

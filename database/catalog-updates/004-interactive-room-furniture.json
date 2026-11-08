@@ -1,0 +1,41 @@
+{
+  "expectedRevision": 3,
+  "actor": "codex-interactive-room-furniture",
+  "operations": [
+    {
+      "action": "patch",
+      "collection": "templates",
+      "id": "furniture.bed",
+      "properties": { "use": "lie" }
+    },
+    {
+      "action": "put",
+      "collection": "templates",
+      "value": {
+        "id": "furniture.shower",
+        "baseId": null,
+        "kind": "fixture",
+        "properties": {
+          "kind": "shower",
+          "width": 0.95,
+          "depth": 0.95,
+          "height": 2.65,
+          "palette": "vista",
+          "use": "shower",
+          "physics": {
+            "shape": "box",
+            "authority": "server",
+            "colliderWidthRatio": 0.86,
+            "colliderDepthRatio": 0.86
+          },
+          "depthOrder": {
+            "anchor": "footprint-front",
+            "vertical": "support-base"
+          }
+        },
+        "version": 1,
+        "archived": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "decision": {"type": "string", "enum": ["propose", "no_change", "blocked"]},
+    "domain": {"type": "string", "enum": ["gameplay_physics", "character_animation", "visual_effects", "ui_ux", "performance", "world_content", "general"]},
+    "title": {"type": "string"},
+    "baseline": {"type": "string"},
+    "goal": {"type": "string"},
+    "acceptance_criteria": {"type": "array", "items": {"type": "string"}},
+    "allowed_paths": {"type": "array", "items": {"type": "string"}},
+    "required_evidence": {"type": "array", "items": {"type": "string", "enum": ["code", "gameplay", "visual", "ui_ux", "performance"]}},
+    "test_command": {"type": "string"},
+    "browser_check": {"type": "string"},
+    "performance_check": {"type": "string"},
+    "blocked_reason": {"type": "string"}
+  },
+  "required": ["decision", "domain", "title", "baseline", "goal", "acceptance_criteria", "allowed_paths", "required_evidence", "test_command", "browser_check", "performance_check", "blocked_reason"]
+}

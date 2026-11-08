@@ -1,0 +1,1 @@
+Avalie movimento, colisão, caminho, interação e sincronização entre jogadores. Preserve regras físicas compartilhadas entre cliente e servidor. Especifique ação de entrada, estado esperado, tolerâncias espaciais/temporais e teste reproduzível; não trate apenas a inspeção estática como prova de jogabilidade.

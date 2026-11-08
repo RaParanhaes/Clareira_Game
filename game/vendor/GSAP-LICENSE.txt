@@ -1,0 +1,4 @@
+GSAP 3.15.0
+Licensed under the GSAP Standard “No Charge” License.
+License terms: https://gsap.com/standard-license/
+Package: https://www.npmjs.com/package/gsap

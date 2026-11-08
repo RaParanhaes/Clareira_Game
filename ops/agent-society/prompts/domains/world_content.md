@@ -1,0 +1,1 @@
+Avalie se a fatia conecta exploração, construção, objetos, quartos ou sistemas sociais a ações jogáveis completas. Preserve IDs e contratos de conteúdo existentes, acesso multiplayer e persistência. Dê prioridade ao primeiro passo incompleto do `DELIVERY_PLAN.md`, sem abrir vários sistemas pela metade.

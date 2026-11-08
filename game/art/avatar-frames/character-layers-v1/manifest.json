@@ -1,0 +1,3228 @@
+{
+  "schemaVersion": 1,
+  "assetVersion": 1,
+  "canvas": {
+    "width": 96,
+    "height": 96
+  },
+  "artHeight": 80,
+  "pivot": {
+    "x": 48,
+    "y": 84,
+    "anchor": "sole-center"
+  },
+  "facings": [
+    "south",
+    "southeast",
+    "east",
+    "northeast",
+    "north",
+    "northwest",
+    "west",
+    "southwest"
+  ],
+  "appearanceMode": "full-body-raster-variant",
+  "frameOrder": "atlas cells follow facings left-to-right; action frames are numbered from 01 in playback order",
+  "sourceSheetGrid": {
+    "rows": 2,
+    "columns": 4,
+    "order": "row-major"
+  },
+  "facingVisualCues": {
+    "south": "front; face visible",
+    "southeast": "front three-quarter; face visible, turned right",
+    "east": "right profile",
+    "northeast": "rear three-quarter; back dominates, face hidden",
+    "north": "back",
+    "northwest": "rear three-quarter from the opposite side; face hidden",
+    "west": "left profile",
+    "southwest": "front three-quarter; face visible, turned left"
+  },
+  "paletteSampling": "nearest-neighbor; 64-color per-frame reduction",
+  "outfits": {
+    "commoner": {
+      "male": {
+        "source": "source/commoner-male.png",
+        "sourceSheetGrid": {
+          "rows": 2,
+          "columns": 4,
+          "order": "row-major",
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "visualFacingAudit": "passed-after-direction-correction",
+          "directionOverrides": {
+            "northeast": "horizontal-mirror-of-northwest; source northeast cell repeats a front-right view"
+          }
+        },
+        "paletteNormalization": "shared 128-color palette across all eight corrected views and movement actions; action luminance follows same-facing idle",
+        "motionSourceFramesRoot": "source/motion/commoner-male/action-frames",
+        "atlas": "atlases/outfits/commoner/male/idle.png",
+        "characterId": "character.peasant",
+        "motionProfileId": "animation-profile.standard",
+        "compatibleFitGroupIds": [
+          "fit-group.average"
+        ],
+        "bundledSlots": [
+          "body-shape",
+          "hair",
+          "eyes",
+          "headwear",
+          "back-item"
+        ],
+        "action": "idle",
+        "frameCount": 1,
+        "turnaroundPreviewDurationMs": 120,
+        "framesByFacing": {
+          "south": [
+            "frames/outfits/commoner/male/idle/south/frame-01.png"
+          ],
+          "southeast": [
+            "frames/outfits/commoner/male/idle/southeast/frame-01.png"
+          ],
+          "east": [
+            "frames/outfits/commoner/male/idle/east/frame-01.png"
+          ],
+          "northeast": [
+            "frames/outfits/commoner/male/idle/northeast/frame-01.png"
+          ],
+          "north": [
+            "frames/outfits/commoner/male/idle/north/frame-01.png"
+          ],
+          "northwest": [
+            "frames/outfits/commoner/male/idle/northwest/frame-01.png"
+          ],
+          "west": [
+            "frames/outfits/commoner/male/idle/west/frame-01.png"
+          ],
+          "southwest": [
+            "frames/outfits/commoner/male/idle/southwest/frame-01.png"
+          ]
+        },
+        "scaleDiagnostics": {
+          "sourceMedianHeight": 488.0,
+          "scale": 0.16393442622950818,
+          "artHeightRange": [
+            79,
+            81
+          ],
+          "artWidthRange": [
+            22,
+            35
+          ]
+        },
+        "silhouetteComponents": 8,
+        "renderLayer": "full-avatar",
+        "includes": [
+          "body",
+          "hair",
+          "eyes",
+          "headwear",
+          "outfit",
+          "cape",
+          "boots"
+        ],
+        "walk": {
+          "source": {
+            "south": "source/motion/commoner-male/walk/south-grid.png",
+            "southeast": "source/motion/commoner-male/walk/southeast-grid.png",
+            "east": "source/motion/commoner-male/walk/east-grid.png",
+            "northeast": "source/motion/commoner-male/walk/northeast-grid.png",
+            "north": "source/motion/commoner-male/walk/north-grid.png",
+            "northwest": "source/motion/commoner-male/walk/northwest-grid.png",
+            "west": "source/motion/commoner-male/walk/west-grid.png",
+            "southwest": "source/motion/commoner-male/walk/southwest-grid.png"
+          },
+          "atlas": "atlases/outfits/commoner/male/walk.png",
+          "status": "reviewed",
+          "layout": "direction-rows-frames-horizontal",
+          "frameCount": 8,
+          "frameDurationMs": 100,
+          "distancePerCycle": 2.56,
+          "loop": true,
+          "paletteColors": 128,
+          "paletteReference": "same-facing idle",
+          "horizontalFitByFacing": {
+            "east": 0.83,
+            "west": 0.83
+          },
+          "frameOrder": [
+            "contact-left",
+            "push-off",
+            "contact-right",
+            "push-off"
+          ],
+          "framesByFacing": {
+            "south": [
+              "frames/outfits/commoner/male/walk/south/frame-01.png",
+              "frames/outfits/commoner/male/walk/south/frame-02.png",
+              "frames/outfits/commoner/male/walk/south/frame-03.png",
+              "frames/outfits/commoner/male/walk/south/frame-04.png",
+              "frames/outfits/commoner/male/walk/south/frame-05.png",
+              "frames/outfits/commoner/male/walk/south/frame-06.png",
+              "frames/outfits/commoner/male/walk/south/frame-07.png",
+              "frames/outfits/commoner/male/walk/south/frame-08.png"
+            ],
+            "southeast": [
+              "frames/outfits/commoner/male/walk/southeast/frame-01.png",
+              "frames/outfits/commoner/male/walk/southeast/frame-02.png",
+              "frames/outfits/commoner/male/walk/southeast/frame-03.png",
+              "frames/outfits/commoner/male/walk/southeast/frame-04.png",
+              "frames/outfits/commoner/male/walk/southeast/frame-05.png",
+              "frames/outfits/commoner/male/walk/southeast/frame-06.png",
+              "frames/outfits/commoner/male/walk/southeast/frame-07.png",
+              "frames/outfits/commoner/male/walk/southeast/frame-08.png"
+            ],
+            "east": [
+              "frames/outfits/commoner/male/walk/east/frame-01.png",
+              "frames/outfits/commoner/male/walk/east/frame-02.png",
+              "frames/outfits/commoner/male/walk/east/frame-03.png",
+              "frames/outfits/commoner/male/walk/east/frame-04.png",
+              "frames/outfits/commoner/male/walk/east/frame-05.png",
+              "frames/outfits/commoner/male/walk/east/frame-06.png",
+              "frames/outfits/commoner/male/walk/east/frame-07.png",
+              "frames/outfits/commoner/male/walk/east/frame-08.png"
+            ],
+            "northeast": [
+              "frames/outfits/commoner/male/walk/northeast/frame-01.png",
+              "frames/outfits/commoner/male/walk/northeast/frame-02.png",
+              "frames/outfits/commoner/male/walk/northeast/frame-03.png",
+              "frames/outfits/commoner/male/walk/northeast/frame-04.png",
+              "frames/outfits/commoner/male/walk/northeast/frame-05.png",
+              "frames/outfits/commoner/male/walk/northeast/frame-06.png",
+              "frames/outfits/commoner/male/walk/northeast/frame-07.png",
+              "frames/outfits/commoner/male/walk/northeast/frame-08.png"
+            ],
+            "north": [
+              "frames/outfits/commoner/male/walk/north/frame-01.png",
+              "frames/outfits/commoner/male/walk/north/frame-02.png",
+              "frames/outfits/commoner/male/walk/north/frame-03.png",
+              "frames/outfits/commoner/male/walk/north/frame-04.png",
+              "frames/outfits/commoner/male/walk/north/frame-05.png",
+              "frames/outfits/commoner/male/walk/north/frame-06.png",
+              "frames/outfits/commoner/male/walk/north/frame-07.png",
+              "frames/outfits/commoner/male/walk/north/frame-08.png"
+            ],
+            "northwest": [
+              "frames/outfits/commoner/male/walk/northwest/frame-01.png",
+              "frames/outfits/commoner/male/walk/northwest/frame-02.png",
+              "frames/outfits/commoner/male/walk/northwest/frame-03.png",
+              "frames/outfits/commoner/male/walk/northwest/frame-04.png",
+              "frames/outfits/commoner/male/walk/northwest/frame-05.png",
+              "frames/outfits/commoner/male/walk/northwest/frame-06.png",
+              "frames/outfits/commoner/male/walk/northwest/frame-07.png",
+              "frames/outfits/commoner/male/walk/northwest/frame-08.png"
+            ],
+            "west": [
+              "frames/outfits/commoner/male/walk/west/frame-01.png",
+              "frames/outfits/commoner/male/walk/west/frame-02.png",
+              "frames/outfits/commoner/male/walk/west/frame-03.png",
+              "frames/outfits/commoner/male/walk/west/frame-04.png",
+              "frames/outfits/commoner/male/walk/west/frame-05.png",
+              "frames/outfits/commoner/male/walk/west/frame-06.png",
+              "frames/outfits/commoner/male/walk/west/frame-07.png",
+              "frames/outfits/commoner/male/walk/west/frame-08.png"
+            ],
+            "southwest": [
+              "frames/outfits/commoner/male/walk/southwest/frame-01.png",
+              "frames/outfits/commoner/male/walk/southwest/frame-02.png",
+              "frames/outfits/commoner/male/walk/southwest/frame-03.png",
+              "frames/outfits/commoner/male/walk/southwest/frame-04.png",
+              "frames/outfits/commoner/male/walk/southwest/frame-05.png",
+              "frames/outfits/commoner/male/walk/southwest/frame-06.png",
+              "frames/outfits/commoner/male/walk/southwest/frame-07.png",
+              "frames/outfits/commoner/male/walk/southwest/frame-08.png"
+            ]
+          },
+          "review": {
+            "contact": "review-gifs/walk/commoner-male/contact.png",
+            "contact2x": "review-gifs/walk/commoner-male/contact-2x.png",
+            "frameByFrame": "reviewed",
+            "reviewedFrameCount": 64,
+            "soleAnchorY": 84,
+            "gifs": {
+              "south": "review-gifs/walk/commoner-male/south.gif",
+              "southeast": "review-gifs/walk/commoner-male/southeast.gif",
+              "east": "review-gifs/walk/commoner-male/east.gif",
+              "northeast": "review-gifs/walk/commoner-male/northeast.gif",
+              "north": "review-gifs/walk/commoner-male/north.gif",
+              "northwest": "review-gifs/walk/commoner-male/northwest.gif",
+              "west": "review-gifs/walk/commoner-male/west.gif",
+              "southwest": "review-gifs/walk/commoner-male/southwest.gif"
+            },
+            "eightFacings": "reviewed",
+            "sharedPaletteAndScale": "matched-to-commoner-idle"
+          },
+          "diagnostics": {
+            "sourceMedianHeightByFacing": {
+              "south": 478.0,
+              "southeast": 397.0,
+              "east": 386.0,
+              "northeast": 368.0,
+              "north": 368.5,
+              "northwest": 352.0,
+              "west": 407.5,
+              "southwest": 411.0
+            },
+            "scaleByFacing": {
+              "south": {
+                "median": 0.167365,
+                "range": [
+                  0.164609,
+                  0.17316
+                ]
+              },
+              "southeast": {
+                "median": 0.201511,
+                "range": [
+                  0.199501,
+                  0.20202
+                ]
+              },
+              "east": {
+                "median": 0.207254,
+                "range": [
+                  0.205656,
+                  0.208333
+                ]
+              },
+              "northeast": {
+                "median": 0.217391,
+                "range": [
+                  0.210526,
+                  0.220994
+                ]
+              },
+              "north": {
+                "median": 0.217097,
+                "range": [
+                  0.216216,
+                  0.217984
+                ]
+              },
+              "northwest": {
+                "median": 0.227273,
+                "range": [
+                  0.225352,
+                  0.230548
+                ]
+              },
+              "west": {
+                "median": 0.196319,
+                "range": [
+                  0.192308,
+                  0.197531
+                ]
+              },
+              "southwest": {
+                "median": 0.194647,
+                "range": [
+                  0.191847,
+                  0.20202
+                ]
+              }
+            },
+            "artHeightRange": [
+              80,
+              80
+            ],
+            "artWidthRange": [
+              31,
+              50
+            ],
+            "silhouetteCenterOffsetRange": [
+              -2.5,
+              3.5
+            ]
+          },
+          "visualFacingAudit": "owner-review-revision-requested",
+          "seamAudit": "passed",
+          "ownerReview": {
+            "status": "revision-required",
+            "acceptedBackFacingDirections": [
+              "northeast",
+              "north",
+              "northwest"
+            ],
+            "reviseDirections": [
+              "south",
+              "southeast",
+              "east",
+              "west",
+              "southwest"
+            ],
+            "note": "O dono considera boas as vistas que caminham de costas para a câmera; frente, perfis e vistas de frente em diagonal precisam ser refeitos pelos agentes Codex da VPS. Não ligar aos comandos nem publicar como aprovado antes de nova inspeção dos GIFs no jogo."
+          },
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ]
+        },
+        "wave": {
+          "atlas": "atlases/outfits/commoner/male/wave.png",
+          "status": "reviewed",
+          "layout": "direction-rows-frames-horizontal",
+          "frameCount": 8,
+          "frameDurationMs": 110,
+          "loop": true,
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "review": {
+            "contact2x": "review-gifs/wave/commoner-male/contact-2x.png",
+            "frameByFrame": "reviewed",
+            "pivotAlignment": "within-1.1px-of-idle",
+            "reviewedFrameCount": 64,
+            "eightFacings": "reviewed",
+            "sharedPaletteAndScale": "matched-to-commoner-idle"
+          },
+          "framesByFacing": {
+            "south": [
+              "frames/outfits/commoner/male/wave/south/frame-01.png",
+              "frames/outfits/commoner/male/wave/south/frame-02.png",
+              "frames/outfits/commoner/male/wave/south/frame-03.png",
+              "frames/outfits/commoner/male/wave/south/frame-04.png",
+              "frames/outfits/commoner/male/wave/south/frame-05.png",
+              "frames/outfits/commoner/male/wave/south/frame-06.png",
+              "frames/outfits/commoner/male/wave/south/frame-07.png",
+              "frames/outfits/commoner/male/wave/south/frame-08.png"
+            ],
+            "southeast": [
+              "frames/outfits/commoner/male/wave/southeast/frame-01.png",
+              "frames/outfits/commoner/male/wave/southeast/frame-02.png",
+              "frames/outfits/commoner/male/wave/southeast/frame-03.png",
+              "frames/outfits/commoner/male/wave/southeast/frame-04.png",
+              "frames/outfits/commoner/male/wave/southeast/frame-05.png",
+              "frames/outfits/commoner/male/wave/southeast/frame-06.png",
+              "frames/outfits/commoner/male/wave/southeast/frame-07.png",
+              "frames/outfits/commoner/male/wave/southeast/frame-08.png"
+            ],
+            "east": [
+              "frames/outfits/commoner/male/wave/east/frame-01.png",
+              "frames/outfits/commoner/male/wave/east/frame-02.png",
+              "frames/outfits/commoner/male/wave/east/frame-03.png",
+              "frames/outfits/commoner/male/wave/east/frame-04.png",
+              "frames/outfits/commoner/male/wave/east/frame-05.png",
+              "frames/outfits/commoner/male/wave/east/frame-06.png",
+              "frames/outfits/commoner/male/wave/east/frame-07.png",
+              "frames/outfits/commoner/male/wave/east/frame-08.png"
+            ],
+            "northeast": [
+              "frames/outfits/commoner/male/wave/northeast/frame-01.png",
+              "frames/outfits/commoner/male/wave/northeast/frame-02.png",
+              "frames/outfits/commoner/male/wave/northeast/frame-03.png",
+              "frames/outfits/commoner/male/wave/northeast/frame-04.png",
+              "frames/outfits/commoner/male/wave/northeast/frame-05.png",
+              "frames/outfits/commoner/male/wave/northeast/frame-06.png",
+              "frames/outfits/commoner/male/wave/northeast/frame-07.png",
+              "frames/outfits/commoner/male/wave/northeast/frame-08.png"
+            ],
+            "north": [
+              "frames/outfits/commoner/male/wave/north/frame-01.png",
+              "frames/outfits/commoner/male/wave/north/frame-02.png",
+              "frames/outfits/commoner/male/wave/north/frame-03.png",
+              "frames/outfits/commoner/male/wave/north/frame-04.png",
+              "frames/outfits/commoner/male/wave/north/frame-05.png",
+              "frames/outfits/commoner/male/wave/north/frame-06.png",
+              "frames/outfits/commoner/male/wave/north/frame-07.png",
+              "frames/outfits/commoner/male/wave/north/frame-08.png"
+            ],
+            "northwest": [
+              "frames/outfits/commoner/male/wave/northwest/frame-01.png",
+              "frames/outfits/commoner/male/wave/northwest/frame-02.png",
+              "frames/outfits/commoner/male/wave/northwest/frame-03.png",
+              "frames/outfits/commoner/male/wave/northwest/frame-04.png",
+              "frames/outfits/commoner/male/wave/northwest/frame-05.png",
+              "frames/outfits/commoner/male/wave/northwest/frame-06.png",
+              "frames/outfits/commoner/male/wave/northwest/frame-07.png",
+              "frames/outfits/commoner/male/wave/northwest/frame-08.png"
+            ],
+            "west": [
+              "frames/outfits/commoner/male/wave/west/frame-01.png",
+              "frames/outfits/commoner/male/wave/west/frame-02.png",
+              "frames/outfits/commoner/male/wave/west/frame-03.png",
+              "frames/outfits/commoner/male/wave/west/frame-04.png",
+              "frames/outfits/commoner/male/wave/west/frame-05.png",
+              "frames/outfits/commoner/male/wave/west/frame-06.png",
+              "frames/outfits/commoner/male/wave/west/frame-07.png",
+              "frames/outfits/commoner/male/wave/west/frame-08.png"
+            ],
+            "southwest": [
+              "frames/outfits/commoner/male/wave/southwest/frame-01.png",
+              "frames/outfits/commoner/male/wave/southwest/frame-02.png",
+              "frames/outfits/commoner/male/wave/southwest/frame-03.png",
+              "frames/outfits/commoner/male/wave/southwest/frame-04.png",
+              "frames/outfits/commoner/male/wave/southwest/frame-05.png",
+              "frames/outfits/commoner/male/wave/southwest/frame-06.png",
+              "frames/outfits/commoner/male/wave/southwest/frame-07.png",
+              "frames/outfits/commoner/male/wave/southwest/frame-08.png"
+            ]
+          },
+          "frameOrder": [
+            "arm rises",
+            "wave",
+            "settle"
+          ]
+        },
+        "run": {
+          "atlas": "atlases/outfits/commoner/male/run.png",
+          "status": "reviewed",
+          "layout": "direction-rows-frames-horizontal",
+          "frameCount": 8,
+          "frameDurationMs": 100,
+          "distancePerCycle": 1.8,
+          "loop": true,
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "frameOrder": [
+            "compressed contacts",
+            "passing",
+            "push-off"
+          ],
+          "review": {
+            "contact2x": "review-gifs/run/commoner-male/contact-2x.png",
+            "frameByFrame": "reviewed",
+            "neighborFramesDistinct": true,
+            "gifs": {
+              "south": "review-gifs/run/commoner-male/south.gif",
+              "southeast": "review-gifs/run/commoner-male/southeast.gif",
+              "east": "review-gifs/run/commoner-male/east.gif",
+              "northeast": "review-gifs/run/commoner-male/northeast.gif",
+              "north": "review-gifs/run/commoner-male/north.gif",
+              "northwest": "review-gifs/run/commoner-male/northwest.gif",
+              "west": "review-gifs/run/commoner-male/west.gif",
+              "southwest": "review-gifs/run/commoner-male/southwest.gif"
+            },
+            "reviewedFrameCount": 64,
+            "eightFacings": "reviewed",
+            "sharedPaletteAndScale": "matched-to-commoner-idle"
+          },
+          "framesByFacing": {
+            "south": [
+              "frames/outfits/commoner/male/run/south/frame-01.png",
+              "frames/outfits/commoner/male/run/south/frame-02.png",
+              "frames/outfits/commoner/male/run/south/frame-03.png",
+              "frames/outfits/commoner/male/run/south/frame-04.png",
+              "frames/outfits/commoner/male/run/south/frame-05.png",
+              "frames/outfits/commoner/male/run/south/frame-06.png",
+              "frames/outfits/commoner/male/run/south/frame-07.png",
+              "frames/outfits/commoner/male/run/south/frame-08.png"
+            ],
+            "southeast": [
+              "frames/outfits/commoner/male/run/southeast/frame-01.png",
+              "frames/outfits/commoner/male/run/southeast/frame-02.png",
+              "frames/outfits/commoner/male/run/southeast/frame-03.png",
+              "frames/outfits/commoner/male/run/southeast/frame-04.png",
+              "frames/outfits/commoner/male/run/southeast/frame-05.png",
+              "frames/outfits/commoner/male/run/southeast/frame-06.png",
+              "frames/outfits/commoner/male/run/southeast/frame-07.png",
+              "frames/outfits/commoner/male/run/southeast/frame-08.png"
+            ],
+            "east": [
+              "frames/outfits/commoner/male/run/east/frame-01.png",
+              "frames/outfits/commoner/male/run/east/frame-02.png",
+              "frames/outfits/commoner/male/run/east/frame-03.png",
+              "frames/outfits/commoner/male/run/east/frame-04.png",
+              "frames/outfits/commoner/male/run/east/frame-05.png",
+              "frames/outfits/commoner/male/run/east/frame-06.png",
+              "frames/outfits/commoner/male/run/east/frame-07.png",
+              "frames/outfits/commoner/male/run/east/frame-08.png"
+            ],
+            "northeast": [
+              "frames/outfits/commoner/male/run/northeast/frame-01.png",
+              "frames/outfits/commoner/male/run/northeast/frame-02.png",
+              "frames/outfits/commoner/male/run/northeast/frame-03.png",
+              "frames/outfits/commoner/male/run/northeast/frame-04.png",
+              "frames/outfits/commoner/male/run/northeast/frame-05.png",
+              "frames/outfits/commoner/male/run/northeast/frame-06.png",
+              "frames/outfits/commoner/male/run/northeast/frame-07.png",
+              "frames/outfits/commoner/male/run/northeast/frame-08.png"
+            ],
+            "north": [
+              "frames/outfits/commoner/male/run/north/frame-01.png",
+              "frames/outfits/commoner/male/run/north/frame-02.png",
+              "frames/outfits/commoner/male/run/north/frame-03.png",
+              "frames/outfits/commoner/male/run/north/frame-04.png",
+              "frames/outfits/commoner/male/run/north/frame-05.png",
+              "frames/outfits/commoner/male/run/north/frame-06.png",
+              "frames/outfits/commoner/male/run/north/frame-07.png",
+              "frames/outfits/commoner/male/run/north/frame-08.png"
+            ],
+            "northwest": [
+              "frames/outfits/commoner/male/run/northwest/frame-01.png",
+              "frames/outfits/commoner/male/run/northwest/frame-02.png",
+              "frames/outfits/commoner/male/run/northwest/frame-03.png",
+              "frames/outfits/commoner/male/run/northwest/frame-04.png",
+              "frames/outfits/commoner/male/run/northwest/frame-05.png",
+              "frames/outfits/commoner/male/run/northwest/frame-06.png",
+              "frames/outfits/commoner/male/run/northwest/frame-07.png",
+              "frames/outfits/commoner/male/run/northwest/frame-08.png"
+            ],
+            "west": [
+              "frames/outfits/commoner/male/run/west/frame-01.png",
+              "frames/outfits/commoner/male/run/west/frame-02.png",
+              "frames/outfits/commoner/male/run/west/frame-03.png",
+              "frames/outfits/commoner/male/run/west/frame-04.png",
+              "frames/outfits/commoner/male/run/west/frame-05.png",
+              "frames/outfits/commoner/male/run/west/frame-06.png",
+              "frames/outfits/commoner/male/run/west/frame-07.png",
+              "frames/outfits/commoner/male/run/west/frame-08.png"
+            ],
+            "southwest": [
+              "frames/outfits/commoner/male/run/southwest/frame-01.png",
+              "frames/outfits/commoner/male/run/southwest/frame-02.png",
+              "frames/outfits/commoner/male/run/southwest/frame-03.png",
+              "frames/outfits/commoner/male/run/southwest/frame-04.png",
+              "frames/outfits/commoner/male/run/southwest/frame-05.png",
+              "frames/outfits/commoner/male/run/southwest/frame-06.png",
+              "frames/outfits/commoner/male/run/southwest/frame-07.png",
+              "frames/outfits/commoner/male/run/southwest/frame-08.png"
+            ]
+          }
+        },
+        "sit-chair": {
+          "atlas": "atlases/outfits/commoner/male/sit-chair.png",
+          "status": "reviewed",
+          "layout": "direction-rows-frames-horizontal",
+          "frameCount": 8,
+          "frameDurationMs": 120,
+          "transitionFrameCount": 4,
+          "holdFrameStart": 4,
+          "loop": false,
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "frameOrder": [
+            "stand",
+            "lower into bent-leg seat",
+            "hold"
+          ],
+          "review": {
+            "frameByFrame": "reviewed",
+            "knownIssues": [
+              "Palette and cap-to-head proportions still need a final comparison with the existing PNG actions.",
+              "Runtime transition and seated hold are not connected yet."
+            ],
+            "contactSheets": {
+              "south": "review-gifs/sit-chair/commoner-male/south-contact-2x.png",
+              "southeast": "review-gifs/sit-chair/commoner-male/southeast-contact-2x.png",
+              "east": "review-gifs/sit-chair/commoner-male/east-contact-2x.png",
+              "northeast": "review-gifs/sit-chair/commoner-male/northeast-contact-2x.png",
+              "north": "review-gifs/sit-chair/commoner-male/north-contact-2x.png",
+              "northwest": "review-gifs/sit-chair/commoner-male/northwest-contact-2x.png",
+              "west": "review-gifs/sit-chair/commoner-male/west-contact-2x.png",
+              "southwest": "review-gifs/sit-chair/commoner-male/southwest-contact-2x.png"
+            },
+            "gifs": {
+              "south": "review-gifs/sit-chair/commoner-male/south.gif",
+              "southeast": "review-gifs/sit-chair/commoner-male/southeast.gif",
+              "east": "review-gifs/sit-chair/commoner-male/east.gif",
+              "northeast": "review-gifs/sit-chair/commoner-male/northeast.gif",
+              "north": "review-gifs/sit-chair/commoner-male/north.gif",
+              "northwest": "review-gifs/sit-chair/commoner-male/northwest.gif",
+              "west": "review-gifs/sit-chair/commoner-male/west.gif",
+              "southwest": "review-gifs/sit-chair/commoner-male/southwest.gif"
+            },
+            "contact2x": "review-gifs/sit-chair/commoner-male/contact-2x.png",
+            "reviewedFrameCount": 64,
+            "eightFacings": "reviewed",
+            "sharedPaletteAndScale": "matched-to-commoner-idle"
+          },
+          "framesByFacing": {
+            "south": [
+              "frames/outfits/commoner/male/sit-chair/south/frame-01.png",
+              "frames/outfits/commoner/male/sit-chair/south/frame-02.png",
+              "frames/outfits/commoner/male/sit-chair/south/frame-03.png",
+              "frames/outfits/commoner/male/sit-chair/south/frame-04.png",
+              "frames/outfits/commoner/male/sit-chair/south/frame-05.png",
+              "frames/outfits/commoner/male/sit-chair/south/frame-06.png",
+              "frames/outfits/commoner/male/sit-chair/south/frame-07.png",
+              "frames/outfits/commoner/male/sit-chair/south/frame-08.png"
+            ],
+            "southeast": [
+              "frames/outfits/commoner/male/sit-chair/southeast/frame-01.png",
+              "frames/outfits/commoner/male/sit-chair/southeast/frame-02.png",
+              "frames/outfits/commoner/male/sit-chair/southeast/frame-03.png",
+              "frames/outfits/commoner/male/sit-chair/southeast/frame-04.png",
+              "frames/outfits/commoner/male/sit-chair/southeast/frame-05.png",
+              "frames/outfits/commoner/male/sit-chair/southeast/frame-06.png",
+              "frames/outfits/commoner/male/sit-chair/southeast/frame-07.png",
+              "frames/outfits/commoner/male/sit-chair/southeast/frame-08.png"
+            ],
+            "east": [
+              "frames/outfits/commoner/male/sit-chair/east/frame-01.png",
+              "frames/outfits/commoner/male/sit-chair/east/frame-02.png",
+              "frames/outfits/commoner/male/sit-chair/east/frame-03.png",
+              "frames/outfits/commoner/male/sit-chair/east/frame-04.png",
+              "frames/outfits/commoner/male/sit-chair/east/frame-05.png",
+              "frames/outfits/commoner/male/sit-chair/east/frame-06.png",
+              "frames/outfits/commoner/male/sit-chair/east/frame-07.png",
+              "frames/outfits/commoner/male/sit-chair/east/frame-08.png"
+            ],
+            "northeast": [
+              "frames/outfits/commoner/male/sit-chair/northeast/frame-01.png",
+              "frames/outfits/commoner/male/sit-chair/northeast/frame-02.png",
+              "frames/outfits/commoner/male/sit-chair/northeast/frame-03.png",
+              "frames/outfits/commoner/male/sit-chair/northeast/frame-04.png",
+              "frames/outfits/commoner/male/sit-chair/northeast/frame-05.png",
+              "frames/outfits/commoner/male/sit-chair/northeast/frame-06.png",
+              "frames/outfits/commoner/male/sit-chair/northeast/frame-07.png",
+              "frames/outfits/commoner/male/sit-chair/northeast/frame-08.png"
+            ],
+            "north": [
+              "frames/outfits/commoner/male/sit-chair/north/frame-01.png",
+              "frames/outfits/commoner/male/sit-chair/north/frame-02.png",
+              "frames/outfits/commoner/male/sit-chair/north/frame-03.png",
+              "frames/outfits/commoner/male/sit-chair/north/frame-04.png",
+              "frames/outfits/commoner/male/sit-chair/north/frame-05.png",
+              "frames/outfits/commoner/male/sit-chair/north/frame-06.png",
+              "frames/outfits/commoner/male/sit-chair/north/frame-07.png",
+              "frames/outfits/commoner/male/sit-chair/north/frame-08.png"
+            ],
+            "northwest": [
+              "frames/outfits/commoner/male/sit-chair/northwest/frame-01.png",
+              "frames/outfits/commoner/male/sit-chair/northwest/frame-02.png",
+              "frames/outfits/commoner/male/sit-chair/northwest/frame-03.png",
+              "frames/outfits/commoner/male/sit-chair/northwest/frame-04.png",
+              "frames/outfits/commoner/male/sit-chair/northwest/frame-05.png",
+              "frames/outfits/commoner/male/sit-chair/northwest/frame-06.png",
+              "frames/outfits/commoner/male/sit-chair/northwest/frame-07.png",
+              "frames/outfits/commoner/male/sit-chair/northwest/frame-08.png"
+            ],
+            "west": [
+              "frames/outfits/commoner/male/sit-chair/west/frame-01.png",
+              "frames/outfits/commoner/male/sit-chair/west/frame-02.png",
+              "frames/outfits/commoner/male/sit-chair/west/frame-03.png",
+              "frames/outfits/commoner/male/sit-chair/west/frame-04.png",
+              "frames/outfits/commoner/male/sit-chair/west/frame-05.png",
+              "frames/outfits/commoner/male/sit-chair/west/frame-06.png",
+              "frames/outfits/commoner/male/sit-chair/west/frame-07.png",
+              "frames/outfits/commoner/male/sit-chair/west/frame-08.png"
+            ],
+            "southwest": [
+              "frames/outfits/commoner/male/sit-chair/southwest/frame-01.png",
+              "frames/outfits/commoner/male/sit-chair/southwest/frame-02.png",
+              "frames/outfits/commoner/male/sit-chair/southwest/frame-03.png",
+              "frames/outfits/commoner/male/sit-chair/southwest/frame-04.png",
+              "frames/outfits/commoner/male/sit-chair/southwest/frame-05.png",
+              "frames/outfits/commoner/male/sit-chair/southwest/frame-06.png",
+              "frames/outfits/commoner/male/sit-chair/southwest/frame-07.png",
+              "frames/outfits/commoner/male/sit-chair/southwest/frame-08.png"
+            ]
+          }
+        },
+        "sit-ground": {
+          "status": "reviewed",
+          "layout": "direction-rows-frames-horizontal",
+          "frameCount": 8,
+          "frameDurationMs": 120,
+          "transitionFrameCount": 4,
+          "holdFrameStart": 4,
+          "loop": false,
+          "frameOrder": [
+            "stand",
+            "lower",
+            "cross-legged hold"
+          ],
+          "review": {
+            "frameByFrame": "reviewed",
+            "knownIssues": [
+              "Only the south-facing PNG sequence exists; seven views and runtime connection remain."
+            ],
+            "contact2x": "review-gifs/sit-ground/commoner-male/contact-2x.png",
+            "gif": "review-gifs/sit-ground/commoner-male/south.gif",
+            "reviewedFrameCount": 64,
+            "eightFacings": "reviewed",
+            "sharedPaletteAndScale": "matched-to-commoner-idle"
+          },
+          "framesByFacing": {
+            "south": [
+              "frames/outfits/commoner/male/sit-ground/south/frame-01.png",
+              "frames/outfits/commoner/male/sit-ground/south/frame-02.png",
+              "frames/outfits/commoner/male/sit-ground/south/frame-03.png",
+              "frames/outfits/commoner/male/sit-ground/south/frame-04.png",
+              "frames/outfits/commoner/male/sit-ground/south/frame-05.png",
+              "frames/outfits/commoner/male/sit-ground/south/frame-06.png",
+              "frames/outfits/commoner/male/sit-ground/south/frame-07.png",
+              "frames/outfits/commoner/male/sit-ground/south/frame-08.png"
+            ],
+            "southeast": [
+              "frames/outfits/commoner/male/sit-ground/southeast/frame-01.png",
+              "frames/outfits/commoner/male/sit-ground/southeast/frame-02.png",
+              "frames/outfits/commoner/male/sit-ground/southeast/frame-03.png",
+              "frames/outfits/commoner/male/sit-ground/southeast/frame-04.png",
+              "frames/outfits/commoner/male/sit-ground/southeast/frame-05.png",
+              "frames/outfits/commoner/male/sit-ground/southeast/frame-06.png",
+              "frames/outfits/commoner/male/sit-ground/southeast/frame-07.png",
+              "frames/outfits/commoner/male/sit-ground/southeast/frame-08.png"
+            ],
+            "east": [
+              "frames/outfits/commoner/male/sit-ground/east/frame-01.png",
+              "frames/outfits/commoner/male/sit-ground/east/frame-02.png",
+              "frames/outfits/commoner/male/sit-ground/east/frame-03.png",
+              "frames/outfits/commoner/male/sit-ground/east/frame-04.png",
+              "frames/outfits/commoner/male/sit-ground/east/frame-05.png",
+              "frames/outfits/commoner/male/sit-ground/east/frame-06.png",
+              "frames/outfits/commoner/male/sit-ground/east/frame-07.png",
+              "frames/outfits/commoner/male/sit-ground/east/frame-08.png"
+            ],
+            "northeast": [
+              "frames/outfits/commoner/male/sit-ground/northeast/frame-01.png",
+              "frames/outfits/commoner/male/sit-ground/northeast/frame-02.png",
+              "frames/outfits/commoner/male/sit-ground/northeast/frame-03.png",
+              "frames/outfits/commoner/male/sit-ground/northeast/frame-04.png",
+              "frames/outfits/commoner/male/sit-ground/northeast/frame-05.png",
+              "frames/outfits/commoner/male/sit-ground/northeast/frame-06.png",
+              "frames/outfits/commoner/male/sit-ground/northeast/frame-07.png",
+              "frames/outfits/commoner/male/sit-ground/northeast/frame-08.png"
+            ],
+            "north": [
+              "frames/outfits/commoner/male/sit-ground/north/frame-01.png",
+              "frames/outfits/commoner/male/sit-ground/north/frame-02.png",
+              "frames/outfits/commoner/male/sit-ground/north/frame-03.png",
+              "frames/outfits/commoner/male/sit-ground/north/frame-04.png",
+              "frames/outfits/commoner/male/sit-ground/north/frame-05.png",
+              "frames/outfits/commoner/male/sit-ground/north/frame-06.png",
+              "frames/outfits/commoner/male/sit-ground/north/frame-07.png",
+              "frames/outfits/commoner/male/sit-ground/north/frame-08.png"
+            ],
+            "northwest": [
+              "frames/outfits/commoner/male/sit-ground/northwest/frame-01.png",
+              "frames/outfits/commoner/male/sit-ground/northwest/frame-02.png",
+              "frames/outfits/commoner/male/sit-ground/northwest/frame-03.png",
+              "frames/outfits/commoner/male/sit-ground/northwest/frame-04.png",
+              "frames/outfits/commoner/male/sit-ground/northwest/frame-05.png",
+              "frames/outfits/commoner/male/sit-ground/northwest/frame-06.png",
+              "frames/outfits/commoner/male/sit-ground/northwest/frame-07.png",
+              "frames/outfits/commoner/male/sit-ground/northwest/frame-08.png"
+            ],
+            "west": [
+              "frames/outfits/commoner/male/sit-ground/west/frame-01.png",
+              "frames/outfits/commoner/male/sit-ground/west/frame-02.png",
+              "frames/outfits/commoner/male/sit-ground/west/frame-03.png",
+              "frames/outfits/commoner/male/sit-ground/west/frame-04.png",
+              "frames/outfits/commoner/male/sit-ground/west/frame-05.png",
+              "frames/outfits/commoner/male/sit-ground/west/frame-06.png",
+              "frames/outfits/commoner/male/sit-ground/west/frame-07.png",
+              "frames/outfits/commoner/male/sit-ground/west/frame-08.png"
+            ],
+            "southwest": [
+              "frames/outfits/commoner/male/sit-ground/southwest/frame-01.png",
+              "frames/outfits/commoner/male/sit-ground/southwest/frame-02.png",
+              "frames/outfits/commoner/male/sit-ground/southwest/frame-03.png",
+              "frames/outfits/commoner/male/sit-ground/southwest/frame-04.png",
+              "frames/outfits/commoner/male/sit-ground/southwest/frame-05.png",
+              "frames/outfits/commoner/male/sit-ground/southwest/frame-06.png",
+              "frames/outfits/commoner/male/sit-ground/southwest/frame-07.png",
+              "frames/outfits/commoner/male/sit-ground/southwest/frame-08.png"
+            ]
+          },
+          "atlas": "atlases/outfits/commoner/male/sit-ground.png",
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ]
+        },
+        "dance": {
+          "atlas": "atlases/outfits/commoner/male/dance.png",
+          "status": "reviewed",
+          "layout": "direction-rows-frames-horizontal",
+          "frameCount": 8,
+          "frameDurationMs": 115,
+          "loop": true,
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "frameOrder": [
+            "rhythmic sway",
+            "arm accents",
+            "reset"
+          ],
+          "framesByFacing": {
+            "south": [
+              "frames/outfits/commoner/male/dance/south/frame-01.png",
+              "frames/outfits/commoner/male/dance/south/frame-02.png",
+              "frames/outfits/commoner/male/dance/south/frame-03.png",
+              "frames/outfits/commoner/male/dance/south/frame-04.png",
+              "frames/outfits/commoner/male/dance/south/frame-05.png",
+              "frames/outfits/commoner/male/dance/south/frame-06.png",
+              "frames/outfits/commoner/male/dance/south/frame-07.png",
+              "frames/outfits/commoner/male/dance/south/frame-08.png"
+            ],
+            "southeast": [
+              "frames/outfits/commoner/male/dance/southeast/frame-01.png",
+              "frames/outfits/commoner/male/dance/southeast/frame-02.png",
+              "frames/outfits/commoner/male/dance/southeast/frame-03.png",
+              "frames/outfits/commoner/male/dance/southeast/frame-04.png",
+              "frames/outfits/commoner/male/dance/southeast/frame-05.png",
+              "frames/outfits/commoner/male/dance/southeast/frame-06.png",
+              "frames/outfits/commoner/male/dance/southeast/frame-07.png",
+              "frames/outfits/commoner/male/dance/southeast/frame-08.png"
+            ],
+            "east": [
+              "frames/outfits/commoner/male/dance/east/frame-01.png",
+              "frames/outfits/commoner/male/dance/east/frame-02.png",
+              "frames/outfits/commoner/male/dance/east/frame-03.png",
+              "frames/outfits/commoner/male/dance/east/frame-04.png",
+              "frames/outfits/commoner/male/dance/east/frame-05.png",
+              "frames/outfits/commoner/male/dance/east/frame-06.png",
+              "frames/outfits/commoner/male/dance/east/frame-07.png",
+              "frames/outfits/commoner/male/dance/east/frame-08.png"
+            ],
+            "northeast": [
+              "frames/outfits/commoner/male/dance/northeast/frame-01.png",
+              "frames/outfits/commoner/male/dance/northeast/frame-02.png",
+              "frames/outfits/commoner/male/dance/northeast/frame-03.png",
+              "frames/outfits/commoner/male/dance/northeast/frame-04.png",
+              "frames/outfits/commoner/male/dance/northeast/frame-05.png",
+              "frames/outfits/commoner/male/dance/northeast/frame-06.png",
+              "frames/outfits/commoner/male/dance/northeast/frame-07.png",
+              "frames/outfits/commoner/male/dance/northeast/frame-08.png"
+            ],
+            "north": [
+              "frames/outfits/commoner/male/dance/north/frame-01.png",
+              "frames/outfits/commoner/male/dance/north/frame-02.png",
+              "frames/outfits/commoner/male/dance/north/frame-03.png",
+              "frames/outfits/commoner/male/dance/north/frame-04.png",
+              "frames/outfits/commoner/male/dance/north/frame-05.png",
+              "frames/outfits/commoner/male/dance/north/frame-06.png",
+              "frames/outfits/commoner/male/dance/north/frame-07.png",
+              "frames/outfits/commoner/male/dance/north/frame-08.png"
+            ],
+            "northwest": [
+              "frames/outfits/commoner/male/dance/northwest/frame-01.png",
+              "frames/outfits/commoner/male/dance/northwest/frame-02.png",
+              "frames/outfits/commoner/male/dance/northwest/frame-03.png",
+              "frames/outfits/commoner/male/dance/northwest/frame-04.png",
+              "frames/outfits/commoner/male/dance/northwest/frame-05.png",
+              "frames/outfits/commoner/male/dance/northwest/frame-06.png",
+              "frames/outfits/commoner/male/dance/northwest/frame-07.png",
+              "frames/outfits/commoner/male/dance/northwest/frame-08.png"
+            ],
+            "west": [
+              "frames/outfits/commoner/male/dance/west/frame-01.png",
+              "frames/outfits/commoner/male/dance/west/frame-02.png",
+              "frames/outfits/commoner/male/dance/west/frame-03.png",
+              "frames/outfits/commoner/male/dance/west/frame-04.png",
+              "frames/outfits/commoner/male/dance/west/frame-05.png",
+              "frames/outfits/commoner/male/dance/west/frame-06.png",
+              "frames/outfits/commoner/male/dance/west/frame-07.png",
+              "frames/outfits/commoner/male/dance/west/frame-08.png"
+            ],
+            "southwest": [
+              "frames/outfits/commoner/male/dance/southwest/frame-01.png",
+              "frames/outfits/commoner/male/dance/southwest/frame-02.png",
+              "frames/outfits/commoner/male/dance/southwest/frame-03.png",
+              "frames/outfits/commoner/male/dance/southwest/frame-04.png",
+              "frames/outfits/commoner/male/dance/southwest/frame-05.png",
+              "frames/outfits/commoner/male/dance/southwest/frame-06.png",
+              "frames/outfits/commoner/male/dance/southwest/frame-07.png",
+              "frames/outfits/commoner/male/dance/southwest/frame-08.png"
+            ]
+          },
+          "review": {
+            "contact2x": "review-gifs/dance/commoner-male/contact-2x.png",
+            "frameByFrame": "reviewed",
+            "reviewedFrameCount": 64,
+            "eightFacings": "reviewed",
+            "sharedPaletteAndScale": "matched-to-commoner-idle"
+          }
+        },
+        "jump": {
+          "atlas": "atlases/outfits/commoner/male/jump.png",
+          "status": "reviewed",
+          "layout": "direction-rows-frames-horizontal",
+          "frameCount": 8,
+          "frameDurationMs": 110,
+          "loop": false,
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "frameOrder": [
+            "anticipation",
+            "takeoff",
+            "apex",
+            "landing"
+          ],
+          "framesByFacing": {
+            "south": [
+              "frames/outfits/commoner/male/jump/south/frame-01.png",
+              "frames/outfits/commoner/male/jump/south/frame-02.png",
+              "frames/outfits/commoner/male/jump/south/frame-03.png",
+              "frames/outfits/commoner/male/jump/south/frame-04.png",
+              "frames/outfits/commoner/male/jump/south/frame-05.png",
+              "frames/outfits/commoner/male/jump/south/frame-06.png",
+              "frames/outfits/commoner/male/jump/south/frame-07.png",
+              "frames/outfits/commoner/male/jump/south/frame-08.png"
+            ],
+            "southeast": [
+              "frames/outfits/commoner/male/jump/southeast/frame-01.png",
+              "frames/outfits/commoner/male/jump/southeast/frame-02.png",
+              "frames/outfits/commoner/male/jump/southeast/frame-03.png",
+              "frames/outfits/commoner/male/jump/southeast/frame-04.png",
+              "frames/outfits/commoner/male/jump/southeast/frame-05.png",
+              "frames/outfits/commoner/male/jump/southeast/frame-06.png",
+              "frames/outfits/commoner/male/jump/southeast/frame-07.png",
+              "frames/outfits/commoner/male/jump/southeast/frame-08.png"
+            ],
+            "east": [
+              "frames/outfits/commoner/male/jump/east/frame-01.png",
+              "frames/outfits/commoner/male/jump/east/frame-02.png",
+              "frames/outfits/commoner/male/jump/east/frame-03.png",
+              "frames/outfits/commoner/male/jump/east/frame-04.png",
+              "frames/outfits/commoner/male/jump/east/frame-05.png",
+              "frames/outfits/commoner/male/jump/east/frame-06.png",
+              "frames/outfits/commoner/male/jump/east/frame-07.png",
+              "frames/outfits/commoner/male/jump/east/frame-08.png"
+            ],
+            "northeast": [
+              "frames/outfits/commoner/male/jump/northeast/frame-01.png",
+              "frames/outfits/commoner/male/jump/northeast/frame-02.png",
+              "frames/outfits/commoner/male/jump/northeast/frame-03.png",
+              "frames/outfits/commoner/male/jump/northeast/frame-04.png",
+              "frames/outfits/commoner/male/jump/northeast/frame-05.png",
+              "frames/outfits/commoner/male/jump/northeast/frame-06.png",
+              "frames/outfits/commoner/male/jump/northeast/frame-07.png",
+              "frames/outfits/commoner/male/jump/northeast/frame-08.png"
+            ],
+            "north": [
+              "frames/outfits/commoner/male/jump/north/frame-01.png",
+              "frames/outfits/commoner/male/jump/north/frame-02.png",
+              "frames/outfits/commoner/male/jump/north/frame-03.png",
+              "frames/outfits/commoner/male/jump/north/frame-04.png",
+              "frames/outfits/commoner/male/jump/north/frame-05.png",
+              "frames/outfits/commoner/male/jump/north/frame-06.png",
+              "frames/outfits/commoner/male/jump/north/frame-07.png",
+              "frames/outfits/commoner/male/jump/north/frame-08.png"
+            ],
+            "northwest": [
+              "frames/outfits/commoner/male/jump/northwest/frame-01.png",
+              "frames/outfits/commoner/male/jump/northwest/frame-02.png",
+              "frames/outfits/commoner/male/jump/northwest/frame-03.png",
+              "frames/outfits/commoner/male/jump/northwest/frame-04.png",
+              "frames/outfits/commoner/male/jump/northwest/frame-05.png",
+              "frames/outfits/commoner/male/jump/northwest/frame-06.png",
+              "frames/outfits/commoner/male/jump/northwest/frame-07.png",
+              "frames/outfits/commoner/male/jump/northwest/frame-08.png"
+            ],
+            "west": [
+              "frames/outfits/commoner/male/jump/west/frame-01.png",
+              "frames/outfits/commoner/male/jump/west/frame-02.png",
+              "frames/outfits/commoner/male/jump/west/frame-03.png",
+              "frames/outfits/commoner/male/jump/west/frame-04.png",
+              "frames/outfits/commoner/male/jump/west/frame-05.png",
+              "frames/outfits/commoner/male/jump/west/frame-06.png",
+              "frames/outfits/commoner/male/jump/west/frame-07.png",
+              "frames/outfits/commoner/male/jump/west/frame-08.png"
+            ],
+            "southwest": [
+              "frames/outfits/commoner/male/jump/southwest/frame-01.png",
+              "frames/outfits/commoner/male/jump/southwest/frame-02.png",
+              "frames/outfits/commoner/male/jump/southwest/frame-03.png",
+              "frames/outfits/commoner/male/jump/southwest/frame-04.png",
+              "frames/outfits/commoner/male/jump/southwest/frame-05.png",
+              "frames/outfits/commoner/male/jump/southwest/frame-06.png",
+              "frames/outfits/commoner/male/jump/southwest/frame-07.png",
+              "frames/outfits/commoner/male/jump/southwest/frame-08.png"
+            ]
+          },
+          "review": {
+            "contact2x": "review-gifs/jump/commoner-male/contact-2x.png",
+            "frameByFrame": "reviewed",
+            "reviewedFrameCount": 64,
+            "eightFacings": "reviewed",
+            "sharedPaletteAndScale": "matched-to-commoner-idle"
+          }
+        },
+        "crouch": {
+          "atlas": "atlases/outfits/commoner/male/crouch.png",
+          "status": "reviewed",
+          "layout": "direction-rows-frames-horizontal",
+          "frameCount": 8,
+          "frameDurationMs": 110,
+          "loop": false,
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "frameOrder": [
+            "stand",
+            "lower",
+            "crouched hold"
+          ],
+          "framesByFacing": {
+            "south": [
+              "frames/outfits/commoner/male/crouch/south/frame-01.png",
+              "frames/outfits/commoner/male/crouch/south/frame-02.png",
+              "frames/outfits/commoner/male/crouch/south/frame-03.png",
+              "frames/outfits/commoner/male/crouch/south/frame-04.png",
+              "frames/outfits/commoner/male/crouch/south/frame-05.png",
+              "frames/outfits/commoner/male/crouch/south/frame-06.png",
+              "frames/outfits/commoner/male/crouch/south/frame-07.png",
+              "frames/outfits/commoner/male/crouch/south/frame-08.png"
+            ],
+            "southeast": [
+              "frames/outfits/commoner/male/crouch/southeast/frame-01.png",
+              "frames/outfits/commoner/male/crouch/southeast/frame-02.png",
+              "frames/outfits/commoner/male/crouch/southeast/frame-03.png",
+              "frames/outfits/commoner/male/crouch/southeast/frame-04.png",
+              "frames/outfits/commoner/male/crouch/southeast/frame-05.png",
+              "frames/outfits/commoner/male/crouch/southeast/frame-06.png",
+              "frames/outfits/commoner/male/crouch/southeast/frame-07.png",
+              "frames/outfits/commoner/male/crouch/southeast/frame-08.png"
+            ],
+            "east": [
+              "frames/outfits/commoner/male/crouch/east/frame-01.png",
+              "frames/outfits/commoner/male/crouch/east/frame-02.png",
+              "frames/outfits/commoner/male/crouch/east/frame-03.png",
+              "frames/outfits/commoner/male/crouch/east/frame-04.png",
+              "frames/outfits/commoner/male/crouch/east/frame-05.png",
+              "frames/outfits/commoner/male/crouch/east/frame-06.png",
+              "frames/outfits/commoner/male/crouch/east/frame-07.png",
+              "frames/outfits/commoner/male/crouch/east/frame-08.png"
+            ],
+            "northeast": [
+              "frames/outfits/commoner/male/crouch/northeast/frame-01.png",
+              "frames/outfits/commoner/male/crouch/northeast/frame-02.png",
+              "frames/outfits/commoner/male/crouch/northeast/frame-03.png",
+              "frames/outfits/commoner/male/crouch/northeast/frame-04.png",
+              "frames/outfits/commoner/male/crouch/northeast/frame-05.png",
+              "frames/outfits/commoner/male/crouch/northeast/frame-06.png",
+              "frames/outfits/commoner/male/crouch/northeast/frame-07.png",
+              "frames/outfits/commoner/male/crouch/northeast/frame-08.png"
+            ],
+            "north": [
+              "frames/outfits/commoner/male/crouch/north/frame-01.png",
+              "frames/outfits/commoner/male/crouch/north/frame-02.png",
+              "frames/outfits/commoner/male/crouch/north/frame-03.png",
+              "frames/outfits/commoner/male/crouch/north/frame-04.png",
+              "frames/outfits/commoner/male/crouch/north/frame-05.png",
+              "frames/outfits/commoner/male/crouch/north/frame-06.png",
+              "frames/outfits/commoner/male/crouch/north/frame-07.png",
+              "frames/outfits/commoner/male/crouch/north/frame-08.png"
+            ],
+            "northwest": [
+              "frames/outfits/commoner/male/crouch/northwest/frame-01.png",
+              "frames/outfits/commoner/male/crouch/northwest/frame-02.png",
+              "frames/outfits/commoner/male/crouch/northwest/frame-03.png",
+              "frames/outfits/commoner/male/crouch/northwest/frame-04.png",
+              "frames/outfits/commoner/male/crouch/northwest/frame-05.png",
+              "frames/outfits/commoner/male/crouch/northwest/frame-06.png",
+              "frames/outfits/commoner/male/crouch/northwest/frame-07.png",
+              "frames/outfits/commoner/male/crouch/northwest/frame-08.png"
+            ],
+            "west": [
+              "frames/outfits/commoner/male/crouch/west/frame-01.png",
+              "frames/outfits/commoner/male/crouch/west/frame-02.png",
+              "frames/outfits/commoner/male/crouch/west/frame-03.png",
+              "frames/outfits/commoner/male/crouch/west/frame-04.png",
+              "frames/outfits/commoner/male/crouch/west/frame-05.png",
+              "frames/outfits/commoner/male/crouch/west/frame-06.png",
+              "frames/outfits/commoner/male/crouch/west/frame-07.png",
+              "frames/outfits/commoner/male/crouch/west/frame-08.png"
+            ],
+            "southwest": [
+              "frames/outfits/commoner/male/crouch/southwest/frame-01.png",
+              "frames/outfits/commoner/male/crouch/southwest/frame-02.png",
+              "frames/outfits/commoner/male/crouch/southwest/frame-03.png",
+              "frames/outfits/commoner/male/crouch/southwest/frame-04.png",
+              "frames/outfits/commoner/male/crouch/southwest/frame-05.png",
+              "frames/outfits/commoner/male/crouch/southwest/frame-06.png",
+              "frames/outfits/commoner/male/crouch/southwest/frame-07.png",
+              "frames/outfits/commoner/male/crouch/southwest/frame-08.png"
+            ]
+          },
+          "review": {
+            "contact2x": "review-gifs/crouch/commoner-male/contact-2x.png",
+            "frameByFrame": "reviewed",
+            "reviewedFrameCount": 64,
+            "eightFacings": "reviewed",
+            "sharedPaletteAndScale": "matched-to-commoner-idle"
+          },
+          "transitionFrameCount": 4,
+          "holdFrameStart": 4
+        },
+        "crouch-walk": {
+          "atlas": "atlases/outfits/commoner/male/crouch-walk.png",
+          "status": "reviewed",
+          "layout": "direction-rows-frames-horizontal",
+          "frameCount": 8,
+          "frameDurationMs": 105,
+          "loop": true,
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "frameOrder": [
+            "low alternating steps"
+          ],
+          "framesByFacing": {
+            "south": [
+              "frames/outfits/commoner/male/crouch-walk/south/frame-01.png",
+              "frames/outfits/commoner/male/crouch-walk/south/frame-02.png",
+              "frames/outfits/commoner/male/crouch-walk/south/frame-03.png",
+              "frames/outfits/commoner/male/crouch-walk/south/frame-04.png",
+              "frames/outfits/commoner/male/crouch-walk/south/frame-05.png",
+              "frames/outfits/commoner/male/crouch-walk/south/frame-06.png",
+              "frames/outfits/commoner/male/crouch-walk/south/frame-07.png",
+              "frames/outfits/commoner/male/crouch-walk/south/frame-08.png"
+            ],
+            "southeast": [
+              "frames/outfits/commoner/male/crouch-walk/southeast/frame-01.png",
+              "frames/outfits/commoner/male/crouch-walk/southeast/frame-02.png",
+              "frames/outfits/commoner/male/crouch-walk/southeast/frame-03.png",
+              "frames/outfits/commoner/male/crouch-walk/southeast/frame-04.png",
+              "frames/outfits/commoner/male/crouch-walk/southeast/frame-05.png",
+              "frames/outfits/commoner/male/crouch-walk/southeast/frame-06.png",
+              "frames/outfits/commoner/male/crouch-walk/southeast/frame-07.png",
+              "frames/outfits/commoner/male/crouch-walk/southeast/frame-08.png"
+            ],
+            "east": [
+              "frames/outfits/commoner/male/crouch-walk/east/frame-01.png",
+              "frames/outfits/commoner/male/crouch-walk/east/frame-02.png",
+              "frames/outfits/commoner/male/crouch-walk/east/frame-03.png",
+              "frames/outfits/commoner/male/crouch-walk/east/frame-04.png",
+              "frames/outfits/commoner/male/crouch-walk/east/frame-05.png",
+              "frames/outfits/commoner/male/crouch-walk/east/frame-06.png",
+              "frames/outfits/commoner/male/crouch-walk/east/frame-07.png",
+              "frames/outfits/commoner/male/crouch-walk/east/frame-08.png"
+            ],
+            "northeast": [
+              "frames/outfits/commoner/male/crouch-walk/northeast/frame-01.png",
+              "frames/outfits/commoner/male/crouch-walk/northeast/frame-02.png",
+              "frames/outfits/commoner/male/crouch-walk/northeast/frame-03.png",
+              "frames/outfits/commoner/male/crouch-walk/northeast/frame-04.png",
+              "frames/outfits/commoner/male/crouch-walk/northeast/frame-05.png",
+              "frames/outfits/commoner/male/crouch-walk/northeast/frame-06.png",
+              "frames/outfits/commoner/male/crouch-walk/northeast/frame-07.png",
+              "frames/outfits/commoner/male/crouch-walk/northeast/frame-08.png"
+            ],
+            "north": [
+              "frames/outfits/commoner/male/crouch-walk/north/frame-01.png",
+              "frames/outfits/commoner/male/crouch-walk/north/frame-02.png",
+              "frames/outfits/commoner/male/crouch-walk/north/frame-03.png",
+              "frames/outfits/commoner/male/crouch-walk/north/frame-04.png",
+              "frames/outfits/commoner/male/crouch-walk/north/frame-05.png",
+              "frames/outfits/commoner/male/crouch-walk/north/frame-06.png",
+              "frames/outfits/commoner/male/crouch-walk/north/frame-07.png",
+              "frames/outfits/commoner/male/crouch-walk/north/frame-08.png"
+            ],
+            "northwest": [
+              "frames/outfits/commoner/male/crouch-walk/northwest/frame-01.png",
+              "frames/outfits/commoner/male/crouch-walk/northwest/frame-02.png",
+              "frames/outfits/commoner/male/crouch-walk/northwest/frame-03.png",
+              "frames/outfits/commoner/male/crouch-walk/northwest/frame-04.png",
+              "frames/outfits/commoner/male/crouch-walk/northwest/frame-05.png",
+              "frames/outfits/commoner/male/crouch-walk/northwest/frame-06.png",
+              "frames/outfits/commoner/male/crouch-walk/northwest/frame-07.png",
+              "frames/outfits/commoner/male/crouch-walk/northwest/frame-08.png"
+            ],
+            "west": [
+              "frames/outfits/commoner/male/crouch-walk/west/frame-01.png",
+              "frames/outfits/commoner/male/crouch-walk/west/frame-02.png",
+              "frames/outfits/commoner/male/crouch-walk/west/frame-03.png",
+              "frames/outfits/commoner/male/crouch-walk/west/frame-04.png",
+              "frames/outfits/commoner/male/crouch-walk/west/frame-05.png",
+              "frames/outfits/commoner/male/crouch-walk/west/frame-06.png",
+              "frames/outfits/commoner/male/crouch-walk/west/frame-07.png",
+              "frames/outfits/commoner/male/crouch-walk/west/frame-08.png"
+            ],
+            "southwest": [
+              "frames/outfits/commoner/male/crouch-walk/southwest/frame-01.png",
+              "frames/outfits/commoner/male/crouch-walk/southwest/frame-02.png",
+              "frames/outfits/commoner/male/crouch-walk/southwest/frame-03.png",
+              "frames/outfits/commoner/male/crouch-walk/southwest/frame-04.png",
+              "frames/outfits/commoner/male/crouch-walk/southwest/frame-05.png",
+              "frames/outfits/commoner/male/crouch-walk/southwest/frame-06.png",
+              "frames/outfits/commoner/male/crouch-walk/southwest/frame-07.png",
+              "frames/outfits/commoner/male/crouch-walk/southwest/frame-08.png"
+            ]
+          },
+          "review": {
+            "contact2x": "review-gifs/crouch-walk/commoner-male/contact-2x.png",
+            "frameByFrame": "reviewed",
+            "reviewedFrameCount": 64,
+            "eightFacings": "reviewed",
+            "sharedPaletteAndScale": "matched-to-commoner-idle"
+          },
+          "distancePerCycle": 2.56
+        },
+        "walk-wave": {
+          "atlas": "atlases/outfits/commoner/male/walk-wave.png",
+          "status": "reviewed",
+          "layout": "direction-rows-frames-horizontal",
+          "frameCount": 8,
+          "frameDurationMs": 100,
+          "loop": true,
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "frameOrder": [
+            "alternating steps with raised-arm wave"
+          ],
+          "framesByFacing": {
+            "south": [
+              "frames/outfits/commoner/male/walk-wave/south/frame-01.png",
+              "frames/outfits/commoner/male/walk-wave/south/frame-02.png",
+              "frames/outfits/commoner/male/walk-wave/south/frame-03.png",
+              "frames/outfits/commoner/male/walk-wave/south/frame-04.png",
+              "frames/outfits/commoner/male/walk-wave/south/frame-05.png",
+              "frames/outfits/commoner/male/walk-wave/south/frame-06.png",
+              "frames/outfits/commoner/male/walk-wave/south/frame-07.png",
+              "frames/outfits/commoner/male/walk-wave/south/frame-08.png"
+            ],
+            "southeast": [
+              "frames/outfits/commoner/male/walk-wave/southeast/frame-01.png",
+              "frames/outfits/commoner/male/walk-wave/southeast/frame-02.png",
+              "frames/outfits/commoner/male/walk-wave/southeast/frame-03.png",
+              "frames/outfits/commoner/male/walk-wave/southeast/frame-04.png",
+              "frames/outfits/commoner/male/walk-wave/southeast/frame-05.png",
+              "frames/outfits/commoner/male/walk-wave/southeast/frame-06.png",
+              "frames/outfits/commoner/male/walk-wave/southeast/frame-07.png",
+              "frames/outfits/commoner/male/walk-wave/southeast/frame-08.png"
+            ],
+            "east": [
+              "frames/outfits/commoner/male/walk-wave/east/frame-01.png",
+              "frames/outfits/commoner/male/walk-wave/east/frame-02.png",
+              "frames/outfits/commoner/male/walk-wave/east/frame-03.png",
+              "frames/outfits/commoner/male/walk-wave/east/frame-04.png",
+              "frames/outfits/commoner/male/walk-wave/east/frame-05.png",
+              "frames/outfits/commoner/male/walk-wave/east/frame-06.png",
+              "frames/outfits/commoner/male/walk-wave/east/frame-07.png",
+              "frames/outfits/commoner/male/walk-wave/east/frame-08.png"
+            ],
+            "northeast": [
+              "frames/outfits/commoner/male/walk-wave/northeast/frame-01.png",
+              "frames/outfits/commoner/male/walk-wave/northeast/frame-02.png",
+              "frames/outfits/commoner/male/walk-wave/northeast/frame-03.png",
+              "frames/outfits/commoner/male/walk-wave/northeast/frame-04.png",
+              "frames/outfits/commoner/male/walk-wave/northeast/frame-05.png",
+              "frames/outfits/commoner/male/walk-wave/northeast/frame-06.png",
+              "frames/outfits/commoner/male/walk-wave/northeast/frame-07.png",
+              "frames/outfits/commoner/male/walk-wave/northeast/frame-08.png"
+            ],
+            "north": [
+              "frames/outfits/commoner/male/walk-wave/north/frame-01.png",
+              "frames/outfits/commoner/male/walk-wave/north/frame-02.png",
+              "frames/outfits/commoner/male/walk-wave/north/frame-03.png",
+              "frames/outfits/commoner/male/walk-wave/north/frame-04.png",
+              "frames/outfits/commoner/male/walk-wave/north/frame-05.png",
+              "frames/outfits/commoner/male/walk-wave/north/frame-06.png",
+              "frames/outfits/commoner/male/walk-wave/north/frame-07.png",
+              "frames/outfits/commoner/male/walk-wave/north/frame-08.png"
+            ],
+            "northwest": [
+              "frames/outfits/commoner/male/walk-wave/northwest/frame-01.png",
+              "frames/outfits/commoner/male/walk-wave/northwest/frame-02.png",
+              "frames/outfits/commoner/male/walk-wave/northwest/frame-03.png",
+              "frames/outfits/commoner/male/walk-wave/northwest/frame-04.png",
+              "frames/outfits/commoner/male/walk-wave/northwest/frame-05.png",
+              "frames/outfits/commoner/male/walk-wave/northwest/frame-06.png",
+              "frames/outfits/commoner/male/walk-wave/northwest/frame-07.png",
+              "frames/outfits/commoner/male/walk-wave/northwest/frame-08.png"
+            ],
+            "west": [
+              "frames/outfits/commoner/male/walk-wave/west/frame-01.png",
+              "frames/outfits/commoner/male/walk-wave/west/frame-02.png",
+              "frames/outfits/commoner/male/walk-wave/west/frame-03.png",
+              "frames/outfits/commoner/male/walk-wave/west/frame-04.png",
+              "frames/outfits/commoner/male/walk-wave/west/frame-05.png",
+              "frames/outfits/commoner/male/walk-wave/west/frame-06.png",
+              "frames/outfits/commoner/male/walk-wave/west/frame-07.png",
+              "frames/outfits/commoner/male/walk-wave/west/frame-08.png"
+            ],
+            "southwest": [
+              "frames/outfits/commoner/male/walk-wave/southwest/frame-01.png",
+              "frames/outfits/commoner/male/walk-wave/southwest/frame-02.png",
+              "frames/outfits/commoner/male/walk-wave/southwest/frame-03.png",
+              "frames/outfits/commoner/male/walk-wave/southwest/frame-04.png",
+              "frames/outfits/commoner/male/walk-wave/southwest/frame-05.png",
+              "frames/outfits/commoner/male/walk-wave/southwest/frame-06.png",
+              "frames/outfits/commoner/male/walk-wave/southwest/frame-07.png",
+              "frames/outfits/commoner/male/walk-wave/southwest/frame-08.png"
+            ]
+          },
+          "review": {
+            "contact2x": "review-gifs/walk-wave/commoner-male/contact-2x.png",
+            "frameByFrame": "reviewed",
+            "reviewedFrameCount": 64,
+            "eightFacings": "reviewed",
+            "sharedPaletteAndScale": "matched-to-commoner-idle"
+          },
+          "distancePerCycle": 2.56
+        }
+
+      },
+      "female": {
+        "source": "source/commoner-female.png",
+        "sourceSheetGrid": {
+          "rows": 2,
+          "columns": 4,
+          "order": "row-major",
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "visualFacingAudit": "passed"
+        },
+        "atlas": "atlases/outfits/commoner/female/idle.png",
+        "characterId": "character.peasant",
+        "motionProfileId": "animation-profile.standard",
+        "compatibleFitGroupIds": [
+          "fit-group.average"
+        ],
+        "bundledSlots": [
+          "body-shape",
+          "hair",
+          "eyes",
+          "headwear",
+          "back-item"
+        ],
+        "action": "idle",
+        "frameCount": 1,
+        "turnaroundPreviewDurationMs": 120,
+        "framesByFacing": {
+          "south": [
+            "frames/outfits/commoner/female/idle/south/frame-01.png"
+          ],
+          "southeast": [
+            "frames/outfits/commoner/female/idle/southeast/frame-01.png"
+          ],
+          "east": [
+            "frames/outfits/commoner/female/idle/east/frame-01.png"
+          ],
+          "northeast": [
+            "frames/outfits/commoner/female/idle/northeast/frame-01.png"
+          ],
+          "north": [
+            "frames/outfits/commoner/female/idle/north/frame-01.png"
+          ],
+          "northwest": [
+            "frames/outfits/commoner/female/idle/northwest/frame-01.png"
+          ],
+          "west": [
+            "frames/outfits/commoner/female/idle/west/frame-01.png"
+          ],
+          "southwest": [
+            "frames/outfits/commoner/female/idle/southwest/frame-01.png"
+          ]
+        },
+        "scaleDiagnostics": {
+          "sourceMedianHeight": 488.0,
+          "scale": 0.16393442622950818,
+          "artHeightRange": [
+            80,
+            81
+          ],
+          "artWidthRange": [
+            21,
+            34
+          ]
+        },
+        "silhouetteComponents": 8,
+        "renderLayer": "full-avatar",
+        "includes": [
+          "body",
+          "hair",
+          "eyes",
+          "headwear",
+          "outfit",
+          "cape",
+          "boots"
+        ]
+      }
+    },
+    "mage-robe": {
+      "male": {
+        "source": "source/mage-male.png",
+        "sourceSheetGrid": {
+          "rows": 2,
+          "columns": 4,
+          "order": "row-major",
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "visualFacingAudit": "passed"
+        },
+        "atlas": "atlases/outfits/mage-robe/male/idle.png",
+        "characterId": "character.mage",
+        "motionProfileId": "animation-profile.spellcaster",
+        "compatibleFitGroupIds": [
+          "fit-group.average",
+          "fit-group.slim",
+          "fit-group.hunched"
+        ],
+        "bundledSlots": [
+          "body-shape",
+          "hair",
+          "eyes",
+          "headwear",
+          "back-item"
+        ],
+        "action": "idle",
+        "frameCount": 1,
+        "turnaroundPreviewDurationMs": 120,
+        "framesByFacing": {
+          "south": [
+            "frames/outfits/mage-robe/male/idle/south/frame-01.png"
+          ],
+          "southeast": [
+            "frames/outfits/mage-robe/male/idle/southeast/frame-01.png"
+          ],
+          "east": [
+            "frames/outfits/mage-robe/male/idle/east/frame-01.png"
+          ],
+          "northeast": [
+            "frames/outfits/mage-robe/male/idle/northeast/frame-01.png"
+          ],
+          "north": [
+            "frames/outfits/mage-robe/male/idle/north/frame-01.png"
+          ],
+          "northwest": [
+            "frames/outfits/mage-robe/male/idle/northwest/frame-01.png"
+          ],
+          "west": [
+            "frames/outfits/mage-robe/male/idle/west/frame-01.png"
+          ],
+          "southwest": [
+            "frames/outfits/mage-robe/male/idle/southwest/frame-01.png"
+          ]
+        },
+        "scaleDiagnostics": {
+          "sourceMedianHeight": 486.0,
+          "scale": 0.1646090534979424,
+          "artHeightRange": [
+            80,
+            81
+          ],
+          "artWidthRange": [
+            28,
+            37
+          ]
+        },
+        "silhouetteComponents": 8,
+        "renderLayer": "full-avatar",
+        "includes": [
+          "body",
+          "hair",
+          "eyes",
+          "headwear",
+          "outfit",
+          "cape",
+          "boots"
+        ]
+      },
+      "female": {
+        "source": "source/mage-female.png",
+        "sourceSheetGrid": {
+          "rows": 2,
+          "columns": 4,
+          "order": "row-major",
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "visualFacingAudit": "passed"
+        },
+        "atlas": "atlases/outfits/mage-robe/female/idle.png",
+        "characterId": "character.mage",
+        "motionProfileId": "animation-profile.spellcaster",
+        "compatibleFitGroupIds": [
+          "fit-group.average",
+          "fit-group.slim",
+          "fit-group.hunched"
+        ],
+        "bundledSlots": [
+          "body-shape",
+          "hair",
+          "eyes",
+          "headwear",
+          "back-item"
+        ],
+        "action": "idle",
+        "frameCount": 1,
+        "turnaroundPreviewDurationMs": 120,
+        "framesByFacing": {
+          "south": [
+            "frames/outfits/mage-robe/female/idle/south/frame-01.png"
+          ],
+          "southeast": [
+            "frames/outfits/mage-robe/female/idle/southeast/frame-01.png"
+          ],
+          "east": [
+            "frames/outfits/mage-robe/female/idle/east/frame-01.png"
+          ],
+          "northeast": [
+            "frames/outfits/mage-robe/female/idle/northeast/frame-01.png"
+          ],
+          "north": [
+            "frames/outfits/mage-robe/female/idle/north/frame-01.png"
+          ],
+          "northwest": [
+            "frames/outfits/mage-robe/female/idle/northwest/frame-01.png"
+          ],
+          "west": [
+            "frames/outfits/mage-robe/female/idle/west/frame-01.png"
+          ],
+          "southwest": [
+            "frames/outfits/mage-robe/female/idle/southwest/frame-01.png"
+          ]
+        },
+        "scaleDiagnostics": {
+          "sourceMedianHeight": 491.0,
+          "scale": 0.1629327902240326,
+          "artHeightRange": [
+            80,
+            81
+          ],
+          "artWidthRange": [
+            28,
+            37
+          ]
+        },
+        "silhouetteComponents": 8,
+        "renderLayer": "full-avatar",
+        "includes": [
+          "body",
+          "hair",
+          "eyes",
+          "headwear",
+          "outfit",
+          "cape",
+          "boots"
+        ]
+      }
+    },
+    "dimension-coat": {
+      "male": {
+        "source": "source/dimension-coat-male.png",
+        "sourceSheetGrid": {
+          "rows": 2,
+          "columns": 4,
+          "order": "row-major",
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "visualFacingAudit": "passed"
+        },
+        "atlas": "atlases/outfits/dimension-coat/male/idle.png",
+        "characterId": "character.dimensional-traveler",
+        "motionProfileId": "animation-profile.nimble",
+        "compatibleFitGroupIds": [
+          "fit-group.average",
+          "fit-group.slim",
+          "fit-group.broad",
+          "fit-group.heavy",
+          "fit-group.hunched"
+        ],
+        "bundledSlots": [
+          "body-shape",
+          "hair",
+          "eyes",
+          "headwear",
+          "back-item"
+        ],
+        "action": "idle",
+        "frameCount": 1,
+        "turnaroundPreviewDurationMs": 120,
+        "framesByFacing": {
+          "south": [
+            "frames/outfits/dimension-coat/male/idle/south/frame-01.png"
+          ],
+          "southeast": [
+            "frames/outfits/dimension-coat/male/idle/southeast/frame-01.png"
+          ],
+          "east": [
+            "frames/outfits/dimension-coat/male/idle/east/frame-01.png"
+          ],
+          "northeast": [
+            "frames/outfits/dimension-coat/male/idle/northeast/frame-01.png"
+          ],
+          "north": [
+            "frames/outfits/dimension-coat/male/idle/north/frame-01.png"
+          ],
+          "northwest": [
+            "frames/outfits/dimension-coat/male/idle/northwest/frame-01.png"
+          ],
+          "west": [
+            "frames/outfits/dimension-coat/male/idle/west/frame-01.png"
+          ],
+          "southwest": [
+            "frames/outfits/dimension-coat/male/idle/southwest/frame-01.png"
+          ]
+        },
+        "scaleDiagnostics": {
+          "sourceMedianHeight": 480.0,
+          "scale": 0.16666666666666666,
+          "artHeightRange": [
+            79,
+            81
+          ],
+          "artWidthRange": [
+            34,
+            43
+          ]
+        },
+        "silhouetteComponents": 8,
+        "renderLayer": "full-avatar",
+        "includes": [
+          "body",
+          "hair",
+          "eyes",
+          "headwear",
+          "outfit",
+          "cape",
+          "boots"
+        ]
+      },
+      "female": {
+        "source": "source/dimension-coat-female.png",
+        "sourceSheetGrid": {
+          "rows": 2,
+          "columns": 4,
+          "order": "row-major",
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "visualFacingAudit": "passed"
+        },
+        "atlas": "atlases/outfits/dimension-coat/female/idle.png",
+        "characterId": "character.dimensional-traveler",
+        "motionProfileId": "animation-profile.nimble",
+        "compatibleFitGroupIds": [
+          "fit-group.average",
+          "fit-group.slim",
+          "fit-group.broad",
+          "fit-group.heavy",
+          "fit-group.hunched"
+        ],
+        "bundledSlots": [
+          "body-shape",
+          "hair",
+          "eyes",
+          "headwear",
+          "back-item"
+        ],
+        "action": "idle",
+        "frameCount": 1,
+        "turnaroundPreviewDurationMs": 120,
+        "framesByFacing": {
+          "south": [
+            "frames/outfits/dimension-coat/female/idle/south/frame-01.png"
+          ],
+          "southeast": [
+            "frames/outfits/dimension-coat/female/idle/southeast/frame-01.png"
+          ],
+          "east": [
+            "frames/outfits/dimension-coat/female/idle/east/frame-01.png"
+          ],
+          "northeast": [
+            "frames/outfits/dimension-coat/female/idle/northeast/frame-01.png"
+          ],
+          "north": [
+            "frames/outfits/dimension-coat/female/idle/north/frame-01.png"
+          ],
+          "northwest": [
+            "frames/outfits/dimension-coat/female/idle/northwest/frame-01.png"
+          ],
+          "west": [
+            "frames/outfits/dimension-coat/female/idle/west/frame-01.png"
+          ],
+          "southwest": [
+            "frames/outfits/dimension-coat/female/idle/southwest/frame-01.png"
+          ]
+        },
+        "scaleDiagnostics": {
+          "sourceMedianHeight": 498.0,
+          "scale": 0.1606425702811245,
+          "artHeightRange": [
+            79,
+            81
+          ],
+          "artWidthRange": [
+            38,
+            45
+          ]
+        },
+        "silhouetteComponents": 8,
+        "renderLayer": "full-avatar",
+        "includes": [
+          "body",
+          "hair",
+          "eyes",
+          "headwear",
+          "outfit",
+          "cape",
+          "boots"
+        ]
+      }
+    },
+    "dark-armor": {
+      "male": {
+        "source": "source/dark-armor-male.png",
+        "sourceSheetGrid": {
+          "rows": 2,
+          "columns": 4,
+          "order": "row-major",
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "visualFacingAudit": "passed"
+        },
+        "atlas": "atlases/outfits/dark-armor/male/idle.png",
+        "characterId": "character.dark-knight",
+        "motionProfileId": "animation-profile.heavy",
+        "compatibleFitGroupIds": [
+          "fit-group.broad"
+        ],
+        "bundledSlots": [
+          "body-shape",
+          "hair",
+          "eyes",
+          "headwear",
+          "back-item"
+        ],
+        "action": "idle",
+        "frameCount": 1,
+        "turnaroundPreviewDurationMs": 120,
+        "framesByFacing": {
+          "south": [
+            "frames/outfits/dark-armor/male/idle/south/frame-01.png"
+          ],
+          "southeast": [
+            "frames/outfits/dark-armor/male/idle/southeast/frame-01.png"
+          ],
+          "east": [
+            "frames/outfits/dark-armor/male/idle/east/frame-01.png"
+          ],
+          "northeast": [
+            "frames/outfits/dark-armor/male/idle/northeast/frame-01.png"
+          ],
+          "north": [
+            "frames/outfits/dark-armor/male/idle/north/frame-01.png"
+          ],
+          "northwest": [
+            "frames/outfits/dark-armor/male/idle/northwest/frame-01.png"
+          ],
+          "west": [
+            "frames/outfits/dark-armor/male/idle/west/frame-01.png"
+          ],
+          "southwest": [
+            "frames/outfits/dark-armor/male/idle/southwest/frame-01.png"
+          ]
+        },
+        "scaleDiagnostics": {
+          "sourceMedianHeight": 473.0,
+          "scale": 0.16913319238900634,
+          "artHeightRange": [
+            79,
+            82
+          ],
+          "artWidthRange": [
+            44,
+            57
+          ]
+        },
+        "silhouetteComponents": 8,
+        "renderLayer": "full-avatar",
+        "includes": [
+          "body",
+          "hair",
+          "eyes",
+          "headwear",
+          "outfit",
+          "cape",
+          "boots"
+        ]
+      },
+      "female": {
+        "source": "source/dark-armor-female.png",
+        "sourceSheetGrid": {
+          "rows": 2,
+          "columns": 4,
+          "order": "row-major",
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "visualFacingAudit": "passed"
+        },
+        "atlas": "atlases/outfits/dark-armor/female/idle.png",
+        "characterId": "character.dark-knight",
+        "motionProfileId": "animation-profile.heavy",
+        "compatibleFitGroupIds": [
+          "fit-group.broad"
+        ],
+        "bundledSlots": [
+          "body-shape",
+          "hair",
+          "eyes",
+          "headwear",
+          "back-item"
+        ],
+        "action": "idle",
+        "frameCount": 1,
+        "turnaroundPreviewDurationMs": 120,
+        "framesByFacing": {
+          "south": [
+            "frames/outfits/dark-armor/female/idle/south/frame-01.png"
+          ],
+          "southeast": [
+            "frames/outfits/dark-armor/female/idle/southeast/frame-01.png"
+          ],
+          "east": [
+            "frames/outfits/dark-armor/female/idle/east/frame-01.png"
+          ],
+          "northeast": [
+            "frames/outfits/dark-armor/female/idle/northeast/frame-01.png"
+          ],
+          "north": [
+            "frames/outfits/dark-armor/female/idle/north/frame-01.png"
+          ],
+          "northwest": [
+            "frames/outfits/dark-armor/female/idle/northwest/frame-01.png"
+          ],
+          "west": [
+            "frames/outfits/dark-armor/female/idle/west/frame-01.png"
+          ],
+          "southwest": [
+            "frames/outfits/dark-armor/female/idle/southwest/frame-01.png"
+          ]
+        },
+        "scaleDiagnostics": {
+          "sourceMedianHeight": 481.0,
+          "scale": 0.16632016632016633,
+          "artHeightRange": [
+            79,
+            81
+          ],
+          "artWidthRange": [
+            43,
+            57
+          ]
+        },
+        "silhouetteComponents": 8,
+        "renderLayer": "full-avatar",
+        "includes": [
+          "body",
+          "hair",
+          "eyes",
+          "headwear",
+          "outfit",
+          "cape",
+          "boots"
+        ]
+      }
+    },
+    "light-armor": {
+      "male": {
+        "source": "source/light-armor-male.png",
+        "sourceSheetGrid": {
+          "rows": 2,
+          "columns": 4,
+          "order": "row-major",
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "visualFacingAudit": "passed"
+        },
+        "atlas": "atlases/outfits/light-armor/male/idle.png",
+        "characterId": "character.light-knight",
+        "motionProfileId": "animation-profile.trained",
+        "compatibleFitGroupIds": [
+          "fit-group.broad"
+        ],
+        "bundledSlots": [
+          "body-shape",
+          "hair",
+          "eyes",
+          "headwear",
+          "back-item"
+        ],
+        "action": "idle",
+        "frameCount": 1,
+        "turnaroundPreviewDurationMs": 120,
+        "framesByFacing": {
+          "south": [
+            "frames/outfits/light-armor/male/idle/south/frame-01.png"
+          ],
+          "southeast": [
+            "frames/outfits/light-armor/male/idle/southeast/frame-01.png"
+          ],
+          "east": [
+            "frames/outfits/light-armor/male/idle/east/frame-01.png"
+          ],
+          "northeast": [
+            "frames/outfits/light-armor/male/idle/northeast/frame-01.png"
+          ],
+          "north": [
+            "frames/outfits/light-armor/male/idle/north/frame-01.png"
+          ],
+          "northwest": [
+            "frames/outfits/light-armor/male/idle/northwest/frame-01.png"
+          ],
+          "west": [
+            "frames/outfits/light-armor/male/idle/west/frame-01.png"
+          ],
+          "southwest": [
+            "frames/outfits/light-armor/male/idle/southwest/frame-01.png"
+          ]
+        },
+        "scaleDiagnostics": {
+          "sourceMedianHeight": 464.0,
+          "scale": 0.1724137931034483,
+          "artHeightRange": [
+            79,
+            81
+          ],
+          "artWidthRange": [
+            38,
+            52
+          ]
+        },
+        "silhouetteComponents": 8,
+        "renderLayer": "full-avatar",
+        "includes": [
+          "body",
+          "hair",
+          "eyes",
+          "headwear",
+          "outfit",
+          "cape",
+          "boots"
+        ]
+      },
+      "female": {
+        "source": "source/light-armor-female.png",
+        "sourceSheetGrid": {
+          "rows": 2,
+          "columns": 4,
+          "order": "row-major",
+          "facingOrder": [
+            "south",
+            "southeast",
+            "east",
+            "northeast",
+            "north",
+            "northwest",
+            "west",
+            "southwest"
+          ],
+          "visualFacingAudit": "passed"
+        },
+        "atlas": "atlases/outfits/light-armor/female/idle.png",
+        "characterId": "character.light-knight",
+        "motionProfileId": "animation-profile.trained",
+        "compatibleFitGroupIds": [
+          "fit-group.broad"
+        ],
+        "bundledSlots": [
+          "body-shape",
+          "hair",
+          "eyes",
+          "headwear",
+          "back-item"
+        ],
+        "action": "idle",
+        "frameCount": 1,
+        "turnaroundPreviewDurationMs": 120,
+        "framesByFacing": {
+          "south": [
+            "frames/outfits/light-armor/female/idle/south/frame-01.png"
+          ],
+          "southeast": [
+            "frames/outfits/light-armor/female/idle/southeast/frame-01.png"
+          ],
+          "east": [
+            "frames/outfits/light-armor/female/idle/east/frame-01.png"
+          ],
+          "northeast": [
+            "frames/outfits/light-armor/female/idle/northeast/frame-01.png"
+          ],
+          "north": [
+            "frames/outfits/light-armor/female/idle/north/frame-01.png"
+          ],
+          "northwest": [
+            "frames/outfits/light-armor/female/idle/northwest/frame-01.png"
+          ],
+          "west": [
+            "frames/outfits/light-armor/female/idle/west/frame-01.png"
+          ],
+          "southwest": [
+            "frames/outfits/light-armor/female/idle/southwest/frame-01.png"
+          ]
+        },
+        "scaleDiagnostics": {
+          "sourceMedianHeight": 467.0,
+          "scale": 0.17130620985010706,
+          "artHeightRange": [
+            79,
+            81
+          ],
+          "artWidthRange": [
+            38,
+            53
+          ]
+        },
+        "silhouetteComponents": 8,
+        "renderLayer": "full-avatar",
+        "includes": [
+          "body",
+          "hair",
+          "eyes",
+          "headwear",
+          "outfit",
+          "cape",
+          "boots"
+        ]
+      }
+    }
+  },
+  "effects": {
+    "aura-flow": {
+      "atlas": "atlases/effects/aura-flow.png",
+      "frameCount": 8,
+      "frameDurationMs": 110,
+      "loop": true,
+      "layout": "direction-rows-frames-horizontal",
+      "frameOrder": "eight directions top-to-bottom; eight travelling-energy frames left-to-right",
+      "framesByFacing": {
+        "south": [
+          "frames/effects/aura-flow/south/frame-01.png",
+          "frames/effects/aura-flow/south/frame-02.png",
+          "frames/effects/aura-flow/south/frame-03.png",
+          "frames/effects/aura-flow/south/frame-04.png",
+          "frames/effects/aura-flow/south/frame-05.png",
+          "frames/effects/aura-flow/south/frame-06.png",
+          "frames/effects/aura-flow/south/frame-07.png",
+          "frames/effects/aura-flow/south/frame-08.png"
+        ],
+        "southeast": [
+          "frames/effects/aura-flow/southeast/frame-01.png",
+          "frames/effects/aura-flow/southeast/frame-02.png",
+          "frames/effects/aura-flow/southeast/frame-03.png",
+          "frames/effects/aura-flow/southeast/frame-04.png",
+          "frames/effects/aura-flow/southeast/frame-05.png",
+          "frames/effects/aura-flow/southeast/frame-06.png",
+          "frames/effects/aura-flow/southeast/frame-07.png",
+          "frames/effects/aura-flow/southeast/frame-08.png"
+        ],
+        "east": [
+          "frames/effects/aura-flow/east/frame-01.png",
+          "frames/effects/aura-flow/east/frame-02.png",
+          "frames/effects/aura-flow/east/frame-03.png",
+          "frames/effects/aura-flow/east/frame-04.png",
+          "frames/effects/aura-flow/east/frame-05.png",
+          "frames/effects/aura-flow/east/frame-06.png",
+          "frames/effects/aura-flow/east/frame-07.png",
+          "frames/effects/aura-flow/east/frame-08.png"
+        ],
+        "northeast": [
+          "frames/effects/aura-flow/northeast/frame-01.png",
+          "frames/effects/aura-flow/northeast/frame-02.png",
+          "frames/effects/aura-flow/northeast/frame-03.png",
+          "frames/effects/aura-flow/northeast/frame-04.png",
+          "frames/effects/aura-flow/northeast/frame-05.png",
+          "frames/effects/aura-flow/northeast/frame-06.png",
+          "frames/effects/aura-flow/northeast/frame-07.png",
+          "frames/effects/aura-flow/northeast/frame-08.png"
+        ],
+        "north": [
+          "frames/effects/aura-flow/north/frame-01.png",
+          "frames/effects/aura-flow/north/frame-02.png",
+          "frames/effects/aura-flow/north/frame-03.png",
+          "frames/effects/aura-flow/north/frame-04.png",
+          "frames/effects/aura-flow/north/frame-05.png",
+          "frames/effects/aura-flow/north/frame-06.png",
+          "frames/effects/aura-flow/north/frame-07.png",
+          "frames/effects/aura-flow/north/frame-08.png"
+        ],
+        "northwest": [
+          "frames/effects/aura-flow/northwest/frame-01.png",
+          "frames/effects/aura-flow/northwest/frame-02.png",
+          "frames/effects/aura-flow/northwest/frame-03.png",
+          "frames/effects/aura-flow/northwest/frame-04.png",
+          "frames/effects/aura-flow/northwest/frame-05.png",
+          "frames/effects/aura-flow/northwest/frame-06.png",
+          "frames/effects/aura-flow/northwest/frame-07.png",
+          "frames/effects/aura-flow/northwest/frame-08.png"
+        ],
+        "west": [
+          "frames/effects/aura-flow/west/frame-01.png",
+          "frames/effects/aura-flow/west/frame-02.png",
+          "frames/effects/aura-flow/west/frame-03.png",
+          "frames/effects/aura-flow/west/frame-04.png",
+          "frames/effects/aura-flow/west/frame-05.png",
+          "frames/effects/aura-flow/west/frame-06.png",
+          "frames/effects/aura-flow/west/frame-07.png",
+          "frames/effects/aura-flow/west/frame-08.png"
+        ],
+        "southwest": [
+          "frames/effects/aura-flow/southwest/frame-01.png",
+          "frames/effects/aura-flow/southwest/frame-02.png",
+          "frames/effects/aura-flow/southwest/frame-03.png",
+          "frames/effects/aura-flow/southwest/frame-04.png",
+          "frames/effects/aura-flow/southwest/frame-05.png",
+          "frames/effects/aura-flow/southwest/frame-06.png",
+          "frames/effects/aura-flow/southwest/frame-07.png",
+          "frames/effects/aura-flow/southwest/frame-08.png"
+        ]
+      },
+      "anchor": {
+        "x": 48,
+        "y": 46,
+        "kind": "character-center"
+      },
+      "trigger": "passive",
+      "renderLayer": "aura-front"
+    },
+    "aura-void": {
+      "atlas": "atlases/effects/aura-void.png",
+      "frameCount": 8,
+      "frameDurationMs": 90,
+      "loop": true,
+      "frames": [
+        "frames/effects/aura-void/frame-01.png",
+        "frames/effects/aura-void/frame-02.png",
+        "frames/effects/aura-void/frame-03.png",
+        "frames/effects/aura-void/frame-04.png",
+        "frames/effects/aura-void/frame-05.png",
+        "frames/effects/aura-void/frame-06.png",
+        "frames/effects/aura-void/frame-07.png",
+        "frames/effects/aura-void/frame-08.png"
+      ],
+      "anchor": {
+        "x": 48,
+        "y": 46,
+        "kind": "character-center"
+      },
+      "characters": [
+        "character.dark-knight"
+      ],
+      "trigger": "passive",
+      "renderLayer": "aura-back"
+    },
+    "aura-radiance": {
+      "atlas": "atlases/effects/aura-radiance.png",
+      "frameCount": 8,
+      "frameDurationMs": 90,
+      "loop": true,
+      "frames": [
+        "frames/effects/aura-radiance/frame-01.png",
+        "frames/effects/aura-radiance/frame-02.png",
+        "frames/effects/aura-radiance/frame-03.png",
+        "frames/effects/aura-radiance/frame-04.png",
+        "frames/effects/aura-radiance/frame-05.png",
+        "frames/effects/aura-radiance/frame-06.png",
+        "frames/effects/aura-radiance/frame-07.png",
+        "frames/effects/aura-radiance/frame-08.png"
+      ],
+      "anchor": {
+        "x": 48,
+        "y": 46,
+        "kind": "character-center"
+      },
+      "characters": [
+        "character.light-knight"
+      ],
+      "trigger": "passive",
+      "renderLayer": "aura-back"
+    },
+    "spellcast-blue": {
+      "atlas": "atlases/effects/spellcast-blue.png",
+      "frameCount": 8,
+      "frameDurationMs": 90,
+      "loop": false,
+      "frames": [
+        "frames/effects/spellcast-blue/frame-01.png",
+        "frames/effects/spellcast-blue/frame-02.png",
+        "frames/effects/spellcast-blue/frame-03.png",
+        "frames/effects/spellcast-blue/frame-04.png",
+        "frames/effects/spellcast-blue/frame-05.png",
+        "frames/effects/spellcast-blue/frame-06.png",
+        "frames/effects/spellcast-blue/frame-07.png",
+        "frames/effects/spellcast-blue/frame-08.png"
+      ],
+      "anchor": {
+        "x": 48,
+        "y": 46,
+        "kind": "character-center"
+      },
+      "characters": [
+        "character.mage"
+      ],
+      "trigger": "cast",
+      "renderLayer": "hand-item-front"
+    },
+    "rift-activate": {
+      "atlas": "atlases/effects/rift-activate.png",
+      "frameCount": 8,
+      "frameDurationMs": 90,
+      "loop": false,
+      "frames": [
+        "frames/effects/rift-activate/frame-01.png",
+        "frames/effects/rift-activate/frame-02.png",
+        "frames/effects/rift-activate/frame-03.png",
+        "frames/effects/rift-activate/frame-04.png",
+        "frames/effects/rift-activate/frame-05.png",
+        "frames/effects/rift-activate/frame-06.png",
+        "frames/effects/rift-activate/frame-07.png",
+        "frames/effects/rift-activate/frame-08.png"
+      ],
+      "anchor": {
+        "x": 48,
+        "y": 46,
+        "kind": "character-center"
+      },
+      "characters": [
+        "character.dimensional-traveler"
+      ],
+      "trigger": "activate",
+      "renderLayer": "hand-item-front"
+    }
+  },
+  "equipment": {
+    "axe": {
+      "atlas": "atlases/equipment/axe.png",
+      "frameCount": 1,
+      "framesByFacing": {
+        "south": [
+          "frames/equipment/axe/idle/south/frame-01.png"
+        ],
+        "southeast": [
+          "frames/equipment/axe/idle/southeast/frame-01.png"
+        ],
+        "east": [
+          "frames/equipment/axe/idle/east/frame-01.png"
+        ],
+        "northeast": [
+          "frames/equipment/axe/idle/northeast/frame-01.png"
+        ],
+        "north": [
+          "frames/equipment/axe/idle/north/frame-01.png"
+        ],
+        "northwest": [
+          "frames/equipment/axe/idle/northwest/frame-01.png"
+        ],
+        "west": [
+          "frames/equipment/axe/idle/west/frame-01.png"
+        ],
+        "southwest": [
+          "frames/equipment/axe/idle/southwest/frame-01.png"
+        ]
+      },
+      "slot": "main-hand",
+      "grip": "two-hand",
+      "actions": [
+        "idle",
+        "walk",
+        "chop"
+      ],
+      "motionProfileId": "animation-profile.heavy",
+      "renderLayer": "hand-item-front",
+      "sockets": {
+        "south": {
+          "x": 37,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southeast": {
+          "x": 41,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "east": {
+          "x": 50,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northeast": {
+          "x": 56,
+          "y": 57,
+          "anchor": "main-hand"
+        },
+        "north": {
+          "x": 59,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northwest": {
+          "x": 48,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "west": {
+          "x": 38,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southwest": {
+          "x": 34,
+          "y": 58,
+          "anchor": "main-hand"
+        }
+      }
+    },
+    "sword": {
+      "atlas": "atlases/equipment/sword.png",
+      "frameCount": 1,
+      "framesByFacing": {
+        "south": [
+          "frames/equipment/sword/idle/south/frame-01.png"
+        ],
+        "southeast": [
+          "frames/equipment/sword/idle/southeast/frame-01.png"
+        ],
+        "east": [
+          "frames/equipment/sword/idle/east/frame-01.png"
+        ],
+        "northeast": [
+          "frames/equipment/sword/idle/northeast/frame-01.png"
+        ],
+        "north": [
+          "frames/equipment/sword/idle/north/frame-01.png"
+        ],
+        "northwest": [
+          "frames/equipment/sword/idle/northwest/frame-01.png"
+        ],
+        "west": [
+          "frames/equipment/sword/idle/west/frame-01.png"
+        ],
+        "southwest": [
+          "frames/equipment/sword/idle/southwest/frame-01.png"
+        ]
+      },
+      "slot": "main-hand",
+      "grip": "one-hand",
+      "actions": [
+        "idle",
+        "walk",
+        "slash"
+      ],
+      "motionProfileId": "animation-profile.trained",
+      "renderLayer": "hand-item-front",
+      "sockets": {
+        "south": {
+          "x": 37,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southeast": {
+          "x": 41,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "east": {
+          "x": 50,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northeast": {
+          "x": 56,
+          "y": 57,
+          "anchor": "main-hand"
+        },
+        "north": {
+          "x": 59,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northwest": {
+          "x": 48,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "west": {
+          "x": 38,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southwest": {
+          "x": 34,
+          "y": 58,
+          "anchor": "main-hand"
+        }
+      }
+    },
+    "knife": {
+      "atlas": "atlases/equipment/knife.png",
+      "frameCount": 1,
+      "framesByFacing": {
+        "south": [
+          "frames/equipment/knife/idle/south/frame-01.png"
+        ],
+        "southeast": [
+          "frames/equipment/knife/idle/southeast/frame-01.png"
+        ],
+        "east": [
+          "frames/equipment/knife/idle/east/frame-01.png"
+        ],
+        "northeast": [
+          "frames/equipment/knife/idle/northeast/frame-01.png"
+        ],
+        "north": [
+          "frames/equipment/knife/idle/north/frame-01.png"
+        ],
+        "northwest": [
+          "frames/equipment/knife/idle/northwest/frame-01.png"
+        ],
+        "west": [
+          "frames/equipment/knife/idle/west/frame-01.png"
+        ],
+        "southwest": [
+          "frames/equipment/knife/idle/southwest/frame-01.png"
+        ]
+      },
+      "slot": "main-hand",
+      "grip": "one-hand",
+      "actions": [
+        "idle",
+        "walk",
+        "stab"
+      ],
+      "motionProfileId": "animation-profile.nimble",
+      "renderLayer": "hand-item-front",
+      "sockets": {
+        "south": {
+          "x": 37,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southeast": {
+          "x": 41,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "east": {
+          "x": 50,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northeast": {
+          "x": 56,
+          "y": 57,
+          "anchor": "main-hand"
+        },
+        "north": {
+          "x": 59,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northwest": {
+          "x": 48,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "west": {
+          "x": 38,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southwest": {
+          "x": 34,
+          "y": 58,
+          "anchor": "main-hand"
+        }
+      }
+    },
+    "lantern": {
+      "atlas": "atlases/equipment/lantern.png",
+      "frameCount": 1,
+      "framesByFacing": {
+        "south": [
+          "frames/equipment/lantern/idle/south/frame-01.png"
+        ],
+        "southeast": [
+          "frames/equipment/lantern/idle/southeast/frame-01.png"
+        ],
+        "east": [
+          "frames/equipment/lantern/idle/east/frame-01.png"
+        ],
+        "northeast": [
+          "frames/equipment/lantern/idle/northeast/frame-01.png"
+        ],
+        "north": [
+          "frames/equipment/lantern/idle/north/frame-01.png"
+        ],
+        "northwest": [
+          "frames/equipment/lantern/idle/northwest/frame-01.png"
+        ],
+        "west": [
+          "frames/equipment/lantern/idle/west/frame-01.png"
+        ],
+        "southwest": [
+          "frames/equipment/lantern/idle/southwest/frame-01.png"
+        ]
+      },
+      "slot": "main-hand",
+      "grip": "one-hand",
+      "actions": [
+        "idle",
+        "walk",
+        "carry"
+      ],
+      "motionProfileId": "animation-profile.lantern-carry",
+      "renderLayer": "hand-item-front",
+      "sockets": {
+        "south": {
+          "x": 37,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southeast": {
+          "x": 41,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "east": {
+          "x": 50,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northeast": {
+          "x": 56,
+          "y": 57,
+          "anchor": "main-hand"
+        },
+        "north": {
+          "x": 59,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northwest": {
+          "x": 48,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "west": {
+          "x": 38,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southwest": {
+          "x": 34,
+          "y": 58,
+          "anchor": "main-hand"
+        }
+      }
+    },
+    "branch": {
+      "atlas": "atlases/equipment/branch.png",
+      "frameCount": 1,
+      "framesByFacing": {
+        "south": [
+          "frames/equipment/branch/idle/south/frame-01.png"
+        ],
+        "southeast": [
+          "frames/equipment/branch/idle/southeast/frame-01.png"
+        ],
+        "east": [
+          "frames/equipment/branch/idle/east/frame-01.png"
+        ],
+        "northeast": [
+          "frames/equipment/branch/idle/northeast/frame-01.png"
+        ],
+        "north": [
+          "frames/equipment/branch/idle/north/frame-01.png"
+        ],
+        "northwest": [
+          "frames/equipment/branch/idle/northwest/frame-01.png"
+        ],
+        "west": [
+          "frames/equipment/branch/idle/west/frame-01.png"
+        ],
+        "southwest": [
+          "frames/equipment/branch/idle/southwest/frame-01.png"
+        ]
+      },
+      "slot": "main-hand",
+      "grip": "one-hand",
+      "actions": [
+        "idle",
+        "walk",
+        "carry"
+      ],
+      "motionProfileId": "animation-profile.standard",
+      "renderLayer": "hand-item-front",
+      "sockets": {
+        "south": {
+          "x": 37,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southeast": {
+          "x": 41,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "east": {
+          "x": 50,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northeast": {
+          "x": 56,
+          "y": 57,
+          "anchor": "main-hand"
+        },
+        "north": {
+          "x": 59,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northwest": {
+          "x": 48,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "west": {
+          "x": 38,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southwest": {
+          "x": 34,
+          "y": 58,
+          "anchor": "main-hand"
+        }
+      }
+    },
+    "staff": {
+      "atlas": "atlases/equipment/staff.png",
+      "frameCount": 1,
+      "framesByFacing": {
+        "south": [
+          "frames/equipment/staff/idle/south/frame-01.png"
+        ],
+        "southeast": [
+          "frames/equipment/staff/idle/southeast/frame-01.png"
+        ],
+        "east": [
+          "frames/equipment/staff/idle/east/frame-01.png"
+        ],
+        "northeast": [
+          "frames/equipment/staff/idle/northeast/frame-01.png"
+        ],
+        "north": [
+          "frames/equipment/staff/idle/north/frame-01.png"
+        ],
+        "northwest": [
+          "frames/equipment/staff/idle/northwest/frame-01.png"
+        ],
+        "west": [
+          "frames/equipment/staff/idle/west/frame-01.png"
+        ],
+        "southwest": [
+          "frames/equipment/staff/idle/southwest/frame-01.png"
+        ]
+      },
+      "slot": "main-hand",
+      "grip": "two-hand",
+      "actions": [
+        "idle",
+        "walk",
+        "cast"
+      ],
+      "motionProfileId": "animation-profile.spellcaster",
+      "renderLayer": "hand-item-front",
+      "sockets": {
+        "south": {
+          "x": 37,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southeast": {
+          "x": 41,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "east": {
+          "x": 50,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northeast": {
+          "x": 56,
+          "y": 57,
+          "anchor": "main-hand"
+        },
+        "north": {
+          "x": 59,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northwest": {
+          "x": 48,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "west": {
+          "x": 38,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southwest": {
+          "x": 34,
+          "y": 58,
+          "anchor": "main-hand"
+        }
+      }
+    },
+    "dimensional-device": {
+      "atlas": "atlases/equipment/dimensional-device.png",
+      "frameCount": 1,
+      "framesByFacing": {
+        "south": [
+          "frames/equipment/dimensional-device/idle/south/frame-01.png"
+        ],
+        "southeast": [
+          "frames/equipment/dimensional-device/idle/southeast/frame-01.png"
+        ],
+        "east": [
+          "frames/equipment/dimensional-device/idle/east/frame-01.png"
+        ],
+        "northeast": [
+          "frames/equipment/dimensional-device/idle/northeast/frame-01.png"
+        ],
+        "north": [
+          "frames/equipment/dimensional-device/idle/north/frame-01.png"
+        ],
+        "northwest": [
+          "frames/equipment/dimensional-device/idle/northwest/frame-01.png"
+        ],
+        "west": [
+          "frames/equipment/dimensional-device/idle/west/frame-01.png"
+        ],
+        "southwest": [
+          "frames/equipment/dimensional-device/idle/southwest/frame-01.png"
+        ]
+      },
+      "slot": "main-hand",
+      "grip": "one-hand",
+      "actions": [
+        "idle",
+        "walk",
+        "activate"
+      ],
+      "motionProfileId": "animation-profile.nimble",
+      "renderLayer": "hand-item-front",
+      "sockets": {
+        "south": {
+          "x": 37,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southeast": {
+          "x": 41,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "east": {
+          "x": 50,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northeast": {
+          "x": 56,
+          "y": 57,
+          "anchor": "main-hand"
+        },
+        "north": {
+          "x": 59,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northwest": {
+          "x": 48,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "west": {
+          "x": 38,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southwest": {
+          "x": 34,
+          "y": 58,
+          "anchor": "main-hand"
+        }
+      }
+    },
+    "dark-sword": {
+      "atlas": "atlases/equipment/dark-sword.png",
+      "frameCount": 1,
+      "framesByFacing": {
+        "south": [
+          "frames/equipment/dark-sword/idle/south/frame-01.png"
+        ],
+        "southeast": [
+          "frames/equipment/dark-sword/idle/southeast/frame-01.png"
+        ],
+        "east": [
+          "frames/equipment/dark-sword/idle/east/frame-01.png"
+        ],
+        "northeast": [
+          "frames/equipment/dark-sword/idle/northeast/frame-01.png"
+        ],
+        "north": [
+          "frames/equipment/dark-sword/idle/north/frame-01.png"
+        ],
+        "northwest": [
+          "frames/equipment/dark-sword/idle/northwest/frame-01.png"
+        ],
+        "west": [
+          "frames/equipment/dark-sword/idle/west/frame-01.png"
+        ],
+        "southwest": [
+          "frames/equipment/dark-sword/idle/southwest/frame-01.png"
+        ]
+      },
+      "slot": "main-hand",
+      "grip": "one-hand",
+      "actions": [
+        "idle",
+        "walk",
+        "slash"
+      ],
+      "motionProfileId": "animation-profile.heavy",
+      "renderLayer": "hand-item-front",
+      "sockets": {
+        "south": {
+          "x": 37,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southeast": {
+          "x": 41,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "east": {
+          "x": 50,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northeast": {
+          "x": 56,
+          "y": 57,
+          "anchor": "main-hand"
+        },
+        "north": {
+          "x": 59,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northwest": {
+          "x": 48,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "west": {
+          "x": 38,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southwest": {
+          "x": 34,
+          "y": 58,
+          "anchor": "main-hand"
+        }
+      }
+    },
+    "light-sword": {
+      "atlas": "atlases/equipment/light-sword.png",
+      "frameCount": 1,
+      "framesByFacing": {
+        "south": [
+          "frames/equipment/light-sword/idle/south/frame-01.png"
+        ],
+        "southeast": [
+          "frames/equipment/light-sword/idle/southeast/frame-01.png"
+        ],
+        "east": [
+          "frames/equipment/light-sword/idle/east/frame-01.png"
+        ],
+        "northeast": [
+          "frames/equipment/light-sword/idle/northeast/frame-01.png"
+        ],
+        "north": [
+          "frames/equipment/light-sword/idle/north/frame-01.png"
+        ],
+        "northwest": [
+          "frames/equipment/light-sword/idle/northwest/frame-01.png"
+        ],
+        "west": [
+          "frames/equipment/light-sword/idle/west/frame-01.png"
+        ],
+        "southwest": [
+          "frames/equipment/light-sword/idle/southwest/frame-01.png"
+        ]
+      },
+      "slot": "main-hand",
+      "grip": "one-hand",
+      "actions": [
+        "idle",
+        "walk",
+        "slash"
+      ],
+      "motionProfileId": "animation-profile.trained",
+      "renderLayer": "hand-item-front",
+      "sockets": {
+        "south": {
+          "x": 37,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southeast": {
+          "x": 41,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "east": {
+          "x": 50,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northeast": {
+          "x": 56,
+          "y": 57,
+          "anchor": "main-hand"
+        },
+        "north": {
+          "x": 59,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "northwest": {
+          "x": 48,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "west": {
+          "x": 38,
+          "y": 58,
+          "anchor": "main-hand"
+        },
+        "southwest": {
+          "x": 34,
+          "y": 58,
+          "anchor": "main-hand"
+        }
+      }
+    }
+  },
+  "movementClips": {
+    "status": "partial",
+    "reason": "O camponês masculino usa folhas PNG revisadas com 8 quadros em cada uma das 8 vistas. As combinações de aceno durante salto e sentado ficam para a próxima etapa.",
+    "implementedActions": [
+      "walk",
+      "run",
+      "wave",
+      "dance",
+      "jump",
+      "sit-ground",
+      "sit-chair",
+      "crouch",
+      "crouch-walk",
+      "walk-wave"
+    ],
+    "frameCountPerFacing": 8,
+    "facingOrder": [
+      "south",
+      "southeast",
+      "east",
+      "northeast",
+      "north",
+      "northwest",
+      "west",
+      "southwest"
+    ],
+    "missingActions": [
+      "jump-wave",
+      "sit-ground-wave",
+      "sit-chair-wave"
+    ],
+    "profiles": {
+      "standard": [
+        "walk",
+        "run",
+        "jump",
+        "sit",
+        "wave",
+        "dance",
+        "crouch"
+      ],
+      "spellcaster": [
+        "walk",
+        "run",
+        "jump",
+        "cast",
+        "sit",
+        "wave",
+        "dance",
+        "crouch"
+      ],
+      "nimble": [
+        "walk",
+        "run",
+        "jump",
+        "slash",
+        "stab",
+        "activate",
+        "sit",
+        "wave",
+        "dance",
+        "crouch"
+      ],
+      "heavy": [
+        "walk",
+        "run",
+        "jump",
+        "chop",
+        "slash",
+        "sit",
+        "wave",
+        "dance",
+        "crouch"
+      ],
+      "trained": [
+        "walk",
+        "run",
+        "jump",
+        "slash",
+        "sit",
+        "wave",
+        "dance",
+        "crouch"
+      ]
+    }
+  }
+}

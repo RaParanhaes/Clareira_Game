@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "decision": {"type": "string", "enum": ["accept", "rollback", "hold"]},
+    "summary": {"type": "string"},
+    "evidence_gaps": {"type": "array", "items": {"type": "string"}},
+    "next_goal": {"type": "string"}
+  },
+  "required": ["decision", "summary", "evidence_gaps", "next_goal"]
+}

@@ -1,0 +1,68 @@
+{
+  "physicalShell": [
+    7,
+    7
+  ],
+  "frame": {
+    "width": 320,
+    "height": 320,
+    "pivot": [
+      160,
+      207
+    ]
+  },
+  "window": {
+    "count": 4,
+    "frontCenters": [
+      [
+        -2.15,
+        3.5,
+        1.95
+      ],
+      [
+        2.15,
+        3.5,
+        1.95
+      ]
+    ],
+    "sideCenters": [
+      [
+        3.5,
+        -2,
+        1.95
+      ],
+      [
+        3.5,
+        0.7,
+        1.95
+      ]
+    ]
+  },
+  "porchPosts": [
+    [
+      -1,
+      4.25
+    ],
+    [
+      1,
+      4.25
+    ]
+  ],
+  "doorCenter": [
+    0,
+    3.5
+  ],
+  "dayNightOnlyGlazing": true,
+  "sourceCatalogRevision": 4,
+  "sourceHashes": {
+    "scripts/blender/build-fern-cabin.py": "3747a69cde0b75a405e1ada2e19e8f84afb19efb5ed680d2120c1be021a35a89",
+    "scripts/blender/cottage_pixels.py": "7ad4c81ff724cd62a39658724bb8a0b87876e65d45ae7078308050f174d6d976"
+  },
+  "exportHashes": {
+    "iso-rot0-shell.png": "376e6d6bd385d40fe8daa7378eb563b553858b5f5697abeeeef25691bf510ad6",
+    "iso-rot0-shell-night.png": "9c34fbcaf0ed8d4e1a94c9e42212730228e54775f3d8bea7151e2c51f7b2cf41",
+    "iso-rot0-canopy.png": "fea5b0a3a04d64ae1731319d1ed2482354ad0dd54023b584ee38267aa8380882",
+    "iso-rot0-post-left.png": "49f1b067c728db4df8696d85199dd78a22cff8ea31726b0e6935d149a3f3c5c6",
+    "iso-rot0-post-right.png": "e959f1c4c51027a42a6f0eb8ffb34d5897ceeccefe353e0b503a8bdc0d263755"
+  }
+}

@@ -1,0 +1,1 @@
+Avalie fluxo de entrada, controles de teclado/toque, legibilidade, orientação, feedback, movimento reduzido, celular e prevenção de erro. Defina a tarefa de jogador e o resultado observável. Requeira evidência do fluxo completo em desktop e celular quando aplicável; uma tela sem ação funcional não é entrega.

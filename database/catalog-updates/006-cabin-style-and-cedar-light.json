@@ -1,0 +1,44 @@
+{
+  "expectedRevision": 7,
+  "actor": "codex-cabin-style-and-cedar-light",
+  "operations": [
+    {
+      "action": "archive",
+      "collection": "objects",
+      "id": "building:cabin-cedar-one/window-0"
+    },
+    {
+      "action": "archive",
+      "collection": "objects",
+      "id": "building:cabin-cedar-one/window-2"
+    },
+    {
+      "action": "archive",
+      "collection": "objects",
+      "id": "building:cabin-cedar-one/window-3"
+    },
+    {
+      "action": "patch",
+      "collection": "objects",
+      "id": "building:cabin-cedar-two",
+      "properties": {
+        "architectureStyle": "timber-daub",
+        "roof": ["#53634e", "#70805b", "#84946a", "#404e43"],
+        "walls": ["#98724e", "#aa8154", "#846343", "#6f543c"],
+        "side": ["#564a40", "#625044", "#4a413b"],
+        "foundation": "#435052"
+      }
+    },
+    {
+      "action": "patch",
+      "collection": "objects",
+      "id": "building:cabin-cedar-three",
+      "properties": {
+        "roof": ["#564034", "#72513a", "#8e6545", "#40312b"],
+        "walls": ["#d2ba8b", "#e2cd9e", "#bda074", "#8f704e"],
+        "side": ["#a7835c", "#b9956c", "#886649"],
+        "foundation": "#4a4941"
+      }
+    }
+  ]
+}

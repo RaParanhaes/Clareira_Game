@@ -1,0 +1,57 @@
+{
+  "format": "png-atlas",
+  "source": "Blender UV-mapped low-poly tree catalog; frames rendered from articulated crown meshes",
+  "uvMaterialAtlas": {
+    "file": "tree-material-uv-v1.png",
+    "tileSize": 16,
+    "columns": [
+      "bark",
+      "deep-leaf",
+      "leaf",
+      "sunlit-leaf"
+    ],
+    "paletteRows": 15
+  },
+  "cell": {
+    "width": 80,
+    "height": 104
+  },
+  "framesPerRow": 9,
+  "frameCount": 9,
+  "playback": {
+    "mode": "mesh-wind-cycle",
+    "cycleSeconds": 14,
+    "activeWindow": 0.28,
+    "framePhases": [
+      null,
+      0,
+      0.04,
+      0.08,
+      0.12,
+      0.16,
+      0.2,
+      0.24,
+      0.28
+    ],
+    "anchor": {
+      "x": 40,
+      "y": 100
+    },
+    "smoothing": "nearest-neighbor"
+  },
+  "atlases": {
+    "broadleaf": {
+      "file": "broadleaf-frames.png",
+      "variants": 7,
+      "warmRows": 2,
+      "rows": 14
+    },
+    "pine": {
+      "file": "pine-frames.png",
+      "variants": 1,
+      "rows": 1
+    }
+  },
+  "sourceModel": "tree-uv-catalog-v1.blend",
+  "materialAtlasSha256": "458d26a0e20b1f69bc5a85e2ffbce13c3ec8283927d5fd17fa7ea92f7d88e8ea"
+}

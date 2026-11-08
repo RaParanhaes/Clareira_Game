@@ -1,0 +1,58 @@
+{
+  "duration": 360,
+  "fps": 60,
+  "frames": 21600,
+  "resolution": [
+    1280,
+    720
+  ],
+  "reference": "game/art/clareira-login-vila-v1.webp",
+  "generation": "built-in image_gen; fox states, quadrupedal dragon landing/perch/breath poses, window off plate and fox habitat cleanup",
+  "approvedAssetsReused": [
+    "v5 dragon flight",
+    "v5 rabbit",
+    "v5 deer",
+    "v5 fire"
+  ],
+  "events": {
+    "rabbitA": [
+      35,
+      62
+    ],
+    "windowOff": [
+      72,
+      74,
+      178,
+      180
+    ],
+    "dragonFirst": [
+      88,
+      185
+    ],
+    "deer": [
+      185,
+      214
+    ],
+    "foxSleepyWake": [
+      223,
+      232
+    ],
+    "rabbitB": [
+      242,
+      271
+    ],
+    "foxFullWake": [
+      271,
+      298
+    ],
+    "dragonReturn": [
+      298,
+      317
+    ]
+  },
+  "budgets": {
+    "runtimeVideos": 1,
+    "maxTransferBytes": 94371840,
+    "decodedFramesEstimateBytes": 33554432
+  }
+}

@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#152731">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Clareira</title>
+  <link rel="icon" href="data:,">
+  <style id="loading-critical-css">/* Tela de entrada enxuta: preto, wordmark em pixels, estado e progresso. */
+html.cache-verifying body{background:#000!important}html.cache-verifying .shell{visibility:hidden}.scene-loading{--loading-accent:#d5b878;--loading-scene-progress:0;position:fixed;inset:0;z-index:1200;display:grid;place-items:center;overflow:hidden;padding:20px;background:#000;color:#eee4cb}
+.scene-loading[hidden],#loading-reload[hidden]{display:none}
+.loading-clearing{position:absolute;right:0;bottom:0;left:0;z-index:0;width:100%;height:min(44vh,390px);overflow:hidden;opacity:calc(.92 * (1 - var(--loading-scene-progress)));pointer-events:none;transition:opacity .35s ease}
+.loading-clearing img{display:block;width:100%;height:100%;object-fit:fill;animation:loading-clearing-breathe 8s steps(6,end) infinite}
+.loading-tree-layer{position:absolute;right:0;bottom:0;left:0;z-index:1;width:100%;height:min(44vh,390px);overflow:hidden;opacity:calc(.92 * (1 - var(--loading-scene-progress)));pointer-events:none;transition:opacity .35s ease}
+.loading-tree-layer-portrait{display:none}
+.loading-tree{transform-box:view-box;transform-origin:0 100%;animation:loading-tree-sway 18s ease-in-out infinite alternate}
+.loading-tree.sway-b{animation-delay:-7s}.loading-tree.sway-c{animation-delay:-11s}.loading-tree.sway-d{animation-delay:-4s}
+.scene-loading[data-context="world"] .loading-tree-layer{display:none}
+.scene-loading[data-context="world"] .loading-clearing{display:none}
+.loading-layout{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;align-content:center;width:min(860px,100%);min-height:min(350px,calc(100vh - 40px));padding:0 16px;text-align:center}
+.loading-wordmark{display:block;width:min(700px,94vw);height:auto;overflow:visible;filter:drop-shadow(0 4px 0 #111713) drop-shadow(0 0 20px #d59a4b1c);animation:loading-wordmark-glow 8s ease-in-out infinite}
+.loading-pixel-assembly{opacity:1}
+.loading-word-shadow{fill:#26312f}
+.loading-word-face{fill:#f0d9aa}
+.loading-status{display:grid;place-items:center;width:min(680px,90vw);height:3em;margin:12px 0 18px;color:#c4b89e;font:400 14px/1.5 system-ui,sans-serif;letter-spacing:.025em;text-wrap:balance}
+.loading-progress-row{display:flex;align-items:center;gap:12px;width:min(490px,86vw);margin:0 auto}
+.loading-track{position:relative;flex:1;height:7px;margin:0;overflow:hidden;border:1px solid #777b7138;border-radius:0;background:#111313;box-shadow:0 1px 0 #000}
+.loading-track span{display:block;width:var(--loading-progress,0%);height:100%;background:var(--loading-accent);box-shadow:0 0 9px color-mix(in srgb,var(--loading-accent) 45%,transparent);transition:width .32s ease}
+.loading-track i{display:none}
+.scene-loading[data-progress-mode="indeterminate"] .loading-track span{width:34%;animation:loading-progress-scan 1.35s steps(8,end) infinite}
+.scene-loading[data-progress-mode="indeterminate"] .loading-percent{visibility:hidden}
+.scene-loading[data-context="world"][data-progress-mode="indeterminate"]{--loading-accent:#79b6af}
+.loading-percent{min-width:44px;color:#e8d4a7;text-align:right;font:600 12px/1 system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.03em}
+.loading-subprogress{display:grid;grid-template-rows:12px;width:min(490px,86vw);min-height:12px;margin:11px auto 0}
+.scene-loading[data-context="world"] .loading-subprogress,.scene-loading[data-context="world"] .loading-checkpoints{display:none}
+.scene-loading[data-context="world"][data-progress-mode="indeterminate"] .loading-substep{visibility:hidden}
+.loading-substep{display:grid;grid-template-columns:80px minmax(40px,1fr) 120px;align-items:center;gap:8px;min-width:0;color:#a6a391;font:600 10px/1 system-ui,sans-serif;letter-spacing:.065em;text-align:left;text-transform:uppercase}
+.loading-substep[data-state="pending"]{visibility:hidden}
+.loading-substep>span{white-space:nowrap}.loading-substep small{overflow:hidden;color:#a6a391;font:400 10px/1.1 system-ui,sans-serif;letter-spacing:0;text-align:right;text-overflow:ellipsis;text-transform:none;white-space:nowrap}
+.loading-substep{--loading-mini-accent:var(--loading-accent)}
+.loading-subtrack{position:relative;height:3px;overflow:hidden;background:#151715}
+.loading-subtrack i{display:block;width:var(--loading-mini-progress,0%);height:100%;background:var(--loading-mini-accent,var(--loading-accent));transition:width .42s linear}
+.loading-substep[data-stage-reset="true"] .loading-subtrack i{transition:none}
+.loading-substep[data-state="complete"]{color:#9ba47d}.loading-substep[data-state="complete"] small{color:#8e9875}.loading-substep[data-state="error"]{color:#c97970}.loading-substep[data-state="error"] small{color:#c97970}.loading-substep[data-state="active"]{color:#bca56d}
+.loading-substep[data-progress-mode="indeterminate"] .loading-subtrack i{width:26%;animation:loading-mini-scan 1.1s steps(7,end) infinite}
+.loading-checkpoints{display:flex;justify-content:center;align-items:center;gap:14px;min-height:12px;margin:10px auto 0}
+.loading-checkpoints span{display:inline-flex;align-items:center;gap:5px;color:#8d8b7e;font:400 9px/1 system-ui,sans-serif;letter-spacing:.025em;white-space:nowrap}
+.loading-checkpoints i{display:block;width:6px;height:6px;border:1px solid var(--loading-stage-color,#6d7767);border-radius:50%;background:transparent;box-shadow:0 0 0 2px #111713;flex:none}
+.loading-checkpoints [data-checkpoint="files"]{--loading-stage-color:#c78e50}.loading-checkpoints [data-checkpoint="session"]{--loading-stage-color:#c3a16b}.loading-checkpoints [data-checkpoint="character"]{--loading-stage-color:#9cbd76}.loading-checkpoints [data-checkpoint="scene"]{--loading-stage-color:#79b6af}
+.loading-checkpoints span[data-state="active"]{color:#c9bea5}.loading-checkpoints span[data-state="active"] i{background:var(--loading-stage-color);box-shadow:0 0 7px color-mix(in srgb,var(--loading-stage-color) 55%,transparent)}
+.loading-checkpoints span[data-state="complete"]{color:#a8ae91}.loading-checkpoints span[data-state="complete"] i{background:var(--loading-stage-color);box-shadow:0 0 6px color-mix(in srgb,var(--loading-stage-color) 42%,transparent)}
+.loading-checkpoints span[data-state="error"]{color:#c97970}.loading-checkpoints span[data-state="error"] i{border-color:#c97970;background:#c97970}
+.loading-visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.loading-reload-slot{display:grid;place-items:center;width:100%;min-height:58px;margin-top:0}
+.loading-layout button{margin:0;min-height:40px;padding:8px 14px;border:1px solid #57594d;background:#101211;color:#eee4cb;font:500 13px system-ui,sans-serif;cursor:pointer}
+.loading-layout button:focus-visible{outline:2px solid #e4c77f;outline-offset:3px}
+.scene-loading[data-phase="manifest"]{--loading-accent:#d5bd7f}.scene-loading[data-phase="checking-cache"]{--loading-accent:#82936d}.scene-loading[data-phase="downloading"]{--loading-accent:#c78e50}.scene-loading[data-phase="verifying"]{--loading-accent:#e0bd68}.scene-loading[data-phase="activating"]{--loading-accent:#9baa6d}.scene-loading[data-phase="complete"]{--loading-accent:#9baa6d}.scene-loading[data-phase="session"]{--loading-accent:#c3a16b}.scene-loading[data-phase="world"]{--loading-accent:#d39b58}.scene-loading[data-phase="error"]{--loading-accent:#c97970}
+.scene-loading[data-context="login"][data-loading-stage="files"]{--loading-accent:#c78e50}.scene-loading[data-context="login"][data-loading-stage="session"]{--loading-accent:#c3a16b}.scene-loading[data-context="login"][data-loading-stage="character"]{--loading-accent:#9cbd76}.scene-loading[data-context="login"][data-loading-stage="scene"]{--loading-accent:#79b6af}
+.scene-loading[data-context][data-phase="error"]{--loading-accent:#c97970}
+.scene-loading[data-phase="error"] .loading-status{height:auto;min-height:3em}
+@keyframes loading-wordmark-glow{0%,100%{filter:drop-shadow(0 4px 0 #111713) drop-shadow(0 0 17px #d59a4b16)}50%{filter:drop-shadow(0 4px 0 #111713) drop-shadow(0 0 24px #d59a4b30)}}
+@keyframes loading-clearing-breathe{0%,100%{filter:brightness(.96)}50%{filter:brightness(1.08)}}
+@keyframes loading-tree-sway{0%,100%{rotate:-.45deg}50%{rotate:.45deg}}
+@keyframes loading-progress-scan{from{translate:-110% 0}to{translate:390% 0}}
+@keyframes loading-mini-scan{from{translate:-120% 0}to{translate:480% 0}}
+@media(max-width:600px){.scene-loading{padding:16px}.loading-layout{padding:0 8px}.loading-wordmark{width:96vw}.loading-subprogress{grid-template-rows:12px;width:90vw;min-height:12px;gap:5px}.loading-substep{grid-template-columns:76px minmax(32px,1fr) 112px;gap:6px;font-size:9px}.loading-substep small{font-size:9px}.loading-checkpoints{gap:10px}.loading-checkpoints span{gap:4px;font-size:8px}.loading-status{margin:8px 0 15px;font-size:12px}.loading-progress-row{width:90vw;gap:9px}.loading-percent{min-width:40px;font-size:11px}}
+@media(max-width:600px){.loading-tree-layer-wide{display:none}.loading-tree-layer-portrait{display:block;height:min(42vh,360px)}.loading-clearing{height:min(42vh,360px)}}
+@media(min-width:601px) and (max-height:760px){.loading-clearing,.loading-tree-layer{height:min(38vh,280px)}}
+@media(max-height:500px) and (orientation:landscape){.scene-loading{padding:8px 16px}.loading-layout{width:min(600px,100%);min-height:0;padding:0 8px;transform:translateY(-8px)}.loading-wordmark{width:min(460px,58vw)}.loading-status{width:min(560px,88vw);height:auto;min-height:2em;margin:5px 0 9px;font-size:12px}.loading-progress-row,.loading-subprogress{width:min(460px,82vw)}.loading-subprogress{margin-top:8px}.loading-checkpoints{margin-top:8px}.loading-clearing,.loading-tree-layer{height:min(34vh,132px)}}
+@media(max-width:420px){.scene-loading{padding:12px}.loading-layout{min-height:min(320px,calc(100dvh - 24px));padding:0 4px}.loading-wordmark{width:92vw}.loading-status{width:88vw;font-size:clamp(11px,3vw,13px)}.loading-progress-row,.loading-subprogress{width:92vw}.loading-progress-row{gap:8px}.loading-substep{grid-template-columns:76px minmax(24px,1fr) 112px;gap:5px}}
+@media(prefers-reduced-motion:reduce){.loading-wordmark,.loading-track span,.loading-subtrack i,.loading-clearing,.loading-clearing img,.loading-tree{animation:none!important;transition:none!important}.scene-loading[data-progress-mode="indeterminate"] .loading-track span{width:34%;opacity:.72}}
+
+html:not(.clareira-styles-ready) .shell{visibility:hidden}
+</style>
+  <link rel="stylesheet" href="/dev/style.css">
+</head>
+<body>
+  <section id="scene-loading" class="scene-loading" data-context="login" data-phase="manifest" data-loading-stage="files" data-progress-mode="determinate" role="status" aria-live="polite" aria-labelledby="loading-title">
+    <picture class="loading-clearing" aria-hidden="true">
+      <source media="(max-width:600px) and (orientation:portrait)" srcset="/dev/art/loading-clearing-portrait.svg">
+      <img src="/dev/art/loading-clearing.svg" alt="">
+    </picture>
+    <svg class="loading-tree-layer loading-tree-layer-wide" viewBox="0 145 1440 215" preserveAspectRatio="none" aria-hidden="true" shape-rendering="crispEdges">
+      <g class="loading-tree sway-a" transform="translate(68 0)"><path fill="#101914" d="M-20 330v-28h-8v-16h-7v-16h-7v-15h14v-13h10v13h14v15h-7v16h-8v16h14v28z"/><path fill="#243322" d="M-25 307h9v23h-9z"/></g>
+      <g class="loading-tree sway-b" transform="translate(168 0)"><path fill="#101914" d="M-15 333v-23h-7v-14h-6v-13h-6v-12h12v-11h9v11h12v12h-6v13h-7v14h12v23z"/><path fill="#243322" d="M-18 315h7v18h-7z"/></g>
+      <g class="loading-tree sway-c" transform="translate(1375 0)"><path fill="#101914" d="M-18 333v-24h-7v-14h-6v-14h-7v-13h13v-12h10v12h13v13h-6v14h-7v14h12v24z"/><path fill="#243322" d="M-21 313h8v20h-8z"/></g>
+      <g class="loading-tree sway-d" transform="translate(1280 0)"><path fill="#101914" d="M-14 330v-22h-7v-13h-6v-13h-6v-12h12v-10h9v10h12v12h-6v13h-7v13h12v22z"/><path fill="#243322" d="M-17 313h7v17h-7z"/></g>
+    </svg>
+    <svg class="loading-tree-layer loading-tree-layer-portrait" viewBox="0 115 390 245" preserveAspectRatio="none" aria-hidden="true" shape-rendering="crispEdges">
+      <g class="loading-tree sway-a" transform="translate(30 0)"><path fill="#101914" d="M-10 346v-19h-5v-12h-5v-12h-5v-11h9v-10h7v10h9v11h-5v12h-5v12h9v19z"/><path fill="#243322" d="M-12 330h5v16h-5z"/></g>
+      <g class="loading-tree sway-b" transform="translate(75 0)"><path fill="#101914" d="M-9 350v-16h-5v-10h-4v-11h-5v-10h9v-8h7v8h9v10h-4v11h-5v10h9v16z"/><path fill="#243322" d="M-11 336h5v14h-5z"/></g>
+      <g class="loading-tree sway-c" transform="translate(365 0)"><path fill="#101914" d="M-10 347v-19h-5v-12h-5v-12h-5v-11h9v-10h7v10h9v11h-5v12h-5v12h9v19z"/><path fill="#243322" d="M-12 331h5v16h-5z"/></g>
+      <g class="loading-tree sway-d" transform="translate(320 0)"><path fill="#101914" d="M-9 350v-16h-5v-10h-4v-11h-5v-10h9v-8h7v8h9v10h-4v11h-5v10h9v16z"/><path fill="#243322" d="M-11 336h5v14h-5z"/></g>
+    </svg>
+    <div class="loading-layout">
+      <h1 id="loading-title" class="loading-visually-hidden">Clareira</h1>
+            <svg class="loading-wordmark" viewBox="0 0 760 150" role="img" aria-labelledby="loading-title" shape-rendering="crispEdges">
+                <g class="loading-pixel-assembly" transform="translate(51 25) scale(14)">
+          <path class="loading-word-shadow" d="M1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM0 1h1v1h-1zM0 2h1v1h-1zM0 3h1v1h-1zM0 4h1v1h-1zM0 5h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM6 0h1v1h-1zM6 1h1v1h-1zM6 2h1v1h-1zM6 3h1v1h-1zM6 4h1v1h-1zM6 5h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM9 6h1v1h-1zM10 6h1v1h-1zM13 0h1v1h-1zM14 0h1v1h-1zM15 0h1v1h-1zM12 1h1v1h-1zM16 1h1v1h-1zM12 2h1v1h-1zM16 2h1v1h-1zM12 3h1v1h-1zM13 3h1v1h-1zM14 3h1v1h-1zM15 3h1v1h-1zM16 3h1v1h-1zM12 4h1v1h-1zM16 4h1v1h-1zM12 5h1v1h-1zM16 5h1v1h-1zM12 6h1v1h-1zM16 6h1v1h-1zM18 0h1v1h-1zM19 0h1v1h-1zM20 0h1v1h-1zM21 0h1v1h-1zM18 1h1v1h-1zM22 1h1v1h-1zM18 2h1v1h-1zM22 2h1v1h-1zM18 3h1v1h-1zM19 3h1v1h-1zM20 3h1v1h-1zM21 3h1v1h-1zM18 4h1v1h-1zM20 4h1v1h-1zM18 5h1v1h-1zM21 5h1v1h-1zM18 6h1v1h-1zM22 6h1v1h-1zM24 0h1v1h-1zM25 0h1v1h-1zM26 0h1v1h-1zM27 0h1v1h-1zM28 0h1v1h-1zM24 1h1v1h-1zM24 2h1v1h-1zM24 3h1v1h-1zM25 3h1v1h-1zM26 3h1v1h-1zM27 3h1v1h-1zM24 4h1v1h-1zM24 5h1v1h-1zM24 6h1v1h-1zM25 6h1v1h-1zM26 6h1v1h-1zM27 6h1v1h-1zM28 6h1v1h-1zM30 0h1v1h-1zM31 0h1v1h-1zM32 0h1v1h-1zM33 0h1v1h-1zM34 0h1v1h-1zM32 1h1v1h-1zM32 2h1v1h-1zM32 3h1v1h-1zM32 4h1v1h-1zM32 5h1v1h-1zM30 6h1v1h-1zM31 6h1v1h-1zM32 6h1v1h-1zM33 6h1v1h-1zM34 6h1v1h-1zM36 0h1v1h-1zM37 0h1v1h-1zM38 0h1v1h-1zM39 0h1v1h-1zM36 1h1v1h-1zM40 1h1v1h-1zM36 2h1v1h-1zM40 2h1v1h-1zM36 3h1v1h-1zM37 3h1v1h-1zM38 3h1v1h-1zM39 3h1v1h-1zM36 4h1v1h-1zM38 4h1v1h-1zM36 5h1v1h-1zM39 5h1v1h-1zM36 6h1v1h-1zM40 6h1v1h-1zM43 0h1v1h-1zM44 0h1v1h-1zM45 0h1v1h-1zM42 1h1v1h-1zM46 1h1v1h-1zM42 2h1v1h-1zM46 2h1v1h-1zM42 3h1v1h-1zM43 3h1v1h-1zM44 3h1v1h-1zM45 3h1v1h-1zM46 3h1v1h-1zM42 4h1v1h-1zM46 4h1v1h-1zM42 5h1v1h-1zM46 5h1v1h-1zM42 6h1v1h-1zM46 6h1v1h-1z" transform="translate(.28 .32)"/>
+          <path class="loading-word-face" d="M1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM0 1h1v1h-1zM0 2h1v1h-1zM0 3h1v1h-1zM0 4h1v1h-1zM0 5h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM6 0h1v1h-1zM6 1h1v1h-1zM6 2h1v1h-1zM6 3h1v1h-1zM6 4h1v1h-1zM6 5h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM9 6h1v1h-1zM10 6h1v1h-1zM13 0h1v1h-1zM14 0h1v1h-1zM15 0h1v1h-1zM12 1h1v1h-1zM16 1h1v1h-1zM12 2h1v1h-1zM16 2h1v1h-1zM12 3h1v1h-1zM13 3h1v1h-1zM14 3h1v1h-1zM15 3h1v1h-1zM16 3h1v1h-1zM12 4h1v1h-1zM16 4h1v1h-1zM12 5h1v1h-1zM16 5h1v1h-1zM12 6h1v1h-1zM16 6h1v1h-1zM18 0h1v1h-1zM19 0h1v1h-1zM20 0h1v1h-1zM21 0h1v1h-1zM18 1h1v1h-1zM22 1h1v1h-1zM18 2h1v1h-1zM22 2h1v1h-1zM18 3h1v1h-1zM19 3h1v1h-1zM20 3h1v1h-1zM21 3h1v1h-1zM18 4h1v1h-1zM20 4h1v1h-1zM18 5h1v1h-1zM21 5h1v1h-1zM18 6h1v1h-1zM22 6h1v1h-1zM24 0h1v1h-1zM25 0h1v1h-1zM26 0h1v1h-1zM27 0h1v1h-1zM28 0h1v1h-1zM24 1h1v1h-1zM24 2h1v1h-1zM24 3h1v1h-1zM25 3h1v1h-1zM26 3h1v1h-1zM27 3h1v1h-1zM24 4h1v1h-1zM24 5h1v1h-1zM24 6h1v1h-1zM25 6h1v1h-1zM26 6h1v1h-1zM27 6h1v1h-1zM28 6h1v1h-1zM30 0h1v1h-1zM31 0h1v1h-1zM32 0h1v1h-1zM33 0h1v1h-1zM34 0h1v1h-1zM32 1h1v1h-1zM32 2h1v1h-1zM32 3h1v1h-1zM32 4h1v1h-1zM32 5h1v1h-1zM30 6h1v1h-1zM31 6h1v1h-1zM32 6h1v1h-1zM33 6h1v1h-1zM34 6h1v1h-1zM36 0h1v1h-1zM37 0h1v1h-1zM38 0h1v1h-1zM39 0h1v1h-1zM36 1h1v1h-1zM40 1h1v1h-1zM36 2h1v1h-1zM40 2h1v1h-1zM36 3h1v1h-1zM37 3h1v1h-1zM38 3h1v1h-1zM39 3h1v1h-1zM36 4h1v1h-1zM38 4h1v1h-1zM36 5h1v1h-1zM39 5h1v1h-1zM36 6h1v1h-1zM40 6h1v1h-1zM43 0h1v1h-1zM44 0h1v1h-1zM45 0h1v1h-1zM42 1h1v1h-1zM46 1h1v1h-1zM42 2h1v1h-1zM46 2h1v1h-1zM42 3h1v1h-1zM43 3h1v1h-1zM44 3h1v1h-1zM45 3h1v1h-1zM46 3h1v1h-1zM42 4h1v1h-1zM46 4h1v1h-1zM42 5h1v1h-1zM46 5h1v1h-1zM42 6h1v1h-1zM46 6h1v1h-1z"/>
+
+          <g fill="#e7d3a7" aria-hidden="true">
+            <rect class="loading-fragment" x="4" y="0" width="1" height="1"/>
+            <rect class="loading-fragment" x="6" y="1" width="1" height="1"/>
+            <rect class="loading-fragment" x="16" y="0" width="1" height="1"/>
+            <rect class="loading-fragment" x="22" y="3" width="1" height="1"/>
+            <rect class="loading-fragment" x="28" y="6" width="1" height="1"/>
+            <rect class="loading-fragment" x="33" y="1" width="1" height="1"/>
+            <rect class="loading-fragment" x="41" y="2" width="1" height="1"/>
+            <rect class="loading-fragment" x="46" y="5" width="1" height="1"/>
+            <rect class="loading-fragment" x="2" y="6" width="1" height="1"/>
+            <rect class="loading-fragment" x="12" y="0" width="1" height="1"/>
+            <rect class="loading-fragment" x="25" y="6" width="1" height="1"/>
+            <rect class="loading-fragment" x="44" y="0" width="1" height="1"/>
+          </g>
+        </g>
+      </svg>
+      <p id="loading-message" class="loading-status" aria-live="polite">Toda trilha começa com um primeiro passo.</p>
+      <div class="loading-progress-row">
+        <div class="loading-track" id="loading-progress" role="progressbar" aria-label="Progresso total do carregamento"
+          aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0% do carregamento" aria-live="off"><span></span><i aria-hidden="true"></i></div>
+        <strong id="loading-percent" class="loading-percent">0%</strong>
+      </div>
+      <div class="loading-subprogress" data-loading-group="initial" aria-label="Etapa atual do carregamento">
+        <div class="loading-substep" data-loading-step="current" data-stage="files" data-state="pending" data-progress-mode="determinate" aria-hidden="true">
+          <span data-loading-label>Arquivos</span><div class="loading-subtrack" role="progressbar" aria-label="Etapa atual" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div><small data-loading-detail></small>
+        </div>
+      </div>
+      <div class="loading-checkpoints" data-loading-checkpoints aria-label="Etapas do carregamento">
+        <span data-checkpoint="files" data-state="pending"><i aria-hidden="true"></i>Arquivos</span>
+        <span data-checkpoint="session" data-state="pending"><i aria-hidden="true"></i>Sessão</span>
+        <span data-checkpoint="character" data-state="pending"><i aria-hidden="true"></i>Personagem</span>
+        <span data-checkpoint="scene" data-state="pending"><i aria-hidden="true"></i>Cena</span>
+      </div>
+      <span class="loading-caption loading-visually-hidden" id="loading-caption">Preparando arquivos e cache</span>
+      <div class="loading-reload-slot"><button id="loading-reload" type="button" hidden>Tentar recarregar</button></div>
+    </div>
+  </section>
+  <main class="shell" inert aria-busy="true">
+    <section id="auth-gate" class="auth-gate" aria-labelledby="auth-title">
+      <header class="auth-topbar">
+        <a class="brand auth-brand" href="/dev/" aria-label="Clareira início">
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 48 48" focusable="false" shape-rendering="crispEdges">
+            <path d="M8 38h32v3H8z" fill="#091513" opacity=".8"/><path d="M7 36h5v3H7zm29 0h5v3h-5z" fill="#536648"/>
+            <path d="M10 36h15v4H10z" fill="#704832"/><path d="M23 35h15v4H23z" fill="#895a3a"/><path d="M14 35h5v2h-5zm17-2h5v2h-5z" fill="#bd8952"/>
+            <path d="M8 33h5v4H8zm27 0h5v4h-5z" fill="#75806a"/><path d="M9 32h3v2H9zm29 0h3v2h-3z" fill="#a1a080"/>
+            <g class="logo-flame"><path d="M20 35v-4h-4v-4h-3v-5h3v-5h3v-4h3V8h3v6h3v5h3v5h3v5h-3v4h-4v3H20z" fill="#d76745"/><path d="M20 31v-4h-2v-4h3v-4h2v-4h3v5h3v4h2v5h-3v4h-4v3h-4z" fill="#f2a34d"/><path class="logo-core" d="M22 31v-4h2v-5h2v5h2v4h-2v4h-4z" fill="#ffe39a"/></g>
+            <g class="logo-embers"><path d="M15 10h3v3h-3z" fill="#f3bd68"/><path d="M31 7h3v3h-3z" fill="#ef8e68"/><path d="M38 18h2v2h-2z" fill="#f3bd68"/></g>
+            <g class="logo-leaf"><path d="M34 13h7v3h-3v4h-4v3h-4v-5h3v-3h1z" fill="#9fc38d"/><path d="M33 20h5v2h-5z" fill="#506c4d"/><path d="M34 20h2v4h-2z" fill="#d0d795"/></g>
+          </svg><span class="brand-midge"></span></span>
+          <span><strong>CLAREIRA</strong><small>TRILHAS · ENCONTROS · AVENTURAS</small></span>
+        </a>
+        <div class="auth-topbar-actions">
+          <button id="auth-animation-toggle" class="auth-animation-toggle" type="button" aria-pressed="false" aria-label="Ativar animação da cena"><i data-animation-icon aria-hidden="true">▶</i> <span>Animar</span></button>
+          <button id="auth-sound-toggle" class="auth-audio-toggle" type="button" aria-pressed="true" title="Desligar som">♫ <span>Ligado</span></button>
+        </div>
+      </header>
+      <div class="auth-stage">
+        <img class="auth-illustration-image" src="/dev/art/clareira-login-poster-v5.webp" alt="" aria-hidden="true" fetchpriority="low" loading="eager" decoding="async">
+        <video id="auth-scene-video" class="auth-scene-video" data-src="/dev/art/clareira-login-loop-v5.mp4" data-framing="wildlife" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video>
+        <div class="auth-access">
+        <div class="auth-scene">
+          <p class="eyebrow" data-entry-copy="eyebrow">VOCÊ CHEGOU A OUTRO MUNDO</p>
+          <h1 id="auth-title" data-entry-copy="title">Chegue perto. O bosque acorda.</h1>
+          <p class="auth-lede" data-entry-copy="lede">Dê uma volta pelo bosque e conheça quem já chegou.</p>
+          <form id="guest-form" class="auth-form auth-guest-form" data-auth-form="guest">
+            <button class="primary-auth" type="submit">Jogar como visitante <span aria-hidden="true">→</span></button>
+            <p class="auth-hint">Visita temporária, sem conta.</p>
+          </form>
+          <div class="auth-account-options">
+            <button type="button" data-auth-shortcut="login">Entrar na minha conta</button>
+            <button type="button" data-auth-shortcut="register">Criar conta</button>
+          </div>
+        </div>
+        <aside class="auth-panel" aria-label="Acesso à conta" hidden>
+          <button type="button" class="auth-back" data-auth-back>← Voltar</button>
+          <div class="auth-panel-heading">
+            <h2>Entrar na minha conta</h2>
+          </div>
+          <div class="auth-tabs" role="tablist" aria-label="Acesso à conta">
+            <button type="button" role="tab" aria-selected="true" data-auth-tab="login">Entrar</button>
+            <button type="button" role="tab" aria-selected="false" data-auth-tab="register">Criar conta</button>
+          </div>
+          <form id="login-form" class="auth-form" data-auth-form="login">
+            <label for="login-username">Nome de usuário</label>
+            <input id="login-username" name="username" minlength="3" maxlength="20" autocomplete="username" placeholder="Seu nome de viajante" required>
+            <label for="login-password">Senha</label>
+            <input id="login-password" name="password" type="password" minlength="10" maxlength="128" autocomplete="current-password" required>
+            <p class="auth-hint">Ainda não há recuperação de senha.</p>
+            <button class="primary-auth" type="submit">Entrar na Clareira <span aria-hidden="true">→</span></button>
+          </form>
+          <form id="register-form" class="auth-form" data-auth-form="register" hidden>
+            <label for="register-username">Nome de usuário</label>
+            <input id="register-username" name="username" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Escolha um nome único" required>
+            <label for="register-password">Crie uma senha</label>
+            <input id="register-password" name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required>
+            <p class="auth-hint">Seu nome aparece no jogo. Escolha um que ninguém use, sem palavrões ou palavras obscenas.</p>
+            <p class="auth-hint">Use uma senha exclusiva. Ainda não há recuperação de senha.</p>
+            <button class="primary-auth" type="submit">Guardar meu lugar <span aria-hidden="true">→</span></button>
+          </form>
+        </aside>
+        <p id="auth-status" class="auth-status" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+      <footer class="auth-footer">
+        <p class="auth-footer-note">Sempre há lugar perto do fogo.</p>
+      </footer>
+    </section>
+    <header class="topbar" aria-label="Menu do jogador">
+      <button type="button" class="mobile-menu-toggle" aria-expanded="false">☰ Menu</button>
+      <a class="brand" href="/dev/" aria-label="Clareira início"><strong>CLAREIRA</strong></a>
+      <details class="player-menu"><summary>Jogador</summary>
+        <span id="session-label" class="session-label"></span>
+        <label class="name-label" for="player-name">Nome de usuário</label><input id="player-name" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="username" autocapitalize="none" spellcheck="false" value="" aria-label="Seu nome de usuário" title="3 a 20 letras, números ou _. Precisa ser único e sem palavrões.">
+        <div class="presence"><span id="connection-dot" class="status-dot"></span><span id="connection-label" role="status" aria-live="polite">Conectando…</span><span id="player-count">0 aqui</span></div>
+        <button id="hud-edit-toggle" class="icon-button" type="button" aria-pressed="false" title="Arraste a barra rápida, o minimapa e os controles de construção. Com o teclado, use Alt + setas.">Mover painéis</button>
+        <button id="hud-reset" class="icon-button" type="button">Restaurar painéis</button>
+        <button id="logout-button" class="icon-button logout-button" type="button">Sair</button>
+      </details>
+      <details class="dimension-travel"><summary>Destinos</summary><div class="destination-menu">
+        <button id="world-map-toggle" class="destination-map-button" type="button" aria-haspopup="dialog" aria-controls="world-map-dialog" title="Abrir o mapa" hidden>⌖ Mapa do mundo <kbd>N</kbd></button>
+        <div id="dimension-destinations" role="group" aria-label="Viajar para outra dimensão"></div>
+      </div></details>
+      <section class="coin-wallet" aria-label="Moedas"><span><i class="coin gold" aria-hidden="true"></i><small>Ouro</small><b id="gold-count">0</b></span><span><i class="coin silver" aria-hidden="true"></i><small>Prata</small><b id="silver-count">0</b></span><span><i class="coin bronze" aria-hidden="true"></i><small>Bronze</small><b id="bronze-count">0</b></span></section>
+      <nav class="top-actions" aria-label="Menu principal"><button id="inventory-toggle" class="icon-button" type="button" aria-haspopup="dialog" aria-controls="inventory-dialog" title="Abrir Inventário" aria-label="Abrir Inventário">▦ <span>Inventário</span> <b id="progression-points-badge" class="progression-points-badge" aria-hidden="true" hidden></b> <kbd>I</kbd></button><button id="chat-focus-toggle" class="icon-button" type="button" title="Ir para a conversa">☏ <span>Conversa</span></button><button id="staff-tools-toggle" class="icon-button" type="button" aria-haspopup="dialog" aria-controls="staff-tools-dialog" hidden>⚒ <span>Ferramentas</span></button><button id="settings-toggle" class="icon-button" type="button" aria-haspopup="dialog" aria-controls="settings-dialog">⚙ <span>Configurações</span></button><button id="help-toggle" class="icon-button" type="button" aria-expanded="false" aria-controls="game-help" title="Ajuda">? <span>Ajuda</span></button></nav>
+    </header>
+
+    <section class="game-layout" aria-label="Jogo Clareira">
+      <section class="world-card">
+        <div class="world-heading"><div><h1 id="world-title">Bosque das Brasas</h1></div><span class="weather"><span aria-hidden="true">✧</span> <span id="weather-text">brisa calma</span></span></div>
+        <div class="canvas-wrap">
+          <canvas id="world" width="480" height="300" tabindex="0" aria-label="Clareira isométrica. Toque ou clique no chão, ou use as setas e WASD para caminhar; Espaço para pular enquanto se move; obstáculos continuam bloqueando o caminho; E para coletar; H para criar ou usar o machado; R para afiá-lo; I abre o Inventário; Q ativa Arrancada após desbloqueá-la; 1 a 9 troca itens da barra rápida."></canvas>
+          <button id="mini-map-toggle" class="mini-map" type="button" aria-haspopup="dialog" aria-controls="world-map-dialog" aria-label="Abrir minimapa e mapa completo" hidden><span class="mini-map-caption"><span>MINIMAPA</span><small id="mini-map-exploration-status">Explorando</small></span><canvas id="mini-map-canvas" width="180" height="132" aria-hidden="true"></canvas><span class="mini-map-open-hint">Toque para expandir</span></button>
+          <div id="quickbar" class="quickbar" role="toolbar" aria-label="Barra rápida de itens"></div>
+          <div id="room-build-tools" class="room-build-tools" hidden aria-label="Construção do quarto">
+            <button id="room-build-toggle" type="button" aria-expanded="false" aria-controls="room-build-options">Construir</button>
+            <div id="room-build-options" class="room-build-options" hidden>
+              <select id="room-category" aria-label="Categoria de móveis"><option value="basicos">Móveis básicos</option></select>
+              <select id="room-kind" aria-label="Escolher móvel"><option value="stool">Banco</option><option value="chair">Cadeira</option><option value="bed">Cama</option><option value="shower">Ducha</option><option value="nightstand">Criado-mudo</option><option value="wardrobe">Guarda-roupa</option><option value="bookshelf">Estante</option><option value="desk">Escrivaninha</option><option value="table">Mesa</option><option value="sofa">Sofá</option><option value="chest">Baú</option><option value="plant">Planta</option></select>
+              <button id="room-place" type="button" aria-pressed="false" title="Colocar o móvel escolhido">+ Colocar</button>
+              <button id="room-move" type="button" aria-pressed="false">Mover</button>
+              <button id="room-rotate" type="button" aria-pressed="false">Girar</button>
+              <button id="room-remove" type="button" aria-pressed="false">Retirar</button>
+            </div>
+          </div>
+          <section id="room-object-card" class="room-object-card" hidden aria-label="Detalhes do móvel selecionado">
+            <button id="room-object-close" class="room-object-close" type="button" aria-label="Fechar detalhes do móvel">×</button>
+            <canvas id="room-object-preview" width="160" height="140" aria-hidden="true"></canvas>
+            <div class="room-object-copy"><p id="room-object-type" class="room-object-type">MÓVEL</p><h2 id="room-object-name">Objeto</h2><p id="room-object-description"></p></div>
+            <div id="room-object-actions" class="room-object-actions"></div>
+          </div>
+          <div class="scene-vignette" aria-hidden="true"></div>
+          <div id="toast" class="toast" role="status" aria-live="polite"></div>
+          <div class="mini-coords"><span class="live-pip"></span> MUNDO AO VIVO</div>
+        </div>
+        <form id="chat-form" class="chat-form" aria-label="Conversa" autocomplete="off">
+          <span class="chat-mark" aria-hidden="true"></span>
+          <label class="visually-hidden" for="chat-text">Mensagem para quem está por perto</label>
+          <input id="chat-text" name="chat" type="text" inputmode="text" enterkeyhint="send" maxlength="4096" placeholder="Diga algo a quem está por perto…">
+          <button type="submit" aria-label="Enviar mensagem">Falar</button>
+          <span id="chat-status" class="visually-hidden" role="status" aria-live="polite"></span>
+        </form>
+        <span id="objective-text" class="visually-hidden" aria-live="polite"></span>
+      </section>
+
+      <aside class="side-panel" id="game-help" hidden>
+        <section class="panel-card welcome-card">
+          <span class="sun-stamp" aria-hidden="true">☼</span>
+          <p class="eyebrow">SEM PRESSA</p>
+          <h2>O bosque é seu.</h2>
+          <p>Ande por aí, junte alguns materiais e chame alguém para perto da fogueira.</p>
+          <div class="tiny-people" aria-hidden="true"><span>●</span><span>●</span><span>●</span><small>um lugar para encontrar gente</small></div>
+        </section>
+        <section class="panel-card controls-card">
+          <div class="card-title"><h2>O que fazer</h2><span class="sparkle" aria-hidden="true">✧</span></div>
+          <div class="control-row"><span class="keycap">W A S D</span><span>caminhar</span></div>
+          <div class="control-row"><span class="keycap">Shift</span><span>correr enquanto anda</span></div>
+          <div class="control-row"><span class="keycap">C</span><span>agachar; segure para andar abaixado</span></div>
+          <div class="control-row"><span class="keycap">Espaço</span><span>pular enquanto se move; obstáculos continuam bloqueando o caminho</span></div>
+          <div class="control-row"><span class="keycap">E</span><span>interagir com alguém, usar objetos ou fazer a ação disponível</span></div>
+          <div class="control-row"><span class="keycap">H / R / P</span><span><b id="tool-status">Faca simples · sem machado</b><small>H cria ou usa o machado/picareta; R afia o machado com uma pedra; P monta a picareta com 2 pedras, galho forte e cipó.</small><small>Árvore: 40 golpes · tora: 30 cortes. Sem fio, o machado demora até 8 s por golpe; afiar leva 10 s e usa 1 pedra.</small><small>O machado dura 210 golpes: cerca de 3 ciclos completos de árvore e tora. A afiação recupera o fio, não o desgaste.</small></span></div>
+          <div class="control-row"><span class="keycap">U / Y</span><span>Melhorar machado e picareta de cobre ou ferro na bancada; use lingotes e ripas. Ferramentas de metal duram mais e reduzem golpes por recurso.</span></div>
+          <div class="control-row"><span class="keycap">B / K / O / M</span><span>construir bancada, caieira, fornalha e iniciar lote; Shift+M fatia ripas em gravetos <small>Bancada: 24 madeira bruta + 8 pedras + 4 cipós · caieira: 20 madeira bruta + 12 pedras + 4 ripas · fornalha: 25 pedras + 8 madeira bruta + 8 ripas.</small><small>Na bancada: 20 madeira bruta → 5 ripas em 30 s; depois 2 ripas → 12 gravetos em 18 s. Carvão vegetal: 20 madeira bruta → 6 em 90 s.</small></span></div>
+          <div class="control-row"><span class="keycap">V</span><span>visitar alguém por perto</span></div>
+          <div class="control-row"><span class="keycap">F</span><span>fazer ou reacender uma fogueira <small>nova: 20 gravetos + 10 pedras + 1 maço de folhas secas</small><small>reacender: 10 gravetos + 1 maço de folhas secas</small><small>alimentar fraca: 2 gravetos · reconstruir: 10 gravetos + 5 pedras + 1 maço de folhas secas</small></span></div>
+          <div class="control-row"><span class="keycap">G</span><span>oferecer uma frutinha a alguém por perto</span></div>
+          <div class="control-row"><span class="keycap">B no quarto</span><span>escolher um ponto para colocar banco</span></div>
+          <div class="control-row"><span class="keycap">X</span><span>clicar num banco para retirá-lo</span></div>
+          <div class="control-row"><span class="keycap">Alt+1–3</span><span>acenar, dançar, sentar no chão ou num banco próximo</span></div>
+          <div class="control-row"><span class="keycap">N</span><span>abrir o mapa do mundo</span></div><div class="control-row"><span class="keycap">1–9</span><span>trocar rapidamente o item equipado</span></div><div class="control-row"><span class="keycap">Shift+1–4</span><span>usar até quatro habilidades ativas aprendidas</span></div>
+          <div class="control-row"><span class="keycap">I</span><span>abrir o Inventário; clique num item para colocá-lo na barra rápida</span></div>
+        </section>
+      </aside>
+    </section>
+    <div class="mobile-input">
+          <span class="touch-walk-hint">Toque no chão para caminhar</span>
+          <div class="mobile-primary-actions" role="group" aria-label="Ações principais">
+            <button type="button" data-action="context" aria-label="Usar ou interagir com personagem, objeto ou ação próxima" title="Usar ou interagir">Usar</button>
+            <button type="button" data-run-toggle aria-pressed="false" aria-label="Ativar corrida" title="Ativar corrida">Correr</button>
+          </div>
+          <details class="mobile-actions-menu">
+            <summary>Ações</summary>
+            <div class="touch-actions">
+              <details class="touch-action-group outside-room" data-flight-pilot hidden>
+                <summary>Voo experimental</summary>
+                <div class="touch-action-group-items">
+                  <button type="button" data-flight-rise>Subir</button>
+                  <button type="button" data-flight-land>Descer</button>
+                  <button type="button" data-flight-profile aria-pressed="false">Voo controlado</button>
+                </div>
+              </details>
+              <details class="touch-action-group">
+                <summary>Interações sociais</summary>
+                <div class="touch-action-group-items">
+                  <button type="button" data-action="share" aria-label="Oferecer frutinha">Oferecer</button>
+                </div>
+              </details>
+              <details class="touch-action-group outside-room">
+                <summary>Ferramentas e construção</summary>
+                <div class="touch-action-group-items">
+                  <button type="button" data-action="sharpen" aria-label="Afiar o machado com uma pedra">Afiar</button>
+                  <button type="button" data-action="craftPickaxe" aria-label="Montar picareta de pedra">Picareta</button>
+                  <button type="button" data-action="upgradeAxe" aria-label="Melhorar machado na bancada">Machado +</button>
+                  <button type="button" data-action="upgradePickaxe" aria-label="Melhorar picareta na bancada">Picareta +</button>
+                  <button type="button" data-action="buildBench" aria-label="Construir bancada de corte">Bancada</button>
+                  <button type="button" data-action="buildKiln" aria-label="Construir caieira">Caieira</button>
+                  <button type="button" data-action="buildFurnace" aria-label="Construir fornalha de pedra">Fornalha</button>
+                  <button type="button" data-action="process" aria-label="Iniciar produção ou verificar máquina">Processar</button>
+                  <button type="button" data-action="processSticks" aria-label="Fatiar ripas em gravetos secos">Gravetos</button>
+                  <button type="button" data-action="fire" aria-label="Fazer ou reacender fogueira">Fogo</button>
+                </div>
+              </details>
+              <details class="touch-action-group outside-room" data-ability-group>
+                <summary>Combate e habilidades</summary>
+                <div class="touch-action-group-items">
+                  <button type="button" data-action="cast:heavyStrike" aria-label="Usar Golpe Pesado contra o animal mais próximo, com faca ou machado equipado">Golpe Pesado</button>
+                  <button type="button" data-action="cast:fireballI" aria-label="Conjurar Bola de Fogo I no animal mais próximo">Bola de Fogo I</button>
+                  <button type="button" data-action="cast:fireballII" aria-label="Conjurar Bola de Fogo II no animal mais próximo">Bola de Fogo II</button>
+                  <button type="button" data-action="cast:haste" aria-label="Ativar Hiper Velocidade por oito segundos">Hiper Velocidade</button>
+                  <button type="button" data-action="cast:sprintBurst" aria-label="Ativar Arrancada por 1,5 segundo, com recarga de 12 segundos" hidden>Arrancada</button>
+                  <button type="button" data-action="cast:hyperEvasion" aria-label="Preparar Hiper Esquiva contra o próximo ataque">Hiper Esquiva</button>
+                  <button type="button" data-action="cast:combatBlink" aria-label="Usar Teleporte de Combate I na direção do movimento">Teleporte de Combate I</button>
+                  <button type="button" data-action="cast:combatBlinkII" aria-label="Usar Teleporte de Combate II na direção do movimento">Teleporte de Combate II</button>
+                </div>
+              </details>
+              <details class="touch-action-group outside-room">
+                <summary>Poções raras de XP</summary>
+                <div class="touch-action-group-items xp-potion-recipes">
+                  <div class="xp-potion-recipe" data-xp-potion-card="xpPotionI"><button type="button" data-action="brewXpPotion" aria-label="Preparar Poção de XP I na fornalha de pedra">Poção XP I · Nv. 1</button><small data-xp-potion-note>Receita disponível ao abrir esta seção.</small></div>
+                  <div class="xp-potion-recipe" data-xp-potion-card="xpPotionII"><button type="button" data-action="brewXpPotionII" aria-label="Preparar Poção de XP II na fornalha de pedra">Poção XP II · Nv. 5</button><small data-xp-potion-note>Receita disponível ao abrir esta seção.</small></div>
+                  <div class="xp-potion-recipe" data-xp-potion-card="xpPotionIII"><button type="button" data-action="brewXpPotionIII" aria-label="Preparar Poção de XP III na fornalha de pedra">Poção XP III · Nv. 10</button><small data-xp-potion-note>Receita disponível ao abrir esta seção.</small></div>
+                  <div class="xp-potion-recipe" data-xp-potion-card="xpPotionIV"><button type="button" data-action="brewXpPotionIV" aria-label="Preparar Poção de XP IV na fornalha de pedra">Poção XP IV · Nv. 20</button><small data-xp-potion-note>Receita disponível ao abrir esta seção.</small></div>
+                </div>
+              </details>
+              <details class="touch-action-group">
+                <summary>Movimento e gestos</summary>
+                <div class="touch-action-group-items">
+                  <button type="button" data-motion-key="c" aria-label="Agachar enquanto segura">Agachar</button>
+                  <button type="button" data-motion-key=" " aria-label="Pular">Pular</button>
+                  <button type="button" data-action="emote" data-emote="wave" aria-label="Acenar">Oi</button>
+                  <button type="button" data-action="emote" data-emote="dance" aria-label="Dançar">Dança</button>
+                  <button type="button" data-action="emote" data-emote="sit" aria-label="Sentar no chão ou num banco próximo">Sentar</button>
+                </div>
+              </details>
+            </div>
+          </details>
+    </div>
+    <aside id="arrival-tutorial" class="arrival-tutorial" hidden aria-live="polite" aria-labelledby="arrival-tutorial-title">
+      <p id="arrival-tutorial-step" class="arrival-tutorial-eyebrow">SUA PRIMEIRA CHAMA</p>
+      <h2 id="arrival-tutorial-title">O Deus do Fogo</h2>
+      <p id="arrival-tutorial-text"></p>
+      <div class="arrival-tutorial-actions">
+        <button id="arrival-tutorial-next" type="button" hidden>Continuar</button>
+        <button id="arrival-tutorial-skip" type="button">Seguir sem tutorial</button>
+      </div>
+    </aside>
+    <footer class="site-footer"><span>Clareira <b>·</b> sempre há lugar perto do fogo</span></footer>
+  </main>
+  <dialog id="inventory-dialog" class="inventory-dialog" aria-labelledby="inventory-title">
+    <div class="inventory-dialog-head"><div><p class="eyebrow">ESPAÇO POR PÁGINAS · PILHAS LIMITADAS</p><h2 id="inventory-title">Inventário</h2></div><button id="inventory-close" type="button" aria-label="Fechar Inventário">×</button></div>
+    <p class="inventory-hint">Arraste para reorganizar. No celular, toque no item e depois no destino; a ficha também oferece uma ação rápida.</p>
+    <div class="inventory-workspace"><div class="inventory-stacks">
+      <section class="inventory-section" aria-labelledby="inventory-quick-title"><div class="inventory-section-head"><h3 id="inventory-quick-title">Acesso rápido</h3><span>1–9 · escolha durante a aventura</span></div><div id="inventory-quick-grid" class="inventory-grid inventory-quick-grid" role="grid" aria-label="Espaços de acesso rápido"></div></section>
+      <section class="inventory-section bag-section" aria-labelledby="inventory-bag-title"><div class="inventory-section-head"><h3 id="inventory-bag-title">Armazenamento</h3><span>18 espaços por página</span></div><div id="inventory-pages" class="inventory-pages" role="group" aria-label="Páginas do Inventário"></div><div id="inventory-grid" class="inventory-grid" role="grid" aria-label="Itens guardados no Inventário"></div><div class="inventory-purse" aria-label="Moedas guardadas"><h4>Bolsa de moedas</h4><div class="inventory-purse-items"><span><i class="coin gold" aria-hidden="true"></i><small>Ouro</small><b id="bag-gold-count">0</b></span><span><i class="coin silver" aria-hidden="true"></i><small>Prata</small><b id="bag-silver-count">0</b></span><span><i class="coin bronze" aria-hidden="true"></i><small>Bronze</small><b id="bag-bronze-count">0</b></span></div></div></section>
+    </div><aside class="inventory-inspector" aria-label="Detalhes do item escolhido" aria-live="polite"><div class="inventory-inspector-item"><span class="inventory-inspector-icon"><svg id="inventory-detail-icon" viewBox="0 0 24 24" aria-hidden="true"><use id="inventory-detail-image" href="/dev/art/inventory-items.svg#knife"></use></svg></span><div><p class="eyebrow">DETALHES DO ITEM</p><h3 id="inventory-detail-name">Escolha um item</h3><span id="inventory-detail-meta">Espaços de armazenamento</span></div></div><p id="inventory-detail-use" class="inventory-detail-use">Veja o que cada achado faz e como ele pode ajudar na aventura.</p><button id="inventory-equip" class="inventory-equip" type="button" disabled>Levar para acesso rápido</button></aside></div>
+    <p id="inventory-capacity" class="inventory-capacity" aria-live="polite"></p>
+    <details class="progression-attributes"><summary>Atributos <span id="attribute-points">0 pontos disponíveis</span></summary><div id="attribute-list" class="attribute-list"></div></details>
+    <details class="progression-attributes progression-skills"><summary>Técnicas <span id="skill-points">0 pontos disponíveis</span></summary><div id="skill-list" class="attribute-list"></div></details>
+
+  </dialog>
+  <dialog id="xp-potion-confirm" class="potion-confirm-dialog" aria-labelledby="xp-potion-confirm-title" aria-describedby="xp-potion-confirm-message">
+    <p class="eyebrow">ITEM RARO</p>
+    <h2 id="xp-potion-confirm-title">Usar esta poção?</h2>
+    <p id="xp-potion-confirm-message"></p>
+    <div class="potion-confirm-actions">
+      <button id="xp-potion-keep" type="button" autofocus>Manter no Inventário</button>
+      <button id="xp-potion-drink" type="button">Beber poção</button>
+    </div>
+  </dialog>
+  <dialog id="ability-confirm-dialog" class="ability-confirm-dialog" aria-labelledby="ability-confirm-title" aria-describedby="ability-confirm-message">
+    <p class="eyebrow">PONTO DE HABILIDADE</p>
+    <h2 id="ability-confirm-title">Aprender técnica?</h2>
+    <p id="ability-confirm-message"></p>
+    <div class="ability-confirm-actions">
+      <button id="ability-confirm-keep" type="button" autofocus>Voltar</button>
+      <button id="ability-confirm-learn" type="button">Aprender</button>
+    </div>
+  </dialog>
+  <output id="performance-overlay" class="performance-overlay" aria-label="Métricas de desempenho" aria-live="off" hidden></output>
+  <dialog id="settings-dialog" class="inventory-dialog settings-dialog" aria-labelledby="settings-title">
+    <header class="inventory-dialog-head settings-dialog-head"><div><p class="eyebrow">AJUSTES DA SUA JORNADA</p><h2 id="settings-title">Configurações</h2></div><button id="settings-close" type="button" aria-label="Fechar Configurações">×</button></header>
+    <div class="settings-content">
+      <section class="settings-group" aria-labelledby="settings-sound-title"><h3 id="settings-sound-title">Som</h3><p>Ambiente e música começam após sua primeira interação.</p><button id="sound-toggle" class="settings-action" type="button" aria-pressed="true" title="Desligar som">♫ <span>Ligado</span></button></section>
+      <section class="settings-group" aria-labelledby="settings-view-title"><h3 id="settings-view-title">Tela e câmera</h3><label class="camera-zoom-control" for="camera-zoom"><span class="camera-zoom-heading">Zoom da câmera <output id="camera-zoom-value" for="camera-zoom">100%</output></span><input id="camera-zoom" type="range" min="70" max="125" step="5" value="100" aria-describedby="camera-zoom-hint"><small id="camera-zoom-hint">Afaste a câmera até 70%.</small></label><button id="fullscreen-toggle" class="settings-action" type="button" aria-pressed="false" title="Tela inteira">⛶ <span>Tela inteira</span></button></section>
+      <section class="settings-group" aria-labelledby="settings-performance-title"><h3 id="settings-performance-title">Desempenho</h3><p>Confira a fluidez e a conexão. Exporte os últimos dados para análise.</p><button id="performance-toggle" class="settings-action" type="button" aria-pressed="false" aria-controls="performance-overlay">Mostrar FPS e conexão</button><button id="performance-export" class="settings-action" type="button">Baixar log de desempenho</button></section>
+      <section class="settings-group" aria-labelledby="settings-character-title"><h3 id="settings-character-title">Personagem</h3><p>Troque roupa e efeito visual.</p><button id="appearance-open" class="settings-action" type="button">Aparência</button></section>
+    </div>
+  </dialog>
+  <dialog id="staff-tools-dialog" class="inventory-dialog staff-tools-dialog" aria-labelledby="staff-tools-title">
+    <header class="inventory-dialog-head staff-tools-head"><div><p class="eyebrow">EQUIPE DA CLAREIRA</p><h2 id="staff-tools-title">Ferramentas</h2><p class="staff-tools-caption">Cuide da comunidade sem sair do mundo.</p></div><button id="staff-tools-close" type="button" aria-label="Fechar ferramentas">×</button></header>
+    <div class="staff-tools-body" data-panel-body>
+      <section id="staff-tools-home">
+        <p class="staff-section-label">SUAS FERRAMENTAS</p>
+        <div class="staff-tool-options">
+          <button id="staff-player-open" class="staff-tool-choice" type="button" hidden><span class="staff-tool-symbol" aria-hidden="true">♙</span><span><strong>Ficha de jogador</strong><small>Ver progressão, carteira e imóveis.</small></span><span class="staff-tool-arrow" aria-hidden="true">→</span></button>
+          <button id="staff-market-open" class="staff-tool-choice" type="button" hidden><span class="staff-tool-symbol" aria-hidden="true">▤</span><span><strong>Mercado e juros</strong><small>Consultar preços e estoques.</small></span><span class="staff-tool-arrow" aria-hidden="true">→</span></button>
+          <button id="staff-wallet-open" class="staff-tool-choice" type="button" hidden><span class="staff-tool-symbol" aria-hidden="true">¤</span><span><strong>Carteira de jogador</strong><small>Adicionar ou retirar moedas com motivo.</small></span><span class="staff-tool-arrow" aria-hidden="true">→</span></button>
+          <button id="staff-moderation-open" class="staff-tool-choice" type="button" hidden><span class="staff-tool-symbol" aria-hidden="true">⚑</span><span><strong>Jogadores e denúncias</strong><small>Consultar histórico, advertir e moderar.</small></span><span class="staff-tool-arrow" aria-hidden="true">→</span></button>
+          <button id="staff-audit-open" class="staff-tool-choice" type="button" hidden><span class="staff-tool-symbol" aria-hidden="true">≡</span><span><strong>Histórico de ações</strong><small>Conferir alterações e responsáveis.</small></span><span class="staff-tool-arrow" aria-hidden="true">→</span></button>
+        </div>
+        <a class="staff-panel-link" href="/dev/staff" target="_blank" rel="noopener"><span><strong>Painel completo</strong><small>Cargos e moderação · abre em outra aba</small></span><span aria-hidden="true">↗</span></a>
+      </section>
+      <section id="staff-tools-player" hidden><button id="staff-player-back" class="staff-back" type="button">← Voltar</button><h3 tabindex="-1">Ficha de jogador</h3><form id="staff-player-form" class="staff-wallet-form"><label>Conta<input name="username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="off"></label><button class="settings-action" type="submit">Consultar</button></form><div id="staff-player-result" class="staff-feedback" role="status" aria-live="polite"></div></section>
+      <section id="staff-tools-market" hidden><button id="staff-market-back" class="staff-back" type="button">← Voltar</button><h3 tabindex="-1">Mercado e juros</h3><p>Preços em bronze e estoque disponível no mercado.</p><button id="staff-market-refresh" class="staff-secondary-action" type="button">Atualizar</button><div id="staff-market-result" class="staff-feedback" role="status" aria-live="polite"></div></section>
+      <section id="staff-tools-moderation" hidden>
+        <button id="staff-moderation-back" class="staff-back" type="button">← Voltar</button>
+        <h3 tabindex="-1">Jogadores e denúncias</h3>
+        <p>Consulte o histórico antes de aplicar uma medida. Toda alteração exige motivo e fica na auditoria.</p>
+        <form id="staff-player-lookup" class="staff-wallet-form"><label>Conta<input name="username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocapitalize="none" autocomplete="off"></label><button class="settings-action" type="submit">Consultar histórico</button></form>
+        <button id="staff-reports-load" class="staff-secondary-action" type="button">Consultar denúncias abertas</button>
+        <p id="staff-moderation-status" class="staff-feedback" role="status" aria-live="polite"></p>
+        <ol id="staff-moderation-list" class="staff-audit-list" aria-label="Resultado da consulta"></ol>
+        <form id="staff-moderation-form" class="staff-wallet-form">
+          <label>Conta da medida<input name="username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocapitalize="none" autocomplete="off"></label>
+          <label>Medida<select name="kind" required></select></label>
+          <label id="staff-sanction-duration">Duração<select name="duration"><option value="15">15 minutos</option><option value="60">1 hora</option><option value="1440">24 horas</option><option value="10080">7 dias</option></select></label>
+          <label class="staff-form-wide">Motivo<textarea name="reason" required maxlength="500" rows="3"></textarea></label>
+          <button class="settings-action" type="submit">Revisar medida</button>
+        </form>
+        <div id="staff-moderation-review" class="staff-review-card" hidden><p id="staff-moderation-summary"></p><button id="staff-moderation-cancel" class="staff-secondary-action" type="button">Editar dados</button><button id="staff-moderation-confirm" class="settings-action" type="button">Confirmar medida</button></div>
+      </section>
+      <section id="staff-tools-audit" hidden>
+        <button id="staff-audit-back" class="staff-back" type="button">← Voltar</button>
+        <h3 data-panel-heading tabindex="-1">Histórico de ações</h3>
+        <p>Alterações recentes registradas pela equipe.</p>
+        <button id="staff-audit-refresh" class="staff-secondary-action" type="button">↻ Atualizar histórico</button>
+        <p id="staff-audit-status" class="staff-feedback" role="status" aria-live="polite"></p>
+        <ol id="staff-audit-list" class="staff-audit-list" aria-label="Ações recentes"></ol>
+        <button id="staff-audit-more" class="settings-action" type="button" hidden>Ver ações anteriores</button>
+      </section>
+      <section id="staff-tools-wallet" hidden>
+        <button id="staff-wallet-back" class="staff-back" type="button">← Voltar</button>
+        <h3 data-panel-heading tabindex="-1">Carteira de jogador</h3>
+        <p>Adicionar ou retirar moedas; a alteração fica registrada.</p>
+        <form id="staff-wallet-form" class="staff-wallet-form">
+          <label>Conta<input name="username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="off" autocapitalize="none" placeholder="nome do jogador"></label>
+          <label>Operação<select name="operation"><option value="credit">Adicionar moedas</option><option value="debit">Retirar moedas</option></select></label>
+          <label>Quantidade de moedas<input name="amount" type="number" min="1" max="21474836479999" step="1" inputmode="numeric" aria-describedby="staff-amount-hint" required><small id="staff-amount-hint">100 bronze = 1 prata · 100 prata = 1 ouro</small></label>
+          <label class="staff-form-wide">Motivo<textarea name="reason" minlength="1" maxlength="500" rows="3" placeholder="Explique por que este ajuste é necessário" required></textarea></label>
+          <div class="staff-form-actions"><span>Você confere os dados na próxima etapa.</span><button class="settings-action" type="submit">Revisar ajuste →</button></div>
+        </form>
+        <p id="staff-wallet-status" class="staff-wallet-status staff-feedback" role="status" aria-live="polite"></p>
+      </section>
+      <section id="staff-tools-review" hidden>
+        <button id="staff-review-back" class="staff-back" type="button">← Voltar</button>
+        <h3 data-panel-heading tabindex="-1">Confirmar ajuste</h3>
+        <div class="staff-review-card"><p id="staff-review-summary"></p><span class="staff-section-label">MOTIVO DO AJUSTE</span><p id="staff-review-reason"></p></div><p>Confira a conta e o valor. O ajuste será registrado no histórico.</p>
+        <button id="staff-wallet-confirm" class="settings-action" type="button">Confirmar ajuste</button>
+      </section>
+    </div>
+    <footer class="staff-tools-footer"><span>Ferramentas da equipe</span><span><kbd>Esc</kbd> Voltar ou fechar</span></footer>
+  </dialog>
+  <dialog id="appearance-dialog" aria-labelledby="appearance-title">
+    <form id="appearance-form">
+      <div class="appearance-intro">
+        <canvas id="appearance-preview" width="160" height="192" aria-label="Prévia do personagem em oito direções"></canvas>
+        <div class="appearance-preview-tools"><button type="button" id="appearance-turn-left" aria-label="Girar prévia para a esquerda">↶</button><button type="button" id="appearance-turn-right" aria-label="Girar prévia para a direita">↷</button></div>
+        <h2 id="appearance-title">Seu personagem</h2>
+        <p>Escolha uma roupa, o objeto na mão e um efeito. A lanterna ilumina ao redor durante a noite. Na conta, a escolha fica salva; como visitante, vale nesta sessão.</p>
+      </div>
+      <div class="appearance-options" aria-label="Opções do personagem">
+        <label>Base do corpo<select name="body"><option value="male">Masculina</option><option value="female">Feminina</option></select></label>
+        <label>Objeto na mão<select name="mainHandId" aria-describedby="appearance-hand-hint"></select><small id="appearance-hand-hint">A lanterna cria luz ao redor do personagem à noite.</small></label>
+        <label>Roupa<select name="outfit"><option value="white-base">Viajante da Clareira</option><option value="commoner">Camponês</option><option value="mage-robe">Mago</option><option value="dimension-coat">Viajante dimensional</option><option value="dark-armor">Cavaleiro das trevas</option><option value="light-armor">Cavaleiro da luz</option></select></label>
+        <label>Efeito<select name="aura"><option value="none">Sem efeito</option><option value="flow">Energia pelo corpo</option><option value="radiance">Aura radiante</option><option value="void">Aura sombria</option></select></label>
+      </div>
+      <div class="appearance-actions"><button type="button" id="appearance-close">Cancelar</button><button type="submit">Aplicar</button></div>
+    </form>
+  </dialog>
+  <dialog id="lodging-dialog" aria-labelledby="lodging-title">
+    <section class="lodging-card">
+      <header class="lodging-heading">
+        <div><p id="lodging-eyebrow" class="eyebrow">HOSPEDARIA</p><h2 id="lodging-title">Hospedagem da Vila</h2></div>
+        <button id="lodging-close" type="button" aria-label="Fechar recepção">×</button>
+      </header>
+      <nav class="service-navigation" aria-label="Navegação do atendimento">
+        <button id="lodging-back" type="button" hidden>← Voltar</button>
+        <span id="lodging-path"></span>
+      </nav>
+      <div class="service-panel-body" data-panel-body>
+      <h3 class="service-panel-heading" data-panel-heading tabindex="-1">Serviços</h3>
+      <p id="lodging-intro" class="lodging-intro">Escolha um serviço deste balcão.</p>
+      <p id="lodging-wallet" class="lodging-note"></p>
+      <p id="lodging-status" class="lodging-status" role="status" aria-live="polite"></p>
+      <div id="lodging-options" class="lodging-options" aria-label="Quartos e propriedades"></div>
+      <p id="lodging-note" class="lodging-note">Converse no balcão para ver as opções deste estabelecimento.</p>
+      </div>
+    </section>
+  </dialog>
+  <dialog id="world-map-dialog" class="world-map-dialog" aria-labelledby="world-map-title">
+    <section class="world-map-frame">
+      <header class="world-map-header"><div><p class="map-eyebrow">CADERNO DE EXPLORAÇÃO</p><h2 id="world-map-title">Mapa</h2><p id="world-map-dimension">Bosque das Brasas</p></div><button id="world-map-close" type="button" aria-label="Fechar mapa">×</button></header>
+      <div class="world-map-toolbar">
+        <form id="world-map-search-form" role="search"><label class="visually-hidden" for="world-map-search">Buscar lugar conhecido</label><input id="world-map-search" type="search" placeholder="Buscar lugar conhecido…" autocomplete="off"><button type="submit">Buscar</button></form>
+        <div class="map-view-tools" role="group" aria-label="Controles do mapa"><button id="world-map-zoom-out" type="button" aria-label="Afastar">−</button><button id="world-map-zoom-in" type="button" aria-label="Aproximar">+</button><button id="world-map-center-player" type="button">Minha posição</button><button id="world-map-initial-forest" type="button">Bosque inicial</button><button id="world-map-reset" type="button">Ver o mundo</button><button id="world-map-reveal-all" type="button" aria-pressed="false">Revelar tudo</button></div>
+      </div>
+      <div class="map-zoom-strip"><label for="world-map-zoom-range">Zoom</label><input id="world-map-zoom-range" type="range" min="0" max="100" step="0.5" aria-label="Nível de aproximação do mapa"><output id="world-map-zoom-value" for="world-map-zoom-range">32×</output><span id="world-map-detail-status" role="status">Preparando detalhes…</span></div>
+      <div class="world-map-layout">
+        <div class="world-map-canvas-wrap"><canvas id="world-map-canvas" tabindex="0" aria-label="Mapa do mundo. Aproxime qualquer região para ver o terreno, árvores, caminhos e recursos em detalhe. Áreas pretas estão encobertas; use Revelar tudo para visualizar o terreno. Arraste para mover e use a roda, pinça ou botões para aproximar. Ícones agrupam lugares próximos; toque neles para aproximar. Marque destinos somente em áreas descobertas ou reveladas."></canvas><p class="map-canvas-hint">Aproxime qualquer região para ver mais detalhes · arraste para explorar</p></div>
+        <aside class="world-map-sidebar">
+          <details class="map-legend" open><summary>Camadas e legenda</summary><div class="map-terrain-legend"><span><i class="terrain-swatch meadow"></i>Clareira</span><span><i class="terrain-swatch forest"></i>Floresta</span><span><i class="terrain-swatch highland"></i>Terreno alto</span><span><i class="terrain-swatch water"></i>Água</span><span><i class="terrain-swatch unknown"></i>Encoberto</span></div><div class="map-destination-legend"><i aria-hidden="true">◆</i><span>Destino marcado</span></div><div class="map-detail-legend"><span><i class="detail-tree"></i>Árvores e mudas</span><span><i class="detail-rock"></i>Rochas e troncos</span><span><i class="detail-resource"></i>Recursos</span><span><i class="detail-path"></i>Caminhos</span><span><i class="detail-plaza"></i>Praça central</span></div>
+            <label><input type="checkbox" data-map-filter="trees" checked><i>♣</i>Copas das árvores</label><label><input type="checkbox" data-map-filter="grid"><i>▦</i>Coordenadas</label><label><input type="checkbox" data-map-filter="trails" checked><i class="legend-trail"></i>Trilhas</label><label><input type="checkbox" data-map-filter="water" checked><i>≈</i>Águas</label><label><input type="checkbox" data-map-filter="fires" checked><i>✦</i>Fogueiras</label><label><input type="checkbox" data-map-filter="places" checked><i>⌂</i>Abrigos e lugares</label><label><input type="checkbox" data-map-filter="resources" checked><i>◆</i>Áreas de recursos</label>
+          </details>
+          <section class="map-search-results"><h3>Lugares conhecidos</h3><div id="world-map-results" role="list"></div></section>
+          <section class="map-place-card" aria-live="polite"><p class="map-eyebrow">SEU DESTINO</p><h3 id="world-map-place-name">Escolha um lugar</h3><p id="world-map-place-meta">Toque no mapa ou busque um local conhecido.</p><p id="world-map-place-coords"></p><button id="world-map-go" type="button" disabled>Ir andando</button> <button id="world-map-teleport" type="button" disabled aria-describedby="world-map-teleport-note">Teletransportar</button><small id="world-map-teleport-note">Aprenda no nível 20 com Agilidade 8, Magia 10 e 3 pontos de habilidade.</small></section>
+          <p id="world-map-status" class="visually-hidden" role="status" aria-live="polite"></p>
+        </aside>
+      </div>
+    </section>
+  </dialog>
+
+  <script src="/dev/vendor/gsap.min.js"></script>
+  <script type="module" src="/dev/bootstrap.mjs"></script>
+</body>
+</html>

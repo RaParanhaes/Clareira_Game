@@ -1,0 +1,54 @@
+{
+  "asset": "campfire-aura-frames.png",
+  "source": "campfire-aura-source.png",
+  "sourceGenerator": "scripts/build-campfire-aura-atlas.py",
+  "sourceGrid": {
+    "columns": 4,
+    "rows": 2
+  },
+  "frameCount": 8,
+  "frameWidth": 64,
+  "frameHeight": 64,
+  "frameOrder": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "frameDurationMs": 120,
+  "loop": true,
+  "anchor": {
+    "x": 32,
+    "y": 48
+  },
+  "displaySize": {
+    "width": 64,
+    "height": 64
+  },
+  "displayOffset": {
+    "x": -32,
+    "y": -48
+  },
+  "palette": [
+    "#584624",
+    "#96702c",
+    "#c7953e",
+    "#f0c667",
+    "#ffe9a1",
+    "#164d55",
+    "#287b80",
+    "#54aaa6",
+    "#796b9d",
+    "#b3a3d0"
+  ],
+  "alphaCutoff": 96,
+  "layers": {
+    "groundAura": "lower 40%",
+    "sparkles": "upper 55%"
+  },
+  "silhouette": "broken amber and teal orbit with sparse floating star motes"
+}

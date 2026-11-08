@@ -1,0 +1,1 @@
+Escolha uma melhoria funcional do jogo que tenha um antes/depois observável, limite o patch a poucos caminhos e defina validação proporcional ao risco. Não selecione uma mudança genérica de manutenção se uma fatia jogável central estiver disponível.

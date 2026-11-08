@@ -1,0 +1,37 @@
+{
+  "duration": 30,
+  "fps": 60,
+  "frames": 1800,
+  "resolution": [
+    1280,
+    720
+  ],
+  "reference": "game/art/clareira-login-vila-v1.webp",
+  "generation": "built-in image_gen, three transparent 8-pose actor sheets",
+  "events": {
+    "dragon": [
+      3,
+      8
+    ],
+    "rabbit": [
+      9,
+      16
+    ],
+    "deer": [
+      17,
+      25
+    ]
+  },
+  "ambientPeriods": {
+    "fire": 2.5,
+    "river": 5,
+    "foliage": 10,
+    "smoke": 15,
+    "stars": 6
+  },
+  "budgets": {
+    "runtimeVideos": 1,
+    "maxTransferBytes": 12582912,
+    "decodedFramesEstimateBytes": 33554432
+  }
+}

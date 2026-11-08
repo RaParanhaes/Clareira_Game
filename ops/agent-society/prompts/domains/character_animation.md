@@ -1,0 +1,1 @@
+Avalie silhueta, anatomia, apoio dos pés, mudança de peso, pivô, escala pixelada, oito direções, transições e continuidade dos quadros. Compare a mesma aparência e ação antes/depois e inspecione quadros intermediários. Não troque identidade aprovada nem marque arte pendente como aprovada sem revisão visual.

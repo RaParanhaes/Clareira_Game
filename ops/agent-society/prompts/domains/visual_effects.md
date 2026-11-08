@@ -1,0 +1,1 @@
+Avalie materiais, relevo, luz, sombra, água, fogo, partículas e leitura visual em conjunto com a ação que os produz. Preserve a grade pixelada e a estabilidade da cena. Peça capturas comparáveis e revisão de imagem; não declare qualidade visual apenas por teste de código.

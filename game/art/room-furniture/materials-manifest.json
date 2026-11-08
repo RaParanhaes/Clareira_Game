@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "format": "transparent-material-tiles",
+  "tileSize": 8,
+  "columns": [
+    "wood",
+    "fabric",
+    "stone",
+    "metal",
+    "glass",
+    "leaf"
+  ],
+  "rows": [
+    "cedar",
+    "pine",
+    "hotel",
+    "vista"
+  ],
+  "pixelsPerWorldUnit": 16,
+  "uvSpace": "object-local",
+  "top": [
+    "u*width",
+    "v*depth"
+  ],
+  "front": [
+    "u*width",
+    "-z"
+  ],
+  "side": [
+    "v*depth",
+    "-z"
+  ],
+  "lighting": "shaded-base-color-plus-transparent-texture",
+  "sha256": "009c5f3f10f0449d3ac7480e75b7c587a4ae837be2902df8ab8151cec42ff8ec",
+  "bytes": 688
+}

@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "status": {"type": "string", "enum": ["implemented", "partial", "blocked"]},
+    "summary": {"type": "string"},
+    "changed_paths": {"type": "array", "items": {"type": "string"}},
+    "checks_run": {"type": "array", "items": {"type": "string"}},
+    "unresolved": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["status", "summary", "changed_paths", "checks_run", "unresolved"]
+}

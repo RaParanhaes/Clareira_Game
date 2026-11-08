@@ -1,0 +1,10 @@
+{
+  "id": "mob.coelho",
+  "category": "mob",
+  "label": "Coelho",
+  "version": 1,
+  "status": "planned",
+  "refs": ["style.clareira", "place.clearing"],
+  "directions": 8,
+  "physics": {"shape": "circle", "radius": 0.2, "authority": "server"}
+}

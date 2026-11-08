@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "runtime_audio": "Procedural cues inspired by these references; source recordings are not bundled.",
+  "references": [
+    {
+      "freesound_id": 424287,
+      "creator": "goredon",
+      "title": "Ambient_Loops_IV_INTRO_Strings.wav",
+      "url": "https://freesound.org/people/goredon/sounds/424287/",
+      "license": "Attribution 3.0",
+      "use": "Rare daytime string ambience in the clearing; more likely near woodland.",
+      "runtime_cue": "dayStrings"
+    },
+    {
+      "freesound_id": 100214,
+      "creator": "jmorrisoncafe330",
+      "title": "spacebaloney2.wav",
+      "url": "https://freesound.org/people/jmorrisoncafe330/sounds/100214/",
+      "license": "Sampling+",
+      "use": "Future reference for fixed multidimensional portals; not active until portals exist.",
+      "runtime_cue": null
+    },
+    {
+      "freesound_id": 35292,
+      "creator": "LincolnLog",
+      "title": "space keys 2.wav",
+      "url": "https://freesound.org/people/LincolnLog/sounds/35292/",
+      "license": "Sampling+",
+      "use": "Mundo Energético ambient cue.",
+      "runtime_cue": "energyKeys"
+    },
+    {
+      "freesound_id": 50445,
+      "creator": "fruitcake.hotel",
+      "title": "fh8.mp3",
+      "url": "https://freesound.org/people/fruitcake.hotel/sounds/50445/",
+      "license": "Sampling+",
+      "use": "Mundo Energético ambient cue.",
+      "runtime_cue": "energyChoir"
+    },
+    {
+      "freesound_id": 50443,
+      "creator": "fruitcake.hotel",
+      "title": "fh12.mp3",
+      "url": "https://freesound.org/people/fruitcake.hotel/sounds/50443/",
+      "license": "Sampling+",
+      "use": "Mundo Energético ambient cue.",
+      "runtime_cue": "energyGlints"
+    },
+    {
+      "freesound_id": 50420,
+      "creator": "fruitcake.hotel",
+      "title": "fh6.mp3",
+      "url": "https://freesound.org/people/fruitcake.hotel/sounds/50420/",
+      "license": "Sampling+",
+      "use": "Mundo Energético ambient cue.",
+      "runtime_cue": "energyWaves"
+    },
+    {
+      "freesound_id": 50419,
+      "creator": "fruitcake.hotel",
+      "title": "fh5.mp3",
+      "url": "https://freesound.org/people/fruitcake.hotel/sounds/50419/",
+      "license": "Sampling+",
+      "use": "Mundo Energético ambient cue.",
+      "runtime_cue": "energyResonance"
+    },
+    {
+      "freesound_id": 22317,
+      "creator": "zeuss",
+      "title": "130 BoatImpulseNOMAD#1.wav",
+      "url": "https://freesound.org/people/zeuss/sounds/22317/",
+      "license": "Sampling+",
+      "use": "Mundo Energético transient cue.",
+      "runtime_cue": "energyImpulse"
+    }
+  ]
+}

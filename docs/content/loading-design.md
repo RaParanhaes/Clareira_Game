@@ -1,0 +1,28 @@
+# Referências consultadas para carregamento — 2026-10-10
+- https://create.roblox.com/docs/players/loading-screens — exemplo de apresentação própria com arte e animação, carregada antes do mundo.
+- https://www.gamedeveloper.com/design/game-design-rules-loading-screens — preservar ritmo durante ação e adequar carregamento à troca de local.
+
+Aplicação: entrada inicial em fundo escuro, marca pixelada Clareira e vaga-lumes discretos em CSS; transições de local usam o nome real do destino. O progresso usa porcentagem somente quando há tarefas registradas e contáveis; durante uma espera de duração desconhecida, o indicador permanece indeterminado. A preparação da entrada combina progresso real de arquivos, sessão, personagem e cena. O login mantém a ilustração da vila como imagem decorativa carregada em paralelo, fora do manifesto verificado que libera o formulário; a tela e os formulários não esperam seu download nem decode. Movimento reduzido estático. Após o primeiro quadro correto, manter ambas as barras em 100% durante o assentamento da barra menor (420 ms) e um segundo de confirmação, conforme pedido do dono; essa pausa não inventa avanço durante o carregamento.
+
+Na tela de entrada, manter a marca Clareira, a barra geral, a barra da etapa ativa e a legenda de quatro fases coloridas: Arquivos, Sessão, Personagem e Cena. O destaque da legenda acompanha a etapa atual e as fases concluídas. Em telas grandes, limitar a marca a 700 px e as barras a 490 px; em telas menores, usar a largura responsiva definida no CSS. Essa legenda é exclusiva da entrada inicial; carregamentos de mundo e reconexões mostram o progresso do destino sem repetir as fases de download e sessão.
+
+## Animação decorativa do login
+
+A cena usa `art/clareira-login-loop-v5.mp4`, H.264 1280×720, 1.800 quadros a 60 fps e 30 segundos. O dragão aparece entre 3–8 s, o coelho sai da vegetação entre 9–16 s e o cervo cruza a ponte entre 17–25 s. Fogo, água, folhas, luzes, fumaça, músico, raposa, estrelas e vaga-lumes têm ciclos periódicos. O estado de 0 s é igual ao de 30 s antes da codificação. O pôster `clareira-login-poster-v5.webp` corresponde ao primeiro quadro. No celular, o recorte acompanha os acontecimentos e retorna ao começo, via eventos de mídia; no desktop, o acesso fica abaixo da ponte. Uma instância de vídeo, orçamento de até 12 MiB para a versão rica a 60 fps (v4: 4 MiB/30 fps) e poster até 600 KB; superfícies do decoder estimadas em 32 MiB. Fontes/atlas ficam fora do runtime.
+
+O vídeo fica fora do manifesto verificado e só recebe `src` quando o formulário é revelado; uma falha mantém o pôster e não bloqueia o acesso. `login-animation.mjs` pausa ao entrar no jogo ou ocultar a aba. Movimento reduzido e economia de dados mantêm a imagem estática por padrão; o botão Animar permite escolha explícita, persistida localmente. O servidor aceita intervalos de bytes para reprodução e reinício sem transferências integrais desnecessárias. O recorte guiado é desativado com movimento reduzido.
+
+Fontes e prompts em `art-source/login-scene/v5/README.md`. Prepare com `python3 scripts/prepare-login-v5.py`, renderize com `node scripts/render-login-v5.mjs` e confira a mídia com `python3 scripts/validate-login-v5.py`. A validação de reprodução confere vídeo real, enquadramento dos animais, pausa, retomada, reinício do loop, fallback e movimento reduzido em desktop/celular.
+
+## Atualizações e troca de dimensão
+
+O preview detecta alterações pelos metadados e publica uma versão calculada pelos caminhos, tamanhos e hashes dos arquivos de runtime em `game/`; o endpoint responde sem cache. Cada download fica vinculado aos bytes desse manifesto, preservados pelo servidor durante a transferência. O cliente consulta a versão periodicamente e baixa a nova aplicação sozinho quando ela permanece estável. A troca espera a cena pronta e um momento seguro: sem movimento, comandos pendentes, texto em edição, menu ou diálogo aberto. Assim a conexão pode salvar a posição antes da página abrir a versão nova.
+
+Snapshots do servidor continuam sendo a fonte das revisões de dimensões e mapas. A regra normativa para carregamento inicial e transições de cena está em [Preparação de cenas e transições](README.md#preparação-de-cenas-e-transições): arte estática é preparada e reutilizada; cada destino recebe estado autoritativo compacto e aquece o entorno próximo durante a cobertura. Arquivos estáticos usam revalidação HTTP por ETag; manifesto, coordenação e respostas dos downloads por versão não usam armazenamento HTTP intermediário.
+
+
+## Abertura do Breu após o carregamento
+
+Após os 100% reais e a conclusão do primeiro quadro, a barra sai e o mesmo SVG do logo permanece sobre um céu em coordenadas de tela. A abertura dura 7,2 segundos: logo se dissolve entre 1,6 e 3,4 s, estrelas têm relógios individuais, duas estrelas cadentes cruzam o céu, lua crescente e duas nuvens suaves compõem o fundo; a vista desce entre 5,1 e 7,2 s. Movimento reduzido mantém a transição de opacidade e desliga deslocamento, estrelas cadentes e tremor. Não há superfície física ou UV nesse fundo de apresentação.
+
+O relógio da fogueira começa depois do céu. Pedras e lenha permanecem apagadas até o impacto em 1,17 s; chama cresce por 300 ms e o personagem só é revelado em 2 s. O raio entra de fora da tela, usa quadros isolados em cache com bordas suavizadas e emissão própria; o contato dispara clarão breve, tremor amortecido por 950 ms e trovão com impulso grave. O arquivo de áudio é decodificado tanto se chegar antes quanto depois da criação do contexto, respeitando som desligado e a exigência de gesto do navegador. A movimentação é retida durante o céu e o foco inicial na fogueira.

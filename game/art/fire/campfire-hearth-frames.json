@@ -1,0 +1,41 @@
+{
+  "asset": "campfire-hearth-frames.png",
+  "baseAsset": "campfire-hearth-base.png",
+  "flameAsset": "campfire-hearth-flame-frames.png",
+  "sourceGenerator": "scripts/build-campfire-hearth-atlas.py",
+  "frameCount": 8,
+  "frameWidth": 40,
+  "frameHeight": 40,
+  "frameOrder": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "frameDurationMs": 100,
+  "loop": true,
+  "anchor": {
+    "x": 20,
+    "y": 36
+  },
+  "displaySize": {
+    "width": 40,
+    "height": 40
+  },
+  "groundBaselineY": 36,
+  "palette": [
+    "#201916",
+    "#795037",
+    "#3f4744",
+    "#91978d",
+    "#a83d28",
+    "#ed692c",
+    "#ffb63f",
+    "#ffe58a"
+  ],
+  "silhouette": "fixed crossed logs and open stone ring with eight warm flame poses"
+}

@@ -1,0 +1,3124 @@
+{
+  "version": 1,
+  "frameSize": 128,
+  "columns": 5,
+  "rows": 216,
+  "width": 640,
+  "height": 27648,
+  "anchor": {
+    "x": 64,
+    "y": 89.57804489657399
+  },
+  "canonicalTileX": 12.929952570268297,
+  "rotations": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "url": "art/room-furniture/medieval-furniture-v1.png",
+  "format": "png-frame-atlas",
+  "sha256": "5277cd5fd61e42604a96dc76952bba299b685d86a8686f9bc9d2d5e08e414e06",
+  "bytes": 1644730,
+  "materialAtlas": {
+    "url": "art/room-furniture/medieval-3d-v1/materials/medieval-material-uv-v1.png",
+    "tileSize": 8,
+    "columns": [
+      "wood",
+      "fabric",
+      "stone",
+      "metal",
+      "glass",
+      "leaf"
+    ],
+    "uv": "object-local/per-face"
+  },
+  "models": [
+    {
+      "id": "furniture.medieval-cadeiras-01",
+      "family": "cadeiras",
+      "label": "cadeira de espaldar alto",
+      "frameStart": 0,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-cadeiras-02",
+      "family": "cadeiras",
+      "label": "cadeira de braços I",
+      "frameStart": 4,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-cadeiras-03",
+      "family": "cadeiras",
+      "label": "cadeira de palhinha II",
+      "frameStart": 8,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-cadeiras-04",
+      "family": "cadeiras",
+      "label": "cadeira torneada III",
+      "frameStart": 12,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-cadeiras-05",
+      "family": "cadeiras",
+      "label": "cadeira de escriba IV",
+      "frameStart": 16,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-cadeiras-06",
+      "family": "cadeiras",
+      "label": "cadeira de couro V",
+      "frameStart": 20,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-cadeiras-07",
+      "family": "cadeiras",
+      "label": "cadeira dobrável VI",
+      "frameStart": 24,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-cadeiras-08",
+      "family": "cadeiras",
+      "label": "cadeira de guarda VII",
+      "frameStart": 28,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-cadeiras-09",
+      "family": "cadeiras",
+      "label": "cadeira entalhada VIII",
+      "frameStart": 32,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-cadeiras-10",
+      "family": "cadeiras",
+      "label": "cadeira de banquete IX",
+      "frameStart": 36,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tronos-01",
+      "family": "tronos",
+      "label": "trono do carvalho",
+      "frameStart": 40,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tronos-02",
+      "family": "tronos",
+      "label": "trono do cervo I",
+      "frameStart": 44,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tronos-03",
+      "family": "tronos",
+      "label": "trono do corvo II",
+      "frameStart": 48,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tronos-04",
+      "family": "tronos",
+      "label": "trono de pedra III",
+      "frameStart": 52,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tronos-05",
+      "family": "tronos",
+      "label": "trono de cobre IV",
+      "frameStart": 56,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tronos-06",
+      "family": "tronos",
+      "label": "trono da rainha V",
+      "frameStart": 60,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tronos-07",
+      "family": "tronos",
+      "label": "trono do conselho VI",
+      "frameStart": 64,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tronos-08",
+      "family": "tronos",
+      "label": "trono das raízes VII",
+      "frameStart": 68,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tronos-09",
+      "family": "tronos",
+      "label": "trono de guerra VIII",
+      "frameStart": 72,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tronos-10",
+      "family": "tronos",
+      "label": "trono cerimonial IX",
+      "frameStart": 76,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancos-01",
+      "family": "bancos",
+      "label": "banqueta de três pés",
+      "frameStart": 80,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancos-02",
+      "family": "bancos",
+      "label": "banco de tanoeiro I",
+      "frameStart": 84,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancos-03",
+      "family": "bancos",
+      "label": "banco de viagem II",
+      "frameStart": 88,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancos-04",
+      "family": "bancos",
+      "label": "banco entalhado III",
+      "frameStart": 92,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancos-05",
+      "family": "bancos",
+      "label": "banco de ordenha IV",
+      "frameStart": 96,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancos-06",
+      "family": "bancos",
+      "label": "banco de couro V",
+      "frameStart": 100,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancos-07",
+      "family": "bancos",
+      "label": "banco baixo VI",
+      "frameStart": 104,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancos-08",
+      "family": "bancos",
+      "label": "banco de toras VII",
+      "frameStart": 108,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancos-09",
+      "family": "bancos",
+      "label": "banco de praça VIII",
+      "frameStart": 112,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancos-10",
+      "family": "bancos",
+      "label": "banco de taverna IX",
+      "frameStart": 116,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-sofas-01",
+      "family": "sofas",
+      "label": "divã de lã",
+      "frameStart": 120,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-sofas-02",
+      "family": "sofas",
+      "label": "sofá de taverna I",
+      "frameStart": 124,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-sofas-03",
+      "family": "sofas",
+      "label": "divã bordado II",
+      "frameStart": 128,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-sofas-04",
+      "family": "sofas",
+      "label": "banco estofado III",
+      "frameStart": 132,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-sofas-05",
+      "family": "sofas",
+      "label": "sofá de caça IV",
+      "frameStart": 136,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-sofas-06",
+      "family": "sofas",
+      "label": "divã de veludo V",
+      "frameStart": 140,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-sofas-07",
+      "family": "sofas",
+      "label": "sofá de viagem VI",
+      "frameStart": 144,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-sofas-08",
+      "family": "sofas",
+      "label": "banco com almofadas VII",
+      "frameStart": 148,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-sofas-09",
+      "family": "sofas",
+      "label": "divã real VIII",
+      "frameStart": 152,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-sofas-10",
+      "family": "sofas",
+      "label": "sofá de tapeçaria IX",
+      "frameStart": 156,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-mesas-01",
+      "family": "mesas",
+      "label": "mesa de jantar",
+      "frameStart": 160,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-mesas-02",
+      "family": "mesas",
+      "label": "mesa de banquete I",
+      "frameStart": 164,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-mesas-03",
+      "family": "mesas",
+      "label": "mesa redonda II",
+      "frameStart": 168,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-mesas-04",
+      "family": "mesas",
+      "label": "mesa de cavalete III",
+      "frameStart": 172,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-mesas-05",
+      "family": "mesas",
+      "label": "mesa de carvalho IV",
+      "frameStart": 176,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-mesas-06",
+      "family": "mesas",
+      "label": "mesa de nogueira V",
+      "frameStart": 180,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-mesas-07",
+      "family": "mesas",
+      "label": "mesa de taverna VI",
+      "frameStart": 184,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-mesas-08",
+      "family": "mesas",
+      "label": "mesa dobrável VII",
+      "frameStart": 188,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-mesas-09",
+      "family": "mesas",
+      "label": "mesa de conselho VIII",
+      "frameStart": 192,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-mesas-10",
+      "family": "mesas",
+      "label": "mesa de casamento IX",
+      "frameStart": 196,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-escrivaninhas-01",
+      "family": "escrivaninhas",
+      "label": "mesa de escriba",
+      "frameStart": 200,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-escrivaninhas-02",
+      "family": "escrivaninhas",
+      "label": "escrivaninha de mapas I",
+      "frameStart": 204,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-escrivaninhas-03",
+      "family": "escrivaninhas",
+      "label": "bancada de monge II",
+      "frameStart": 208,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-escrivaninhas-04",
+      "family": "escrivaninhas",
+      "label": "mesa de alquimista III",
+      "frameStart": 212,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-escrivaninhas-05",
+      "family": "escrivaninhas",
+      "label": "púlpito de leitura IV",
+      "frameStart": 216,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-escrivaninhas-06",
+      "family": "escrivaninhas",
+      "label": "mesa de cartógrafo V",
+      "frameStart": 220,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-escrivaninhas-07",
+      "family": "escrivaninhas",
+      "label": "escrivaninha com gavetas VI",
+      "frameStart": 224,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-escrivaninhas-08",
+      "family": "escrivaninhas",
+      "label": "bancada de gravura VII",
+      "frameStart": 228,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-escrivaninhas-09",
+      "family": "escrivaninhas",
+      "label": "mesa de arquivo VIII",
+      "frameStart": 232,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-escrivaninhas-10",
+      "family": "escrivaninhas",
+      "label": "escrivaninha de cedro IX",
+      "frameStart": 236,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-aparadores-01",
+      "family": "aparadores",
+      "label": "aparador de louça",
+      "frameStart": 240,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-aparadores-02",
+      "family": "aparadores",
+      "label": "mesa de serviço I",
+      "frameStart": 244,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-aparadores-03",
+      "family": "aparadores",
+      "label": "bancada de cozinha II",
+      "frameStart": 248,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-aparadores-04",
+      "family": "aparadores",
+      "label": "mesa de poções III",
+      "frameStart": 252,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-aparadores-05",
+      "family": "aparadores",
+      "label": "bancada de ferreiro IV",
+      "frameStart": 256,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-aparadores-06",
+      "family": "aparadores",
+      "label": "mesa de açougueiro V",
+      "frameStart": 260,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-aparadores-07",
+      "family": "aparadores",
+      "label": "mesa de ervas VI",
+      "frameStart": 264,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-aparadores-08",
+      "family": "aparadores",
+      "label": "aparador de salão VII",
+      "frameStart": 268,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-aparadores-09",
+      "family": "aparadores",
+      "label": "mesa de instrumentos VIII",
+      "frameStart": 272,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-aparadores-10",
+      "family": "aparadores",
+      "label": "bancada de costura IX",
+      "frameStart": 276,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancadas-01",
+      "family": "bancadas",
+      "label": "bancada de carpinteiro",
+      "frameStart": 280,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancadas-02",
+      "family": "bancadas",
+      "label": "bancada de armas I",
+      "frameStart": 284,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancadas-03",
+      "family": "bancadas",
+      "label": "bancada de curtidor II",
+      "frameStart": 288,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancadas-04",
+      "family": "bancadas",
+      "label": "bancada de boticário III",
+      "frameStart": 292,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancadas-05",
+      "family": "bancadas",
+      "label": "bancada de padeiro IV",
+      "frameStart": 296,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancadas-06",
+      "family": "bancadas",
+      "label": "mesa de oleiro V",
+      "frameStart": 300,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancadas-07",
+      "family": "bancadas",
+      "label": "bancada de joias VI",
+      "frameStart": 304,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancadas-08",
+      "family": "bancadas",
+      "label": "bancada de remendos VII",
+      "frameStart": 308,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancadas-09",
+      "family": "bancadas",
+      "label": "mesa de entalhador VIII",
+      "frameStart": 312,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bancadas-10",
+      "family": "bancadas",
+      "label": "bancada de lavoura IX",
+      "frameStart": 316,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-camas-01",
+      "family": "camas",
+      "label": "cama de palha",
+      "frameStart": 320,
+      "states": [
+        "covered",
+        "open",
+        "cover"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-camas-02",
+      "family": "camas",
+      "label": "cama de dossel I",
+      "frameStart": 332,
+      "states": [
+        "covered",
+        "open",
+        "cover"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-camas-03",
+      "family": "camas",
+      "label": "cama de casal II",
+      "frameStart": 344,
+      "states": [
+        "covered",
+        "open",
+        "cover"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-camas-04",
+      "family": "camas",
+      "label": "cama de campanha III",
+      "frameStart": 356,
+      "states": [
+        "covered",
+        "open",
+        "cover"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-camas-05",
+      "family": "camas",
+      "label": "cama de castelo IV",
+      "frameStart": 368,
+      "states": [
+        "covered",
+        "open",
+        "cover"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-camas-06",
+      "family": "camas",
+      "label": "cama de viagem V",
+      "frameStart": 380,
+      "states": [
+        "covered",
+        "open",
+        "cover"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-camas-07",
+      "family": "camas",
+      "label": "cama de tapeçaria VI",
+      "frameStart": 392,
+      "states": [
+        "covered",
+        "open",
+        "cover"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-camas-08",
+      "family": "camas",
+      "label": "cama de plumas VII",
+      "frameStart": 404,
+      "states": [
+        "covered",
+        "open",
+        "cover"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-camas-09",
+      "family": "camas",
+      "label": "cama de carvalho VIII",
+      "frameStart": 416,
+      "states": [
+        "covered",
+        "open",
+        "cover"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-camas-10",
+      "family": "camas",
+      "label": "cama de estalagem IX",
+      "frameStart": 428,
+      "states": [
+        "covered",
+        "open",
+        "cover"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bercos-01",
+      "family": "bercos",
+      "label": "berço de balanço",
+      "frameStart": 440,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bercos-02",
+      "family": "bercos",
+      "label": "berço de vime I",
+      "frameStart": 444,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bercos-03",
+      "family": "bercos",
+      "label": "berço com dossel II",
+      "frameStart": 448,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bercos-04",
+      "family": "bercos",
+      "label": "berço de pinho III",
+      "frameStart": 452,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bercos-05",
+      "family": "bercos",
+      "label": "berço entalhado IV",
+      "frameStart": 456,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bercos-06",
+      "family": "bercos",
+      "label": "cestinho de dormir V",
+      "frameStart": 460,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bercos-07",
+      "family": "bercos",
+      "label": "berço de viagem VI",
+      "frameStart": 464,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bercos-08",
+      "family": "bercos",
+      "label": "berço de carvalho VII",
+      "frameStart": 468,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bercos-09",
+      "family": "bercos",
+      "label": "berço com cortinas VIII",
+      "frameStart": 472,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-bercos-10",
+      "family": "bercos",
+      "label": "berço de herdeiro IX",
+      "frameStart": 476,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-baus-01",
+      "family": "baus",
+      "label": "baú de viagem",
+      "frameStart": 480,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-baus-02",
+      "family": "baus",
+      "label": "arca de enxoval I",
+      "frameStart": 484,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-baus-03",
+      "family": "baus",
+      "label": "baú ferrado II",
+      "frameStart": 488,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-baus-04",
+      "family": "baus",
+      "label": "cofre de moedas III",
+      "frameStart": 492,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-baus-05",
+      "family": "baus",
+      "label": "arca de cedro IV",
+      "frameStart": 496,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-baus-06",
+      "family": "baus",
+      "label": "baú de marinheiro V",
+      "frameStart": 500,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-baus-07",
+      "family": "baus",
+      "label": "caixa de ferramentas VI",
+      "frameStart": 504,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-baus-08",
+      "family": "baus",
+      "label": "arca de mantimentos VII",
+      "frameStart": 508,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-baus-09",
+      "family": "baus",
+      "label": "baú de guerra VIII",
+      "frameStart": 512,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-baus-10",
+      "family": "baus",
+      "label": "cofre de relíquias IX",
+      "frameStart": 516,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-armarios-01",
+      "family": "armarios",
+      "label": "armário de mantos",
+      "frameStart": 520,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-armarios-02",
+      "family": "armarios",
+      "label": "roupeiro de pinho I",
+      "frameStart": 524,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-armarios-03",
+      "family": "armarios",
+      "label": "armário de armas II",
+      "frameStart": 528,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-armarios-04",
+      "family": "armarios",
+      "label": "guarda-roupa real III",
+      "frameStart": 532,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-armarios-05",
+      "family": "armarios",
+      "label": "armário de boticário IV",
+      "frameStart": 536,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-armarios-06",
+      "family": "armarios",
+      "label": "armário de louças V",
+      "frameStart": 540,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-armarios-07",
+      "family": "armarios",
+      "label": "armário de arquivo VI",
+      "frameStart": 544,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-armarios-08",
+      "family": "armarios",
+      "label": "roupeiro de viagem VII",
+      "frameStart": 548,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-armarios-09",
+      "family": "armarios",
+      "label": "armário de mantimentos VIII",
+      "frameStart": 552,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-armarios-10",
+      "family": "armarios",
+      "label": "guarda-roupa entalhado IX",
+      "frameStart": 556,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-estantes-01",
+      "family": "estantes",
+      "label": "estante de pergaminhos",
+      "frameStart": 560,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-estantes-02",
+      "family": "estantes",
+      "label": "estante de biblioteca I",
+      "frameStart": 564,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-estantes-03",
+      "family": "estantes",
+      "label": "prateleira de poções II",
+      "frameStart": 568,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-estantes-04",
+      "family": "estantes",
+      "label": "estante de mapas III",
+      "frameStart": 572,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-estantes-05",
+      "family": "estantes",
+      "label": "estante de capela IV",
+      "frameStart": 576,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-estantes-06",
+      "family": "estantes",
+      "label": "nicho de livros V",
+      "frameStart": 580,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-estantes-07",
+      "family": "estantes",
+      "label": "estante de ervas VI",
+      "frameStart": 584,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-estantes-08",
+      "family": "estantes",
+      "label": "estante de armas VII",
+      "frameStart": 588,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-estantes-09",
+      "family": "estantes",
+      "label": "estante de curiosidades VIII",
+      "frameStart": 592,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-estantes-10",
+      "family": "estantes",
+      "label": "arquivo monástico IX",
+      "frameStart": 596,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-banheiras-01",
+      "family": "banheiras",
+      "label": "banheira de cobre",
+      "frameStart": 600,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-banheiras-02",
+      "family": "banheiras",
+      "label": "tina de carvalho I",
+      "frameStart": 604,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-banheiras-03",
+      "family": "banheiras",
+      "label": "banheira de pedra II",
+      "frameStart": 608,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-banheiras-04",
+      "family": "banheiras",
+      "label": "banheira de viagem III",
+      "frameStart": 612,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-banheiras-05",
+      "family": "banheiras",
+      "label": "ofurô medieval IV",
+      "frameStart": 616,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-banheiras-06",
+      "family": "banheiras",
+      "label": "banheira com pés V",
+      "frameStart": 620,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-banheiras-07",
+      "family": "banheiras",
+      "label": "tina de banho duplo VI",
+      "frameStart": 624,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-banheiras-08",
+      "family": "banheiras",
+      "label": "banheira esmaltada VII",
+      "frameStart": 628,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-banheiras-09",
+      "family": "banheiras",
+      "label": "banheira de ervas VIII",
+      "frameStart": 632,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-banheiras-10",
+      "family": "banheiras",
+      "label": "banheira real IX",
+      "frameStart": 636,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lavatorios-01",
+      "family": "lavatorios",
+      "label": "lavatório de pedra",
+      "frameStart": 640,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lavatorios-02",
+      "family": "lavatorios",
+      "label": "bacia de cobre I",
+      "frameStart": 644,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lavatorios-03",
+      "family": "lavatorios",
+      "label": "lavatório de viagem II",
+      "frameStart": 648,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lavatorios-04",
+      "family": "lavatorios",
+      "label": "fonte de lavar mãos III",
+      "frameStart": 652,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lavatorios-05",
+      "family": "lavatorios",
+      "label": "bacia de cerâmica IV",
+      "frameStart": 656,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lavatorios-06",
+      "family": "lavatorios",
+      "label": "lavatório com espelho V",
+      "frameStart": 660,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lavatorios-07",
+      "family": "lavatorios",
+      "label": "pila de mármore VI",
+      "frameStart": 664,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lavatorios-08",
+      "family": "lavatorios",
+      "label": "lavabo de capela VII",
+      "frameStart": 668,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lavatorios-09",
+      "family": "lavatorios",
+      "label": "lavatório de latão VIII",
+      "frameStart": 672,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lavatorios-10",
+      "family": "lavatorios",
+      "label": "bacia de aposento IX",
+      "frameStart": 676,
+      "states": [
+        "covered"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tochas-01",
+      "family": "tochas",
+      "label": "tocha de parede",
+      "frameStart": 680,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tochas-02",
+      "family": "tochas",
+      "label": "archote de ferro I",
+      "frameStart": 688,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tochas-03",
+      "family": "tochas",
+      "label": "tocha de resina II",
+      "frameStart": 696,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tochas-04",
+      "family": "tochas",
+      "label": "tocha de guarda III",
+      "frameStart": 704,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tochas-05",
+      "family": "tochas",
+      "label": "tocha de salão IV",
+      "frameStart": 712,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tochas-06",
+      "family": "tochas",
+      "label": "tocha de bronze V",
+      "frameStart": 720,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tochas-07",
+      "family": "tochas",
+      "label": "tocha de vigia VI",
+      "frameStart": 728,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tochas-08",
+      "family": "tochas",
+      "label": "tocha de corredor VII",
+      "frameStart": 736,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tochas-09",
+      "family": "tochas",
+      "label": "tocha de carvalho VIII",
+      "frameStart": 744,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-tochas-10",
+      "family": "tochas",
+      "label": "tocha de estandarte IX",
+      "frameStart": 752,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-velas-01",
+      "family": "velas",
+      "label": "vela de sebo",
+      "frameStart": 760,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-velas-02",
+      "family": "velas",
+      "label": "castiçal de ferro I",
+      "frameStart": 768,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-velas-03",
+      "family": "velas",
+      "label": "vela de cera de abelha II",
+      "frameStart": 776,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-velas-04",
+      "family": "velas",
+      "label": "castiçal de mesa III",
+      "frameStart": 784,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-velas-05",
+      "family": "velas",
+      "label": "vela votiva IV",
+      "frameStart": 792,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-velas-06",
+      "family": "velas",
+      "label": "castiçal de altar V",
+      "frameStart": 800,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-velas-07",
+      "family": "velas",
+      "label": "vela aromática VI",
+      "frameStart": 808,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-velas-08",
+      "family": "velas",
+      "label": "candelinha de viagem VII",
+      "frameStart": 816,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-velas-09",
+      "family": "velas",
+      "label": "castiçal de bronze VIII",
+      "frameStart": 824,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-velas-10",
+      "family": "velas",
+      "label": "vela de vigília IX",
+      "frameStart": 832,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lanternas-01",
+      "family": "lanternas",
+      "label": "lanterna de mão",
+      "frameStart": 840,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lanternas-02",
+      "family": "lanternas",
+      "label": "lanterna de carroça I",
+      "frameStart": 848,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lanternas-03",
+      "family": "lanternas",
+      "label": "lanterna de vidro II",
+      "frameStart": 856,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lanternas-04",
+      "family": "lanternas",
+      "label": "lanterna de cobre III",
+      "frameStart": 864,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lanternas-05",
+      "family": "lanternas",
+      "label": "lanterna de vigia IV",
+      "frameStart": 872,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lanternas-06",
+      "family": "lanternas",
+      "label": "lanterna de mina V",
+      "frameStart": 880,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lanternas-07",
+      "family": "lanternas",
+      "label": "lanterna de taverna VI",
+      "frameStart": 888,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lanternas-08",
+      "family": "lanternas",
+      "label": "lanterna de gancho VII",
+      "frameStart": 896,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lanternas-09",
+      "family": "lanternas",
+      "label": "lanterna de peregrino VIII",
+      "frameStart": 904,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lanternas-10",
+      "family": "lanternas",
+      "label": "lanterna de ferro IX",
+      "frameStart": 912,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-candelabros-01",
+      "family": "candelabros",
+      "label": "candelabro de três braços",
+      "frameStart": 920,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-candelabros-02",
+      "family": "candelabros",
+      "label": "candelabro de altar I",
+      "frameStart": 928,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-candelabros-03",
+      "family": "candelabros",
+      "label": "candelabro de ferro II",
+      "frameStart": 936,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-candelabros-04",
+      "family": "candelabros",
+      "label": "candelabro de latão III",
+      "frameStart": 944,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-candelabros-05",
+      "family": "candelabros",
+      "label": "candelabro de sete velas IV",
+      "frameStart": 952,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-candelabros-06",
+      "family": "candelabros",
+      "label": "candelabro de mesa V",
+      "frameStart": 960,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-candelabros-07",
+      "family": "candelabros",
+      "label": "candelabro de procissão VI",
+      "frameStart": 968,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-candelabros-08",
+      "family": "candelabros",
+      "label": "candelabro de prata VII",
+      "frameStart": 976,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-candelabros-09",
+      "family": "candelabros",
+      "label": "candelabro de capela VIII",
+      "frameStart": 984,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-candelabros-10",
+      "family": "candelabros",
+      "label": "candelabro de festa IX",
+      "frameStart": 992,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lustres-01",
+      "family": "lustres",
+      "label": "lustre de ferro",
+      "frameStart": 1000,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lustres-02",
+      "family": "lustres",
+      "label": "lustre de chifres I",
+      "frameStart": 1008,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lustres-03",
+      "family": "lustres",
+      "label": "lustre de corrente II",
+      "frameStart": 1016,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lustres-04",
+      "family": "lustres",
+      "label": "lustre de rodas III",
+      "frameStart": 1024,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lustres-05",
+      "family": "lustres",
+      "label": "lustre de salão IV",
+      "frameStart": 1032,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lustres-06",
+      "family": "lustres",
+      "label": "lustre de cobre V",
+      "frameStart": 1040,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lustres-07",
+      "family": "lustres",
+      "label": "lustre de cristal VI",
+      "frameStart": 1048,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lustres-08",
+      "family": "lustres",
+      "label": "lustre de taverna VII",
+      "frameStart": 1056,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lustres-09",
+      "family": "lustres",
+      "label": "lustre de carvalho VIII",
+      "frameStart": 1064,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "furniture.medieval-lustres-10",
+      "family": "lustres",
+      "label": "lustre de banquete IX",
+      "frameStart": 1072,
+      "states": [
+        "covered",
+        "off"
+      ],
+      "rotations": [
+        0,
+        1,
+        2,
+        3
+      ]
+    }
+  ],
+  "frameCount": 1080,
+  "canonicalTileY": 8.750383780406885,
+  "canonicalHeight": 13.462128892933675,
+  "sourceCamera": {
+    "location": [
+      6,
+      6,
+      9.7
+    ],
+    "target": [
+      0,
+      0,
+      1.9
+    ],
+    "orthoScale": 7
+  }
+}

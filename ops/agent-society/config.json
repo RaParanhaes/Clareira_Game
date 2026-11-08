@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "timezone": "Europe/Berlin",
+  "daily_active_seconds": 28800,
+  "model": "gpt-6-luna",
+  "reasoning_effort": "xhigh",
+  "parallel_roles": 1,
+  "idle_between_cycles_seconds": 300,
+  "minimum_cycle_start_seconds": 1800,
+  "minimum_reviewer_seconds": 600,
+  "minimum_integrator_seconds": 300,
+  "minimum_repair_seconds": 600,
+  "role_timeout_seconds": {
+    "planner": 600,
+    "implementer": 3600,
+    "reviewer": 1800,
+    "repair": 1800,
+    "final_reviewer": 1200,
+    "integrator": 600
+  },
+  "max_repairs_per_cycle": 1,
+  "allowed_write_roots": ["game", "scripts", "database"],
+  "allowed_task_roots": ["game/", "scripts/", "database/"],
+  "browser_checks": [
+    "scripts/browser-world-check.mjs",
+    "scripts/browser-avatar-frame-check.mjs",
+    "scripts/browser-locomotion-check.mjs",
+    "scripts/browser-action-obstacle-check.mjs",
+    "scripts/browser-building-terrain-check.mjs",
+    "scripts/browser-room-furniture-check.mjs",
+    "scripts/browser-content-check.mjs",
+    "scripts/browser-hud-night-check.mjs",
+    "scripts/browser-loading-check.mjs",
+    "scripts/browser-login-loading-check.mjs",
+    "scripts/browser-startup-check.mjs",
+    "scripts/browser-upgrade-check.mjs"
+  ],
+  "performance_check": "scripts/browser-performance-check.mjs",
+  "daily_ledger": "scripts/daily_budget.py",
+  "state_directory": "/var/lib/clareira-agent-society"
+}

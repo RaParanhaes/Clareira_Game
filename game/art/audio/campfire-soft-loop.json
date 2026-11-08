@@ -1,0 +1,72 @@
+{
+  "asset": "game/art/audio/campfire-soft-loop.mp3",
+  "source_file": "game/art/audio/source/campfire-ambient-x-660300-hq-preview-first-182s.mp3",
+  "source": {
+    "title": "campfire deer camp 21 minutes - wind - snow - sleet - part 5",
+    "creator": "Ambient-X",
+    "freesound_id": 660300,
+    "url": "https://freesound.org/people/Ambient-X/sounds/660300/",
+    "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Ambient-X, ‘campfire deer camp 21 minutes - wind - snow - sleet - part 5’, via Freesound, CC BY 4.0.",
+    "recording": "Field recording at a real campfire. The Freesound HQ preview is retained as a byte-range source excerpt."
+  },
+  "excerpt": {
+    "source_start_seconds": 25.0,
+    "source_duration_seconds": 90.0,
+    "selection_reason": "Calm fire section before the wind-gust events noted by the uploader."
+  },
+  "game_playback": {
+    "source_gain": 2.5,
+    "bus_gain": 0.9,
+    "nearby_gain_change_db_vs_previous": 1.12,
+    "presence_eq_frequency_hz": 2200,
+    "presence_eq_gain_db": 2.5,
+    "panning_model": "HRTF",
+    "distance_model": "inverse",
+    "reference_distance_world_units": 2,
+    "rolloff_factor": 0.72,
+    "audible_radius_world_units": 32,
+    "distance_fade_start_world_units": 25.6,
+    "source_keepalive_radius_world_units": 40,
+    "maximum_distance_world_units": 40,
+    "peak_protection": {
+      "type": "Web Audio DynamicsCompressorNode",
+      "threshold_db": -16,
+      "knee_db": 12,
+      "ratio": 2.5,
+      "attack_seconds": 0.012,
+      "release_seconds": 0.28
+    }
+  },
+  "processing": [
+    "HQ MP3 preview decoded to mono at 48 kHz for point-source 3D panning",
+    "35 Hz high-pass to remove subsonic recording rumble",
+    "90-second excerpt, from 00:25 to 01:55 of the source recording",
+    "320 ms equal-power loop crossfade",
+    "uniform gain only as needed to keep decoded peak at or below -2.5 dBFS",
+    "no compressor or loudness normalization in the asset build",
+    "MP3 128 kbps mono"
+  ],
+  "measurement_source": "decoded final MP3 at 48 kHz",
+  "duration_seconds": 89.68,
+  "peak_dbfs": -2.85,
+  "rms_dbfs": -45.39,
+  "crest_factor_db": 42.54,
+  "50ms_loudness_range_db": 28.09,
+  "loop_edge_step": 0.000691,
+  "95th_percentile_sample_step": 0.001723,
+  "loop_edge_step_vs_95th_percentile": 0.401,
+  "band_energy_db_relative": {
+    "20-150 Hz": -3.2,
+    "150-600 Hz": -5.99,
+    "600-2 kHz": -14.97,
+    "2-8 kHz": -8.19,
+    "8-20 kHz": -10.95
+  },
+  "checks": {
+    "no_clipping": true,
+    "at_least_2_5db_peak_headroom": true,
+    "loop_seam_below_natural_transients": true
+  }
+}

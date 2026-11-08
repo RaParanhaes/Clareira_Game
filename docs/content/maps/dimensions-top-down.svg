@@ -1,0 +1,366 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1990" role="img" aria-labelledby="title desc">
+<title id="title">Dimensões da Clareira vistas de cima</title><desc id="desc">Mapa esquemático das sete dimensões ativas: Bosque das Brasas, O Breu, Altos do Céu, Mundo Mágico, Inferno, Terra dos Gigantes e Mundo Energético.</desc>
+<defs><pattern id="grid" width="43" height="43" patternUnits="userSpaceOnUse"><path d="M 43 0 L 0 0 0 43" fill="none" stroke="#31423b" stroke-width="1"/></pattern></defs>
+<rect width="100%" height="100%" fill="#101916"/>
+<text x="36" y="42" fill="#f2e8ce" font-family="system-ui,sans-serif" font-size="27" font-weight="700">DIMENSÕES DA CLAREIRA · VISTA SUPERIOR</text>
+<text x="36" y="68" fill="#9fb4a4" font-family="system-ui,sans-serif" font-size="13">Esboços de terreno autorado perto da chegada · coordenadas do mundo · norte para cima · X leste / Y sul</text>
+
+<rect x="24" y="88" width="1392" height="750" rx="15" fill="#1a2823" stroke="#46594a" stroke-width="1.5"/>
+<text x="44" y="118" fill="#f3e7c8" font-family="system-ui,sans-serif" font-size="20" font-weight="700">01 · BOSQUE DAS BRASAS</text>
+<text x="44" y="138" fill="#a9bdab" font-family="system-ui,sans-serif" font-size="12" font-weight="400">Recorte do conteúdo autorado · aprox. X 70–650 / Y 60–670 · o mapa completo mede 5.933 × 5.933</text>
+<rect x="68" y="155" width="590" height="590" rx="8" fill="#17231f" stroke="#667566"/>
+<rect x="68" y="155" width="590" height="590" rx="8" fill="url(#grid)" opacity=".8"/>
+<circle cx="108.6" cy="204.8" r="35.0" fill="#426d50" fill-opacity="0.28" stroke="#426d50" stroke-width="1"/>
+<circle cx="195.7" cy="258.2" r="35.0" fill="#426d50" fill-opacity="0.28" stroke="#426d50" stroke-width="1"/>
+<circle cx="315.6" cy="282.2" r="40.6" fill="#426d50" fill-opacity="0.28" stroke="#426d50" stroke-width="1"/>
+<circle cx="350.4" cy="298.8" r="35.0" fill="#426d50" fill-opacity="0.28" stroke="#426d50" stroke-width="1"/>
+<circle cx="576.8" cy="357.8" r="38.7" fill="#426d50" fill-opacity="0.28" stroke="#426d50" stroke-width="1"/>
+<circle cx="425.9" cy="439.9" r="38.7" fill="#426d50" fill-opacity="0.28" stroke="#426d50" stroke-width="1"/>
+<circle cx="227.6" cy="586.4" r="42.4" fill="#426d50" fill-opacity="0.28" stroke="#426d50" stroke-width="1"/>
+<circle cx="621.2" cy="499.8" r="38.7" fill="#426d50" fill-opacity="0.28" stroke="#426d50" stroke-width="1"/>
+<circle cx="479.1" cy="632.5" r="42.4" fill="#426d50" fill-opacity="0.28" stroke="#426d50" stroke-width="1"/>
+<circle cx="95.3" cy="194.0" r="7.4" fill="#93a765" fill-opacity="0.28" stroke="#93a765" stroke-width="1"/>
+<circle cx="104.8" cy="198.3" r="12.0" fill="#93a765" fill-opacity="0.28" stroke="#93a765" stroke-width="1"/>
+<circle cx="101.9" cy="205.7" r="9.2" fill="#93a765" fill-opacity="0.28" stroke="#93a765" stroke-width="1"/>
+<circle cx="115.4" cy="188.2" r="12.0" fill="#93a765" fill-opacity="0.28" stroke="#93a765" stroke-width="1"/>
+<circle cx="90.7" cy="208.5" r="8.3" fill="#93a765" fill-opacity="0.28" stroke="#93a765" stroke-width="1"/>
+<circle cx="112.0" cy="201.1" r="5.5" fill="#93a765" fill-opacity="0.28" stroke="#93a765" stroke-width="1"/>
+<circle cx="119.7" cy="211.2" r="5.5" fill="#93a765" fill-opacity="0.28" stroke="#93a765" stroke-width="1"/>
+<circle cx="127.5" cy="191.9" r="5.5" fill="#93a765" fill-opacity="0.28" stroke="#93a765" stroke-width="1"/>
+<circle cx="50.1" cy="122.7" r="5.5" fill="#93a765" fill-opacity="0.28" stroke="#93a765" stroke-width="1"/>
+<circle cx="527.4" cy="252.7" r="40.6" fill="#87969a" fill-opacity="0.28" stroke="#87969a" stroke-width="1"/>
+<circle cx="557.4" cy="239.8" r="33.2" fill="#87969a" fill-opacity="0.28" stroke="#87969a" stroke-width="1"/>
+<circle cx="585.5" cy="268.4" r="29.5" fill="#87969a" fill-opacity="0.28" stroke="#87969a" stroke-width="1"/>
+<circle cx="187.0" cy="357.8" r="31.3" fill="#87969a" fill-opacity="0.28" stroke="#87969a" stroke-width="1"/>
+<circle cx="363.0" cy="387.3" r="36.9" fill="#87969a" fill-opacity="0.28" stroke="#87969a" stroke-width="1"/>
+<circle cx="404.6" cy="405.8" r="33.2" fill="#87969a" fill-opacity="0.28" stroke="#87969a" stroke-width="1"/>
+<circle cx="427.8" cy="687.8" r="42.4" fill="#87969a" fill-opacity="0.28" stroke="#87969a" stroke-width="1"/>
+<circle cx="476.2" cy="706.3" r="35.0" fill="#87969a" fill-opacity="0.28" stroke="#87969a" stroke-width="1"/>
+<circle cx="504.2" cy="285.9" r="31.3" fill="#c39a5e" fill-opacity="0.28" stroke="#c39a5e" stroke-width="1"/>
+<circle cx="209.2" cy="378.1" r="27.7" fill="#c39a5e" fill-opacity="0.28" stroke="#c39a5e" stroke-width="1"/>
+<circle cx="377.5" cy="429.7" r="29.5" fill="#c39a5e" fill-opacity="0.28" stroke="#c39a5e" stroke-width="1"/>
+<circle cx="271.1" cy="472.1" r="29.5" fill="#7b627e" fill-opacity="0.28" stroke="#7b627e" stroke-width="1"/>
+<circle cx="522.6" cy="540.3" r="33.2" fill="#7b627e" fill-opacity="0.28" stroke="#7b627e" stroke-width="1"/>
+<circle cx="626.1" cy="500.7" r="13.8" fill="#488ab1" fill-opacity="0.65" stroke="#488ab1" stroke-width="1"/>
+<circle cx="262.4" cy="343.1" r="8.3" fill="#488ab1" fill-opacity="0.65" stroke="#488ab1" stroke-width="1"/>
+<circle cx="391.0" cy="250.9" r="7.4" fill="#488ab1" fill-opacity="0.65" stroke="#488ab1" stroke-width="1"/>
+<circle cx="464.6" cy="446.3" r="11.1" fill="#488ab1" fill-opacity="0.65" stroke="#488ab1" stroke-width="1"/>
+<circle cx="584.5" cy="598.4" r="9.2" fill="#488ab1" fill-opacity="0.65" stroke="#488ab1" stroke-width="1"/>
+<polyline points="95.1,193.7 112.5,191.9 126.0,189.1 106.7,193.7 115.4,194.6" fill="none" stroke="#b8aa75" stroke-width="2.1" stroke-opacity=".65" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="95.1,193.7 95.1,200.2 96.5,202.0 96.5,209.4 101.9,209.4" fill="none" stroke="#b8aa75" stroke-width="2.1" stroke-opacity=".65" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="95.1,200.2 95.1,204.8 95.1,212.2 90.7,212.2" fill="none" stroke="#b8aa75" stroke-width="2.1" stroke-opacity=".65" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="112.5,207.5 112.0,206.3" fill="none" stroke="#b8aa75" stroke-width="2.1" stroke-opacity=".65" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="112.5,207.5 115.4,211.2 115.4,215.8 119.7,215.8" fill="none" stroke="#b8aa75" stroke-width="2.1" stroke-opacity=".65" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="115.4,194.6 122.6,196.5 127.5,196.5" fill="none" stroke="#b8aa75" stroke-width="2.1" stroke-opacity=".65" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="86.4" y="189.0" width="8" height="8" rx="1" fill="#e0a86c" stroke="#382719" stroke-width="1"/>
+<text x="94.43934426229508" y="188.02734375" fill="#ffe8c2" font-family="system-ui,sans-serif" font-size="9" font-weight="700">B1</text>
+<rect x="111.4" y="184.2" width="8" height="8" rx="1" fill="#e0a86c" stroke="#382719" stroke-width="1"/>
+<text x="119.39344262295083" y="183.1875" fill="#ffe8c2" font-family="system-ui,sans-serif" font-size="9" font-weight="700">B2</text>
+<rect x="97.9" y="201.7" width="8" height="8" rx="1" fill="#e0a86c" stroke="#382719" stroke-width="1"/>
+<text x="105.85245901639344" y="200.703125" fill="#ffe8c2" font-family="system-ui,sans-serif" font-size="9" font-weight="700">B3</text>
+<rect x="86.7" y="204.5" width="8" height="8" rx="1" fill="#e0a86c" stroke="#382719" stroke-width="1"/>
+<text x="94.72950819672131" y="203.46875" fill="#ffe8c2" font-family="system-ui,sans-serif" font-size="9" font-weight="700">B4</text>
+<rect x="108.0" y="197.6" width="8" height="8" rx="1" fill="#e0a86c" stroke="#382719" stroke-width="1"/>
+<text x="116.00819672131148" y="196.5546875" fill="#ffe8c2" font-family="system-ui,sans-serif" font-size="9" font-weight="700">B5</text>
+<rect x="115.7" y="207.7" width="8" height="8" rx="1" fill="#e0a86c" stroke="#382719" stroke-width="1"/>
+<text x="123.74590163934425" y="206.6953125" fill="#ffe8c2" font-family="system-ui,sans-serif" font-size="9" font-weight="700">B6</text>
+<rect x="123.5" y="188.3" width="8" height="8" rx="1" fill="#e0a86c" stroke="#382719" stroke-width="1"/>
+<text x="131.48360655737704" y="187.3359375" fill="#ffe8c2" font-family="system-ui,sans-serif" font-size="9" font-weight="700">B7</text>
+<path d="M 95.3 187.0 L 98.3 192.0 L 103.3 194.0 L 98.3 196.0 L 95.3 202.0 L 92.3 196.0 L 87.3 194.0 L 92.3 192.0 Z" fill="#ffe08b" stroke="#573f1c" stroke-width="1"/>
+<rect x="170.7" y="358.8" width="5.4" height="5.4" fill="#c2c7bf" stroke="#17231f" stroke-width=".8"/>
+<rect x="189.1" y="368.0" width="5.4" height="5.4" fill="#c2c7bf" stroke="#17231f" stroke-width=".8"/>
+<rect x="206.5" y="351.4" width="5.4" height="5.4" fill="#c2c7bf" stroke="#17231f" stroke-width=".8"/>
+<rect x="341.0" y="380.9" width="5.4" height="5.4" fill="#c2c7bf" stroke="#17231f" stroke-width=".8"/>
+<rect x="361.3" y="397.5" width="5.4" height="5.4" fill="#c2c7bf" stroke="#17231f" stroke-width=".8"/>
+<rect x="384.5" y="388.3" width="5.4" height="5.4" fill="#c2c7bf" stroke="#17231f" stroke-width=".8"/>
+<rect x="543.1" y="325.6" width="5.4" height="5.4" fill="#c2c7bf" stroke="#17231f" stroke-width=".8"/>
+<rect x="564.4" y="337.6" width="5.4" height="5.4" fill="#c2c7bf" stroke="#17231f" stroke-width=".8"/>
+<rect x="407.7" y="675.9" width="5.4" height="5.4" fill="#c2c7bf" stroke="#17231f" stroke-width=".8"/>
+<rect x="437.7" y="690.7" width="5.4" height="5.4" fill="#c2c7bf" stroke="#17231f" stroke-width=".8"/>
+<rect x="466.7" y="700.8" width="5.4" height="5.4" fill="#c2c7bf" stroke="#17231f" stroke-width=".8"/>
+<rect x="377.7" y="412.3" width="5.4" height="5.4" fill="#c2c7bf" stroke="#17231f" stroke-width=".8"/>
+<path d="M 186.0 349.6 L 189.6 353.2 L 186.0 356.8 L 182.4 353.2 Z" fill="#d9824b" stroke="#17231f" stroke-width=".7"/>
+<path d="M 359.1 387.4 L 362.7 391.0 L 359.1 394.6 L 355.5 391.0 Z" fill="#d9824b" stroke="#17231f" stroke-width=".7"/>
+<path d="M 549.7 332.1 L 553.3 335.7 L 549.7 339.3 L 546.1 335.7 Z" fill="#d9824b" stroke="#17231f" stroke-width=".7"/>
+<path d="M 202.4 357.9 L 206.0 361.5 L 202.4 365.1 L 198.8 361.5 Z" fill="#aebac3" stroke="#17231f" stroke-width=".7"/>
+<path d="M 395.9 406.8 L 399.5 410.4 L 395.9 414.0 L 392.3 410.4 Z" fill="#aebac3" stroke="#17231f" stroke-width=".7"/>
+<path d="M 447.1 686.1 L 450.7 689.7 L 447.1 693.3 L 443.5 689.7 Z" fill="#aebac3" stroke="#17231f" stroke-width=".7"/>
+<path d="M 183.1 362.5 L 186.7 366.1 L 183.1 369.7 L 179.5 366.1 Z" fill="#595d5b" stroke="#17231f" stroke-width=".7"/>
+<path d="M 376.5 415.1 L 380.1 418.7 L 376.5 422.3 L 372.9 418.7 Z" fill="#595d5b" stroke="#17231f" stroke-width=".7"/>
+<path d="M 560.3 341.3 L 563.9 344.9 L 560.3 348.5 L 556.7 344.9 Z" fill="#595d5b" stroke="#17231f" stroke-width=".7"/>
+<circle cx="155.0" cy="238.9" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="379.4" cy="357.8" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="194.7" cy="304.3" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="430.7" cy="509.0" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="603.8" cy="485.0" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="609.6" cy="528.4" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="305.0" cy="270.2" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="330.1" cy="266.5" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="351.4" cy="302.5" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="557.4" cy="235.2" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="175.4" cy="355.0" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="351.4" cy="391.0" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="556.4" cy="329.2" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="421.0" cy="677.7" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="237.3" cy="371.6" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="446.2" cy="462.9" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="497.4" cy="426.0" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="580.6" cy="572.6" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="219.9" cy="235.2" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="374.6" cy="546.8" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="626.1" cy="500.7" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="262.4" cy="343.1" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="391.0" cy="250.9" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="108.6" cy="204.8" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="195.7" cy="258.2" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="332.0" cy="285.0" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="576.8" cy="357.8" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="425.9" cy="439.9" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="227.6" cy="586.4" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="621.2" cy="499.8" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="479.1" cy="632.5" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="557.4" cy="247.2" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="187.0" cy="357.8" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="383.3" cy="397.5" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="451.0" cy="696.1" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="406.5" cy="327.4" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<circle cx="527.4" cy="427.9" r="2.1" fill="#e8cf81" stroke="#463a24" stroke-width=".55"/>
+<text x="690" y="153" fill="#f3e7c8" font-family="system-ui,sans-serif" font-size="14" font-weight="700">LEGENDA</text>
+<circle cx="698.0" cy="176.0" r="7.0" fill="#426d50" fill-opacity="0.65" stroke="#426d50" stroke-width="1"/>
+<text x="714" y="180" fill="#e7e1cd" font-family="system-ui,sans-serif" font-size="13" font-weight="400">forest</text>
+<circle cx="698.0" cy="202.0" r="7.0" fill="#93a765" fill-opacity="0.65" stroke="#93a765" stroke-width="1"/>
+<text x="714" y="206" fill="#e7e1cd" font-family="system-ui,sans-serif" font-size="13" font-weight="400">clareira</text>
+<circle cx="698.0" cy="228.0" r="7.0" fill="#87969a" fill-opacity="0.65" stroke="#87969a" stroke-width="1"/>
+<text x="714" y="232" fill="#e7e1cd" font-family="system-ui,sans-serif" font-size="13" font-weight="400">montanha</text>
+<circle cx="698.0" cy="254.0" r="7.0" fill="#c39a5e" fill-opacity="0.65" stroke="#c39a5e" stroke-width="1"/>
+<text x="714" y="258" fill="#e7e1cd" font-family="system-ui,sans-serif" font-size="13" font-weight="400">colina</text>
+<circle cx="698.0" cy="280.0" r="7.0" fill="#7b627e" fill-opacity="0.65" stroke="#7b627e" stroke-width="1"/>
+<text x="714" y="284" fill="#e7e1cd" font-family="system-ui,sans-serif" font-size="13" font-weight="400">depressão</text>
+<circle cx="698.0" cy="306.0" r="7.0" fill="#488ab1" fill-opacity="0.65" stroke="#488ab1" stroke-width="1"/>
+<text x="714" y="310" fill="#e7e1cd" font-family="system-ui,sans-serif" font-size="13" font-weight="400">lago / lagoa</text>
+<text x="690" y="362" fill="#f3e7c8" font-family="system-ui,sans-serif" font-size="14" font-weight="700">CONSTRUÇÕES</text>
+<text x="690" y="388" fill="#e7d9bf" font-family="system-ui,sans-serif" font-size="12" font-weight="400">B1 Recepção da vila · (83,2; 91,3)</text>
+<text x="690" y="410" fill="#e7d9bf" font-family="system-ui,sans-serif" font-size="12" font-weight="400">B2 Hotel das Brasas · (109; 86)</text>
+<text x="690" y="432" fill="#e7d9bf" font-family="system-ui,sans-serif" font-size="12" font-weight="400">B3 Pousada dos Pinheiros · (95; 105)</text>
+<text x="690" y="454" fill="#e7d9bf" font-family="system-ui,sans-serif" font-size="12" font-weight="400">B4 Hospedaria do Riacho · (83,5; 108)</text>
+<text x="690" y="476" fill="#e7d9bf" font-family="system-ui,sans-serif" font-size="12" font-weight="400">B5 Cabana do Cedro · (105,5; 100,5)</text>
+<text x="690" y="498" fill="#e7d9bf" font-family="system-ui,sans-serif" font-size="12" font-weight="400">B6 Cabana da Samambaia · (113,5; 111,5)</text>
+<text x="690" y="520" fill="#e7d9bf" font-family="system-ui,sans-serif" font-size="12" font-weight="400">B7 Cabana do Mirante · (121,5; 90,5)</text>
+<text x="690" y="566" fill="#f3e7c8" font-family="system-ui,sans-serif" font-size="14" font-weight="700">RECURSOS FIXOS</text>
+<text x="690" y="592" fill="#c7d5c7" font-family="system-ui,sans-serif" font-size="12" font-weight="400">Pedras ×12 · serras oeste/central/leste/sul</text>
+<text x="690" y="614" fill="#c7d5c7" font-family="system-ui,sans-serif" font-size="12" font-weight="400">Cobre ×3 · Serra Oeste, Cordilheira Central, Pinhal</text>
+<text x="690" y="636" fill="#c7d5c7" font-family="system-ui,sans-serif" font-size="12" font-weight="400">Ferro ×3 · Serra Oeste, Cordilheira Central, Morros do Sul</text>
+<text x="690" y="658" fill="#c7d5c7" font-family="system-ui,sans-serif" font-size="12" font-weight="400">Carvão ×3 · Serra Oeste, Cordilheira Central, Pinhal</text>
+<text x="690" y="680" fill="#c7d5c7" font-family="system-ui,sans-serif" font-size="12" font-weight="400">Outros pontos amarelos são marcos macro, não prédios</text>
+<text x="690" y="699" fill="#a9bdab" font-family="system-ui,sans-serif" font-size="11" font-weight="400">15 recursos iniciais cercam a recepção; a lista está no documento.</text>
+<text x="690" y="727" fill="#a9bdab" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Raio dos círculos = alcance aproximado da marca de terreno.</text>
+<text x="690" y="745" fill="#a9bdab" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Recursos comuns também surgem por blocos de 16 unidades.</text>
+<rect x="24" y="862" width="680" height="330" rx="15" fill="#1a2823" stroke="#46594a" stroke-width="1.5"/>
+<text x="44" y="892" fill="#f3e7c8" font-family="system-ui,sans-serif" font-size="20" font-weight="700">02 · O BREU</text>
+<text x="44" y="912" fill="#a9bdab" font-family="system-ui,sans-serif" font-size="12" font-weight="400">Escuridão · breu</text>
+<rect x="46.1" y="932.1" width="226.8" height="226.8" rx="8" fill="#17231f" stroke="#667566" stroke-width="1"/>
+<g transform="translate(159.50 1045.50) scale(0.716049) translate(-159.50 -1045.50)">
+<path d="M 62.3 932.1 V 1158.9 M 46.1 948.3 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 94.7 932.1 V 1158.9 M 46.1 980.7 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 127.1 932.1 V 1158.9 M 46.1 1013.1 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 159.5 932.1 V 1158.9 M 46.1 1045.5 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 191.9 932.1 V 1158.9 M 46.1 1077.9 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 224.3 932.1 V 1158.9 M 46.1 1110.3 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 256.7 932.1 V 1158.9 M 46.1 1142.7 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<circle cx="159.5" cy="1045.5" r="77.8" fill="#93a765" fill-opacity="0.27" stroke="#93a765" stroke-width="1"/>
+<circle cx="39.6" cy="1032.5" r="35.6" fill="#c39a5e" fill-opacity="0.27" stroke="#c39a5e" stroke-width="1"/>
+<circle cx="178.9" cy="1165.4" r="35.6" fill="#7b627e" fill-opacity="0.27" stroke="#7b627e" stroke-width="1"/>
+<path d="M 159.5 1036.5 L 162.5 1042.5 L 169.5 1045.5 L 162.5 1048.5 L 159.5 1055.5 L 156.5 1048.5 L 149.5 1045.5 L 156.5 1042.5 Z" fill="#ffe08b" stroke="#573f1c" stroke-width="1"/>
+<text x="171.5" y="1037.5" fill="#ffe8ad" font-family="system-ui,sans-serif" font-size="9" font-weight="700">CHEGADA</text>
+<text x="55.3" y="1173.9" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">360</text>
+<text x="24.099999999999994" y="951.3000000000001" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">360</text>
+<text x="152.5" y="1173.9" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">420</text>
+<text x="24.099999999999994" y="1048.5" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">420</text>
+<text x="249.70000000000005" y="1173.9" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">480</text>
+<text x="24.099999999999994" y="1145.7" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">480</text>
+</g>
+<text x="314" y="951" fill="#b5c6b1" font-family="system-ui,sans-serif" font-size="11" font-weight="700">MARCAS DE TERRENO</text>
+<text x="314" y="976" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Clareira de chegada (raio 48)</text>
+<text x="314" y="997" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Colina oeste; bacia ao sul</text>
+<text x="314" y="1018" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Sem bosque, nós comuns ou prédios</text>
+<text x="314" y="1057" fill="#e0b987" font-family="system-ui,sans-serif" font-size="11" font-weight="700">Prédios cadastrados: nenhum</text>
+<text x="314" y="1078" fill="#b8c8b9" font-family="system-ui,sans-serif" font-size="10" font-weight="400">Recursos comuns: por blocos de 16</text>
+<text x="314" y="1095" fill="#b8c8b9" font-family="system-ui,sans-serif" font-size="10" font-weight="400">(exceto no Breu; ver nota)</text>
+<rect x="736" y="862" width="680" height="330" rx="15" fill="#1a2823" stroke="#46594a" stroke-width="1.5"/>
+<text x="756" y="892" fill="#f3e7c8" font-family="system-ui,sans-serif" font-size="20" font-weight="700">03 · ALTOS DO CÉU</text>
+<text x="756" y="912" fill="#a9bdab" font-family="system-ui,sans-serif" font-size="12" font-weight="400">Céu · ceu</text>
+<rect x="758.1" y="932.1" width="226.8" height="226.8" rx="8" fill="#17231f" stroke="#667566" stroke-width="1"/>
+<g transform="translate(871.50 1045.50) scale(0.716049) translate(-871.50 -1045.50)">
+<path d="M 774.3 932.1 V 1158.9 M 758.1 948.3 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 806.7 932.1 V 1158.9 M 758.1 980.7 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 839.1 932.1 V 1158.9 M 758.1 1013.1 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 871.5 932.1 V 1158.9 M 758.1 1045.5 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 903.9 932.1 V 1158.9 M 758.1 1077.9 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 936.3 932.1 V 1158.9 M 758.1 1110.3 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 968.7 932.1 V 1158.9 M 758.1 1142.7 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<circle cx="871.5" cy="1045.5" r="22.7" fill="#93a765" fill-opacity="0.27" stroke="#93a765" stroke-width="1"/>
+<circle cx="835.9" cy="1061.7" r="38.9" fill="#87969a" fill-opacity="0.24" stroke="#bac4c1" stroke-width="1.1"/>
+<circle cx="908.8" cy="1024.4" r="32.4" fill="#87969a" fill-opacity="0.24" stroke="#bac4c1" stroke-width="1.1"/>
+<circle cx="808.3" cy="983.9" r="35.6" fill="#7b627e" fill-opacity="0.27" stroke="#7b627e" stroke-width="1"/>
+<path d="M 871.5 1036.5 L 874.5 1042.5 L 881.5 1045.5 L 874.5 1048.5 L 871.5 1055.5 L 868.5 1048.5 L 861.5 1045.5 L 868.5 1042.5 Z" fill="#ffe08b" stroke="#573f1c" stroke-width="1"/>
+<text x="883.5" y="1037.5" fill="#ffe8ad" font-family="system-ui,sans-serif" font-size="9" font-weight="700">CHEGADA</text>
+<text x="767.3000000000001" y="1173.9" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">360</text>
+<text x="736.1" y="951.3000000000001" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">360</text>
+<text x="864.5" y="1173.9" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">420</text>
+<text x="736.1" y="1048.5" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">420</text>
+<text x="961.7" y="1173.9" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">480</text>
+<text x="736.1" y="1145.7" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">480</text>
+</g>
+<text x="1026" y="951" fill="#b5c6b1" font-family="system-ui,sans-serif" font-size="11" font-weight="700">MARCAS DE TERRENO</text>
+<text x="1026" y="976" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Pouso central (raio 14)</text>
+<text x="1026" y="997" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Ilhas/morros oeste e leste</text>
+<text x="1026" y="1018" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Bacia noroeste; sem prédios fixos</text>
+<text x="1026" y="1057" fill="#e0b987" font-family="system-ui,sans-serif" font-size="11" font-weight="700">Prédios cadastrados: nenhum</text>
+<text x="1026" y="1078" fill="#b8c8b9" font-family="system-ui,sans-serif" font-size="10" font-weight="400">Recursos comuns: por blocos de 16</text>
+<text x="1026" y="1095" fill="#b8c8b9" font-family="system-ui,sans-serif" font-size="10" font-weight="400">(exceto no Breu; ver nota)</text>
+<rect x="24" y="1216" width="680" height="330" rx="15" fill="#1a2823" stroke="#46594a" stroke-width="1.5"/>
+<text x="44" y="1246" fill="#f3e7c8" font-family="system-ui,sans-serif" font-size="20" font-weight="700">04 · MUNDO MÁGICO</text>
+<text x="44" y="1266" fill="#a9bdab" font-family="system-ui,sans-serif" font-size="12" font-weight="400">Mágico · arcano</text>
+<rect x="46.1" y="1286.1" width="226.8" height="226.8" rx="8" fill="#17231f" stroke="#667566" stroke-width="1"/>
+<g transform="translate(159.50 1399.50) scale(0.716049) translate(-159.50 -1399.50)">
+<path d="M 62.3 1286.1 V 1512.9 M 46.1 1302.3 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 94.7 1286.1 V 1512.9 M 46.1 1334.7 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 127.1 1286.1 V 1512.9 M 46.1 1367.1 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 159.5 1286.1 V 1512.9 M 46.1 1399.5 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 191.9 1286.1 V 1512.9 M 46.1 1431.9 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 224.3 1286.1 V 1512.9 M 46.1 1464.3 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 256.7 1286.1 V 1512.9 M 46.1 1496.7 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<circle cx="159.5" cy="1399.5" r="13.0" fill="#93a765" fill-opacity="0.27" stroke="#93a765" stroke-width="1"/>
+<circle cx="128.7" cy="1380.1" r="45.4" fill="#426d50" fill-opacity="0.27" stroke="#426d50" stroke-width="1"/>
+<circle cx="198.4" cy="1431.9" r="40.5" fill="#426d50" fill-opacity="0.27" stroke="#426d50" stroke-width="1"/>
+<circle cx="195.1" cy="1367.1" r="14.6" fill="#488ab1" fill-opacity="0.56" stroke="#86c6e7" stroke-width="1"/>
+<circle cx="102.8" cy="1441.6" r="35.6" fill="#c39a5e" fill-opacity="0.27" stroke="#c39a5e" stroke-width="1"/>
+<circle cx="219.4" cy="1454.6" r="38.9" fill="#7b627e" fill-opacity="0.27" stroke="#7b627e" stroke-width="1"/>
+<path d="M 159.5 1390.5 L 162.5 1396.5 L 169.5 1399.5 L 162.5 1402.5 L 159.5 1409.5 L 156.5 1402.5 L 149.5 1399.5 L 156.5 1396.5 Z" fill="#ffe08b" stroke="#573f1c" stroke-width="1"/>
+<text x="171.5" y="1391.5" fill="#ffe8ad" font-family="system-ui,sans-serif" font-size="9" font-weight="700">CHEGADA</text>
+<text x="55.3" y="1527.8999999999999" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">360</text>
+<text x="24.099999999999994" y="1305.3" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">360</text>
+<text x="152.5" y="1527.8999999999999" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">420</text>
+<text x="24.099999999999994" y="1402.5" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">420</text>
+<text x="249.70000000000005" y="1527.8999999999999" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">480</text>
+<text x="24.099999999999994" y="1499.6999999999998" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">480</text>
+</g>
+<text x="314" y="1305" fill="#b5c6b1" font-family="system-ui,sans-serif" font-size="11" font-weight="700">MARCAS DE TERRENO</text>
+<text x="314" y="1330" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Santuário no centro (raio 8)</text>
+<text x="314" y="1351" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Dois bosques; Lagoa da Lua a NE</text>
+<text x="314" y="1372" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Colina SW e bacia SE</text>
+<text x="314" y="1411" fill="#e0b987" font-family="system-ui,sans-serif" font-size="11" font-weight="700">Prédios cadastrados: nenhum</text>
+<text x="314" y="1432" fill="#b8c8b9" font-family="system-ui,sans-serif" font-size="10" font-weight="400">Recursos comuns: por blocos de 16</text>
+<text x="314" y="1449" fill="#b8c8b9" font-family="system-ui,sans-serif" font-size="10" font-weight="400">(exceto no Breu; ver nota)</text>
+<rect x="736" y="1216" width="680" height="330" rx="15" fill="#1a2823" stroke="#46594a" stroke-width="1.5"/>
+<text x="756" y="1246" fill="#f3e7c8" font-family="system-ui,sans-serif" font-size="20" font-weight="700">05 · INFERNO</text>
+<text x="756" y="1266" fill="#a9bdab" font-family="system-ui,sans-serif" font-size="12" font-weight="400">Inferno · inferno</text>
+<rect x="758.1" y="1286.1" width="226.8" height="226.8" rx="8" fill="#17231f" stroke="#667566" stroke-width="1"/>
+<g transform="translate(871.50 1399.50) scale(0.716049) translate(-871.50 -1399.50)">
+<path d="M 774.3 1286.1 V 1512.9 M 758.1 1302.3 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 806.7 1286.1 V 1512.9 M 758.1 1334.7 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 839.1 1286.1 V 1512.9 M 758.1 1367.1 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 871.5 1286.1 V 1512.9 M 758.1 1399.5 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 903.9 1286.1 V 1512.9 M 758.1 1431.9 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 936.3 1286.1 V 1512.9 M 758.1 1464.3 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 968.7 1286.1 V 1512.9 M 758.1 1496.7 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<circle cx="871.5" cy="1399.5" r="16.2" fill="#93a765" fill-opacity="0.27" stroke="#93a765" stroke-width="1"/>
+<circle cx="835.9" cy="1375.2" r="45.4" fill="#87969a" fill-opacity="0.24" stroke="#bac4c1" stroke-width="1.1"/>
+<circle cx="908.8" cy="1428.7" r="48.6" fill="#87969a" fill-opacity="0.24" stroke="#bac4c1" stroke-width="1.1"/>
+<circle cx="899.0" cy="1372.0" r="22.7" fill="#7b627e" fill-opacity="0.27" stroke="#7b627e" stroke-width="1"/>
+<path d="M 871.5 1390.5 L 874.5 1396.5 L 881.5 1399.5 L 874.5 1402.5 L 871.5 1409.5 L 868.5 1402.5 L 861.5 1399.5 L 868.5 1396.5 Z" fill="#ffe08b" stroke="#573f1c" stroke-width="1"/>
+<text x="883.5" y="1391.5" fill="#ffe8ad" font-family="system-ui,sans-serif" font-size="9" font-weight="700">CHEGADA</text>
+<text x="767.3000000000001" y="1527.8999999999999" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">360</text>
+<text x="736.1" y="1305.3" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">360</text>
+<text x="864.5" y="1527.8999999999999" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">420</text>
+<text x="736.1" y="1402.5" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">420</text>
+<text x="961.7" y="1527.8999999999999" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">480</text>
+<text x="736.1" y="1499.6999999999998" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">480</text>
+</g>
+<text x="1026" y="1305" fill="#b5c6b1" font-family="system-ui,sans-serif" font-size="11" font-weight="700">MARCAS DE TERRENO</text>
+<text x="1026" y="1330" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Chegada central (raio 10)</text>
+<text x="1026" y="1351" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Cordilheira das Brasas NW</text>
+<text x="1026" y="1372" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Cordilheira das Cinzas SE; bacia NE</text>
+<text x="1026" y="1411" fill="#e0b987" font-family="system-ui,sans-serif" font-size="11" font-weight="700">Prédios cadastrados: nenhum</text>
+<text x="1026" y="1432" fill="#b8c8b9" font-family="system-ui,sans-serif" font-size="10" font-weight="400">Recursos comuns: por blocos de 16</text>
+<text x="1026" y="1449" fill="#b8c8b9" font-family="system-ui,sans-serif" font-size="10" font-weight="400">(exceto no Breu; ver nota)</text>
+<rect x="24" y="1570" width="680" height="330" rx="15" fill="#1a2823" stroke="#46594a" stroke-width="1.5"/>
+<text x="44" y="1600" fill="#f3e7c8" font-family="system-ui,sans-serif" font-size="20" font-weight="700">06 · TERRA DOS GIGANTES</text>
+<text x="44" y="1620" fill="#a9bdab" font-family="system-ui,sans-serif" font-size="12" font-weight="400">Gigantes · gigantes</text>
+<rect x="46.1" y="1640.1" width="226.8" height="226.8" rx="8" fill="#17231f" stroke="#667566" stroke-width="1"/>
+<g transform="translate(159.50 1753.50) scale(0.716049) translate(-159.50 -1753.50)">
+<path d="M 62.3 1640.1 V 1866.9 M 46.1 1656.3 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 94.7 1640.1 V 1866.9 M 46.1 1688.7 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 127.1 1640.1 V 1866.9 M 46.1 1721.1 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 159.5 1640.1 V 1866.9 M 46.1 1753.5 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 191.9 1640.1 V 1866.9 M 46.1 1785.9 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 224.3 1640.1 V 1866.9 M 46.1 1818.3 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 256.7 1640.1 V 1866.9 M 46.1 1850.7 H 272.9" stroke="#2c3c35" stroke-width=".7"/>
+<circle cx="159.5" cy="1753.5" r="19.4" fill="#93a765" fill-opacity="0.27" stroke="#93a765" stroke-width="1"/>
+<circle cx="123.9" cy="1721.1" r="56.7" fill="#87969a" fill-opacity="0.24" stroke="#bac4c1" stroke-width="1.1"/>
+<circle cx="198.4" cy="1785.9" r="61.6" fill="#87969a" fill-opacity="0.24" stroke="#bac4c1" stroke-width="1.1"/>
+<circle cx="167.6" cy="1706.5" r="34.0" fill="#426d50" fill-opacity="0.27" stroke="#426d50" stroke-width="1"/>
+<circle cx="91.5" cy="1823.2" r="45.4" fill="#7b627e" fill-opacity="0.27" stroke="#7b627e" stroke-width="1"/>
+<path d="M 159.5 1744.5 L 162.5 1750.5 L 169.5 1753.5 L 162.5 1756.5 L 159.5 1763.5 L 156.5 1756.5 L 149.5 1753.5 L 156.5 1750.5 Z" fill="#ffe08b" stroke="#573f1c" stroke-width="1"/>
+<text x="171.5" y="1745.5" fill="#ffe8ad" font-family="system-ui,sans-serif" font-size="9" font-weight="700">CHEGADA</text>
+<text x="55.3" y="1881.8999999999999" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">360</text>
+<text x="24.099999999999994" y="1659.3" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">360</text>
+<text x="152.5" y="1881.8999999999999" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">420</text>
+<text x="24.099999999999994" y="1756.5" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">420</text>
+<text x="249.70000000000005" y="1881.8999999999999" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">480</text>
+<text x="24.099999999999994" y="1853.6999999999998" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">480</text>
+</g>
+<text x="314" y="1659" fill="#b5c6b1" font-family="system-ui,sans-serif" font-size="11" font-weight="700">MARCAS DE TERRENO</text>
+<text x="314" y="1684" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Estrada Antiga no centro</text>
+<text x="314" y="1705" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Montes colossais NW e SE</text>
+<text x="314" y="1726" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Pinheiros ao norte; bacia sul</text>
+<text x="314" y="1765" fill="#e0b987" font-family="system-ui,sans-serif" font-size="11" font-weight="700">Prédios cadastrados: nenhum</text>
+<text x="314" y="1786" fill="#b8c8b9" font-family="system-ui,sans-serif" font-size="10" font-weight="400">Recursos comuns: por blocos de 16</text>
+<text x="314" y="1803" fill="#b8c8b9" font-family="system-ui,sans-serif" font-size="10" font-weight="400">(exceto no Breu; ver nota)</text>
+<rect x="736" y="1570" width="680" height="330" rx="15" fill="#1a2823" stroke="#46594a" stroke-width="1.5"/>
+<text x="756" y="1600" fill="#f3e7c8" font-family="system-ui,sans-serif" font-size="20" font-weight="700">07 · MUNDO ENERGÉTICO</text>
+<text x="756" y="1620" fill="#a9bdab" font-family="system-ui,sans-serif" font-size="12" font-weight="400">Energético · energia</text>
+<rect x="758.1" y="1640.1" width="226.8" height="226.8" rx="8" fill="#17231f" stroke="#667566" stroke-width="1"/>
+<g transform="translate(871.50 1753.50) scale(0.716049) translate(-871.50 -1753.50)">
+<path d="M 774.3 1640.1 V 1866.9 M 758.1 1656.3 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 806.7 1640.1 V 1866.9 M 758.1 1688.7 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 839.1 1640.1 V 1866.9 M 758.1 1721.1 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 871.5 1640.1 V 1866.9 M 758.1 1753.5 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 903.9 1640.1 V 1866.9 M 758.1 1785.9 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 936.3 1640.1 V 1866.9 M 758.1 1818.3 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<path d="M 968.7 1640.1 V 1866.9 M 758.1 1850.7 H 984.9" stroke="#2c3c35" stroke-width=".7"/>
+<circle cx="871.5" cy="1753.5" r="14.6" fill="#93a765" fill-opacity="0.27" stroke="#93a765" stroke-width="1"/>
+<circle cx="842.3" cy="1774.6" r="38.9" fill="#c39a5e" fill-opacity="0.27" stroke="#c39a5e" stroke-width="1"/>
+<circle cx="905.5" cy="1734.1" r="35.6" fill="#7b627e" fill-opacity="0.27" stroke="#7b627e" stroke-width="1"/>
+<circle cx="834.2" cy="1722.7" r="16.2" fill="#488ab1" fill-opacity="0.56" stroke="#86c6e7" stroke-width="1"/>
+<path d="M 871.5 1744.5 L 874.5 1750.5 L 881.5 1753.5 L 874.5 1756.5 L 871.5 1763.5 L 868.5 1756.5 L 861.5 1753.5 L 868.5 1750.5 Z" fill="#ffe08b" stroke="#573f1c" stroke-width="1"/>
+<text x="883.5" y="1745.5" fill="#ffe8ad" font-family="system-ui,sans-serif" font-size="9" font-weight="700">CHEGADA</text>
+<text x="767.3000000000001" y="1881.8999999999999" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">360</text>
+<text x="736.1" y="1659.3" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">360</text>
+<text x="864.5" y="1881.8999999999999" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">420</text>
+<text x="736.1" y="1756.5" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">420</text>
+<text x="961.7" y="1881.8999999999999" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">480</text>
+<text x="736.1" y="1853.6999999999998" fill="#a6b7a7" font-family="system-ui,sans-serif" font-size="9" font-weight="400">480</text>
+</g>
+<text x="1026" y="1659" fill="#b5c6b1" font-family="system-ui,sans-serif" font-size="11" font-weight="700">MARCAS DE TERRENO</text>
+<text x="1026" y="1684" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Chegada central (raio 9)</text>
+<text x="1026" y="1705" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Colina de Pulso SW e Fenda NE</text>
+<text x="1026" y="1726" fill="#e3ddc9" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Lagoa Carregada NW; sem recurso único</text>
+<text x="1026" y="1765" fill="#e0b987" font-family="system-ui,sans-serif" font-size="11" font-weight="700">Prédios cadastrados: nenhum</text>
+<text x="1026" y="1786" fill="#b8c8b9" font-family="system-ui,sans-serif" font-size="10" font-weight="400">Recursos comuns: por blocos de 16</text>
+<text x="1026" y="1803" fill="#b8c8b9" font-family="system-ui,sans-serif" font-size="10" font-weight="400">(exceto no Breu; ver nota)</text>
+<rect x="24" y="1925" width="1392" height="1" fill="#405247"/>
+<circle cx="40.0" cy="1952.0" r="7.0" fill="#426d50" fill-opacity="0.65" stroke="#426d50" stroke-width="1"/>
+<text x="56" y="1957" fill="#ced7c8" font-family="system-ui,sans-serif" font-size="12" font-weight="400">floresta</text>
+<circle cx="195.0" cy="1952.0" r="7.0" fill="#93a765" fill-opacity="0.65" stroke="#93a765" stroke-width="1"/>
+<text x="211" y="1957" fill="#ced7c8" font-family="system-ui,sans-serif" font-size="12" font-weight="400">clareira</text>
+<circle cx="350.0" cy="1952.0" r="7.0" fill="#87969a" fill-opacity="0.65" stroke="#87969a" stroke-width="1"/>
+<text x="366" y="1957" fill="#ced7c8" font-family="system-ui,sans-serif" font-size="12" font-weight="400">elevação</text>
+<circle cx="505.0" cy="1952.0" r="7.0" fill="#c39a5e" fill-opacity="0.65" stroke="#c39a5e" stroke-width="1"/>
+<text x="521" y="1957" fill="#ced7c8" font-family="system-ui,sans-serif" font-size="12" font-weight="400">colina</text>
+<circle cx="660.0" cy="1952.0" r="7.0" fill="#7b627e" fill-opacity="0.65" stroke="#7b627e" stroke-width="1"/>
+<text x="676" y="1957" fill="#ced7c8" font-family="system-ui,sans-serif" font-size="12" font-weight="400">depressão</text>
+<circle cx="815.0" cy="1952.0" r="7.0" fill="#488ab1" fill-opacity="0.65" stroke="#488ab1" stroke-width="1"/>
+<text x="831" y="1957" fill="#ced7c8" font-family="system-ui,sans-serif" font-size="12" font-weight="400">água</text>
+<text x="1050" y="1957" fill="#9fb4a4" font-family="system-ui,sans-serif" font-size="11" font-weight="400">Nota: esboço, sem escala entre mundos.</text>
+</svg>

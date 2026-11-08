@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 145 1440 215" preserveAspectRatio="none" fill="none" shape-rendering="crispEdges">
+  <defs>
+    <linearGradient id="path" x1="720" y1="245" x2="720" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#a6ad72" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#718354" stop-opacity=".04"/>
+    </linearGradient>
+  </defs>
+  <!-- Distant mountain range framed by a quiet opening in the canopy -->
+  <path fill="#34483b" d="m502 251 42-24 22 7 46-42 28 17 37-34 37 32 25-11 35 22 25-14 37 22 25-10 33 26 35 13v34H502z"/>
+  <path fill="#52644a" d="m580 237 32-45 28 17 37-34 37 32-30-10-17 14-15-4-19 22-16-8zM761 223l33-19 25 22 37-10 34 28h-84l-20-11z"/>
+  <path fill="#74815a" fill-opacity=".82" d="m640 209 37-34 37 32-20-7-15 13-18-5-16 20-16-9z"/>
+  <path fill="#c9a772" fill-opacity=".54" d="m665 190 12-15 12 10-8-2-6 8zM725 199l12-9 9 7-10-2-6 7z"/>
+  <!-- Distant tree line, deliberately low in the frame -->
+  <g fill="#202d22">
+    <path d="M0 250h43v-20h13v-18h12v-20h14v-17h14v17h13v20h12v18h17v20h33v-19h18v-18h14v-22h14v-19h15v19h14v22h13v18h17v19h43v-18h16v-21h13v-18h15v18h13v21h14v18h28v29H0z"/>
+    <path d="M1440 251h-37v-20h-14v-19h-13v-22h-14v-18h-16v18h-13v22h-13v19h-17v20h-34v-19h-17v-20h-14v-22h-15v-19h-14v19h-14v22h-13v20h-18v19h-38v-19h-15v-22h-14v-18h-14v18h-13v22h-14v19h-29v29h382z"/>
+  </g>
+  <!-- Angular trunks and stepped branches -->
+  <g fill="#101914">
+    <path d="M76 258h24v-41h-8v-19h-8v19h-8v41zM226 259h22v-44h-7v-20h-8v20h-7v44zM352 261h24v-39h-8v-18h-8v18h-8v39zM1280 260h24v-42h-8v-20h-8v20h-8v42zM1144 260h22v-44h-7v-20h-8v20h-7v44zM1002 261h23v-40h-8v-19h-8v19h-7v40z"/>
+  </g>
+  <!-- Layered ground, with an open path receding toward the light -->
+  <path fill="#1b291e" d="M0 276h70v-9h68v8h66v-13h48v11h71v-9h67v10h72v-13h62v8h58v-9h47v12h60v-7h62v8h57v-12h69v10h63v-9h66v12h60v-8h72v12h73v-10h59v9h76v-6h56v85H0z"/>
+  <path fill="#243322" fill-opacity=".94" d="M0 306h94v-8h73v9h88v-7h65v10h87v-9h88v10h78v-8h64v7h66v-10h70v9h77v-8h85v10h78v-9h86v8h86v-9h89v8h73v-7h84v56H0z"/>
+  <path fill="url(#path)" d="M704 252h32l118 108H586z"/>
+  <!-- Small grass blocks catch the light at the clearing edge -->
+  <g fill="#718354" fill-opacity=".8">
+    <path d="M158 291h4v-8h4v8h5v4h-13zM422 289h4v-6h4v6h5v4h-13zM1012 290h4v-8h4v8h5v4h-13zM1254 292h4v-7h4v7h5v4h-13z"/>
+  </g>
+  <g fill="#e0ad70" fill-opacity=".9">
+    <rect x="512" y="244" width="4" height="4"/>
+    <rect x="883" y="239" width="4" height="4"/>
+    <rect x="592" y="273" width="3" height="3"/>
+    <rect x="846" y="278" width="3" height="3"/>
+  </g>
+</svg>

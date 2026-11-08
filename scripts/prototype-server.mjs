@@ -1074,6 +1074,7 @@ export function createPrototypeServer({
       resourceContracts: resourceContractBoard(viewer.contractState, Date.now()),
       marketQuotes,
       governmentTaxPanel: viewer.governmentTaxPanel || null,
+      economyManagementPanel: viewer.economyManagementPanel || null,
       resourceContractsRequireAccount: !viewer.accountId,
       arrivalTutorial: viewer.arrivalTutorial || null,
   });
@@ -1184,7 +1185,7 @@ export function createPrototypeServer({
       'inventoryState', 'flightPilotAllowed', 'roomOwnerName', 'roomCanEdit', 'canOwnerVisitHomes', 'roomKey', 'roomKind', 'roomBuildingId',
       'roomLodgingMode', 'lodgingClaim', 'lodgingClaims', 'lodgingLeases', 'lodgingLease', 'recurringLeasesAvailable', 'cabinKeys',
       'issuedCabinKeys', 'cabinOccupancy', 'propertyListings', 'propertyRentalListings', 'propertyRequests', 'resourceContracts', 'marketQuotes', 'objectCatalog',
-      'governmentTaxPanel', 'resourceContractsRequireAccount', 'arrivalTutorial', 'dimensions',
+      'governmentTaxPanel', 'economyManagementPanel', 'resourceContractsRequireAccount', 'arrivalTutorial', 'dimensions',
     ],
   });
   let pendingBroadcast = null;
@@ -1747,6 +1748,8 @@ export function createPrototypeServer({
       accountId: profile.guest ? null : profile.id,
       governmentTaxPanel: profile.guest || !storage.getGovernmentTaxPanel ? null
         : await storage.getGovernmentTaxPanel({ governmentId: marketGovernmentId, actorProfileId: profile.id }).catch(() => null),
+      economyManagementPanel: profile.guest || !storage.getGovernmentEconomyPanel ? null
+        : await storage.getGovernmentEconomyPanel({ governmentId: marketGovernmentId, actorProfileId: profile.id }).catch(() => null),
       sessionId,
       homeRoomKey,
       roomKey,
@@ -2382,6 +2385,57 @@ export function createPrototypeServer({
         return;
       }
 
+      if (message.name === 'economyRefresh') {
+        if (!player.accountId || !storage.getGovernmentEconomyPanel) {
+          notice(socket, 'Entre com uma conta autorizada para consultar os indicadores.'); return;
+        }
+        try {
+          player.economyManagementPanel = await storage.getGovernmentEconomyPanel({
+            governmentId:marketGovernmentId,actorProfileId:player.accountId,
+          });
+          if (!player.economyManagementPanel) {
+            player.governmentTaxPanel = null;
+            notice(socket, 'Esta conta não possui um cargo econômico ativo.'); broadcast(false); return;
+          }
+          player.governmentTaxPanel = player.economyManagementPanel.permissions.manageTaxes
+            && storage.getGovernmentTaxPanel
+            ? await storage.getGovernmentTaxPanel({
+              governmentId:marketGovernmentId,actorProfileId:player.accountId,
+            }) : null;
+          notice(socket, 'Indicadores econômicos atualizados.', 'chime'); broadcast(false);
+        } catch (error) { notice(socket, error.message || 'Não foi possível atualizar o painel econômico.'); }
+        return;
+      }
+
+      if (message.name === 'economyRoleSet') {
+        if (!player.accountId || !storage.setGovernmentEconomyRole) {
+          notice(socket, 'Entre com uma conta autorizada para administrar cargos.'); return;
+        }
+        try {
+          const result = await storage.setGovernmentEconomyRole({
+            governmentId:marketGovernmentId,actorProfileId:player.accountId,
+            username:message.username,role:message.role,
+          });
+          if (result.changed) {
+            await Promise.all([...peers.values()].filter(other=>other.accountId).map(async other=>{
+              const rolePanel = await storage.getGovernmentEconomyPanel({
+                governmentId:marketGovernmentId,actorProfileId:other.accountId,
+              }).catch(()=>null);
+              other.economyManagementPanel = rolePanel;
+              other.governmentTaxPanel = rolePanel?.permissions.manageTaxes && storage.getGovernmentTaxPanel
+                ? await storage.getGovernmentTaxPanel({
+                  governmentId:marketGovernmentId,actorProfileId:other.accountId,
+                }).catch(()=>null) : null;
+            }));
+          }
+          notice(socket,result.changed
+            ? result.role ? `Cargo de ${result.username} atualizado.` : `Cargo de ${result.username} revogado.`
+            : 'A conta já possui essa configuração de cargo.','chime');
+          broadcast(false);
+        } catch (error) { notice(socket,error.message || 'Não foi possível atualizar o cargo.'); }
+        return;
+      }
+
       if (message.name === 'governmentTaxPolicySet') {
         if (!player.accountId || !storage.updateGovernmentTaxPolicy) {
           notice(socket, 'Entre com uma conta autorizada pelo governo para alterar impostos.'); return;
@@ -2397,6 +2451,11 @@ export function createPrototypeServer({
           await storage.refreshGovernmentTaxQuote({ governmentId: marketGovernmentId, taxCode, force: true });
           marketQuotes = await storage.refreshQuotes({ governmentId: marketGovernmentId, force: true });
           player.governmentTaxPanel = await storage.getGovernmentTaxPanel({ governmentId: marketGovernmentId, actorProfileId: player.accountId });
+          if (storage.getGovernmentEconomyPanel) {
+            player.economyManagementPanel = await storage.getGovernmentEconomyPanel({
+              governmentId:marketGovernmentId,actorProfileId:player.accountId,
+            });
+          }
           notice(socket, `Imposto atualizado para a versão ${result.version}.`, 'chime'); broadcast();
         } catch (error) { notice(socket, error.message || 'Não foi possível atualizar o imposto.'); }
         return;

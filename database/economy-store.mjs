@@ -357,7 +357,7 @@ export function createEconomyStore(pool) {
       await client.query('BEGIN');
       await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', ['lodging-profile', profileId]);
       const quoteResult = await client.query(
-        'SELECT sell_price_bronze FROM economy_quotes WHERE item_id=$1 AND region_id=$2', [itemId, REGION],
+        'SELECT buy_price_bronze FROM economy_quotes WHERE item_id=$1 AND region_id=$2 FOR SHARE', [itemId, REGION],
       );
       const profile = await client.query('SELECT id FROM profiles WHERE id=$1 AND is_guest=false', [profileId]);
       if (!profile.rowCount) throw Object.assign(new Error('Crie uma conta para guardar as moedas desta venda.'), { status: 403 });
@@ -370,7 +370,10 @@ export function createEconomyStore(pool) {
       if (expectedRemaining < 0 || expectedRemaining !== inventoryAfter[itemId]) {
         throw Object.assign(new Error('A mochila mudou. Atualize a venda e tente novamente.'), { status:409 });
       }
-      const unitPrice = quoteResult.rowCount ? Number(quoteResult.rows[0].sell_price_bronze) : TRADE_PRICES[itemId];
+      const unitPrice = quoteResult.rowCount ? Number(quoteResult.rows[0].buy_price_bronze) : TRADE_PRICES[itemId];
+       if (expectedPriceBronze !== null && (!Number.isSafeInteger(expectedPriceBronze) || expectedPriceBronze !== unitPrice)) {
+         throw Object.assign(new Error('A cotação mudou. Revise a venda antes de confirmar.'), { status:409 });
+       }
       const grossAmount = unitPrice * quantity;
       if (!Number.isSafeInteger(grossAmount) || grossAmount < 1) throw Object.assign(new Error('Esta cotação não é válida.'), { status: 409 });
       const taxRule = await client.query(

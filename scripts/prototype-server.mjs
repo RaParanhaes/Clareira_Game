@@ -2727,6 +2727,24 @@ export function createPrototypeServer({
         if (player.inventory[tool] || (AXE_TOOL_IDS.includes(tool) && axeToolFor(player.inventory))
             || (PICKAXE_TOOL_IDS.includes(tool) && pickaxeToolFor(player.inventory))) { notice(socket, 'Você já tem uma ferramenta desse tipo no Inventário.'); return; }
         if (!canAddInventoryItems(player.inventory, { [tool]:1 })) { notice(socket, 'Libere um espaço no Inventário antes de comprar a ferramenta.'); return; }
+        if (storage.settleToolPurchase) {
+          const profileId = player.accountId;
+          const inventoryBefore = inventorySnapshot(player.inventory);
+          const previous = progressWrites.get(profileId) || Promise.resolve();
+          const next = previous.catch(() => {}).then(() => storage.settleToolPurchase({
+            profileId, toolId:tool, inventoryBefore, expectedPriceBronze:message.expectedPriceBronze ?? null,
+          }));
+          progressWrites.set(profileId, next);
+          try {
+            const result = await next;
+            restoreInventory(player.inventory, result.inventory);
+            notice(socket, `Compra concluída: ${tool === 'stoneAxe' ? 'machado de pedra' : 'picareta de pedra'} por ${formatCoins(result.price)}.`, 'chime');
+            broadcast(false);
+          } catch (error) {
+            notice(socket, error.message || 'Não consegui concluir a compra. Nenhuma moeda foi cobrada.');
+          }
+          return;
+        }
         let wallet;
         try { wallet = await storage.debitWallet(player.accountId, price); }
         catch (error) { notice(socket, error.message || 'Não consegui concluir a compra.'); return; }

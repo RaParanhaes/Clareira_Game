@@ -223,12 +223,12 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
       const goods = Object.entries(TRADE_PRICES).filter(([item]) => (state.inventory[item] || 0) > 0);
       if (!goods.length) fragment.append(element('p', 'Você ainda não tem materiais para vender. Colete recursos no bosque e volte ao balcão.', 'lodging-note'));
       for (const [item, basePrice] of goods) {
-        const hasMarketQuote = Number.isSafeInteger(state.marketQuotes?.[item]?.sellPrice);
-        const price = hasMarketQuote ? state.marketQuotes[item].sellPrice : basePrice;
+        const hasMarketQuote = Number.isSafeInteger(state.marketQuotes?.[item]?.buyPrice);
+        const price = hasMarketQuote ? state.marketQuotes[item].buyPrice : basePrice;
         const available = state.inventory[item] || 0;
         const row = element('div', '', 'lodging-trade commerce-sale');
         const label = element('label'); label.htmlFor = `trade-quantity-${item}`;
-        label.append(element('span', itemNames[item]), element('small', `${formatCoins(price)} por unidade · ${hasMarketQuote ? 'cotação do mercado' : 'preço de referência'} · ${available} no Inventário`));
+        label.append(element('span', itemNames[item]), element('small', `${formatCoins(price)} por unidade · ${hasMarketQuote ? 'oferta de compra do balcão' : 'preço de referência'} · ${available} no Inventário`));
         const input = element('input'); input.type = 'number'; input.min = '1'; input.max = String(Math.min(50, available));
         input.id = label.htmlFor; input.dataset.quantityItem = item; input.dataset.focusKey = `${item}-quantity`;
         input.inputMode = 'numeric'; input.step = '1'; input.required = true;
@@ -445,7 +445,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
     if(['propertyRequest','propertyRentDelist'].includes(message.name))return 0;
     if(['propertyQuote','propertyRentList'].includes(message.name))return message.askingPriceBronze || 0;
     if (['setLodgingAutoRenew', 'propertyDelist', 'cabinRevokeKey'].includes(message.name)) return 0;
-    if (message.name === 'lodgeSell') return state.marketQuotes?.[message.item]?.sellPrice ?? TRADE_PRICES[message.item];
+    if (message.name === 'lodgeSell') return state.marketQuotes?.[message.item]?.buyPrice ?? TRADE_PRICES[message.item];
     if (message.name === 'propertyList') return message.askingPriceBronze;
     if(message.name==='propertyRent')return state.propertyRentalListings?.find(l=>l.buildingId===message.buildingId)?.rentBronze * Number(message.rentalDays||1);
     if (message.name === 'propertyBuy') return message.requestId ? state.propertyRequests?.find(r=>r.requestId===message.requestId)?.askingPriceBronze : state.propertyListings?.find(item => item.buildingId === message.buildingId)?.askingPriceBronze;

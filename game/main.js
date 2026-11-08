@@ -8126,7 +8126,7 @@ function advanceFrame(now) {
     setWeatherWind(windNow);
     const moon=gameDay.hasMoon&&gameDay.night>.5?moonAt(skyTime):null;
     const moonText=moon?` · ${moon.phaseName}${moon.redMoon?' (lua vermelha)':''}`:'';
-    ui.weatherText.textContent=`${skySymbol} ${gameDateTimeLabel(skyTime)} · ${gameDay.period} · ${weatherLabel(sky)} · ${windLabel(windNow)}${moonText}${weather?` · ${weather}`:''}`;
+    ui.weatherText.textContent=`${skySymbol} ${gameDateTimeLabel(skyTime)} · ${gameDay.period} · ${weatherLabel(sky)} · ${windLabel(windNow)}${moonText}`;
   }
   sendInputIfChanged(now);
   const drawStartedAt=performance.now();

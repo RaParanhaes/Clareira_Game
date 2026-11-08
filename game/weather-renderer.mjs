@@ -77,11 +77,26 @@ function drawSnow(ctx, width, height, count, seconds, wind) {
   ctx.globalAlpha = 1;
 }
 
+// Each season tints the whole landscape: cool and grey in winter, warm in autumn,
+// fresh in spring and untinted in summer.
+const SEASON_VEIL = Object.freeze({
+  primavera: 'rgba(170,220,150,0.07)',
+  verao: null,
+  outono: 'rgba(210,120,40,0.11)',
+  inverno: 'rgba(150,178,210,0.24)',
+});
+function drawSeasonVeil(ctx, width, height, season) {
+  const veil = SEASON_VEIL[season];
+  if (!veil) return;
+  ctx.fillStyle = veil;
+  ctx.fillRect(0, 0, width, height);
+}
+
 // A warm glare from the top of the frame, harsher and whiter than a normal day.
 function drawExtremeSun(ctx, width, height, strength) {
   const glare = ctx.createRadialGradient(width * 0.18, -height * 0.05, 0, width * 0.18, -height * 0.05, width * 0.7);
-  glare.addColorStop(0, `rgba(255,246,214,${0.34 * strength})`);
-  glare.addColorStop(0.5, `rgba(255,220,150,${0.12 * strength})`);
+  glare.addColorStop(0, `rgba(255,246,214,${0.55 * strength})`);
+  glare.addColorStop(0.5, `rgba(255,220,150,${0.22 * strength})`);
   glare.addColorStop(1, 'rgba(255,200,120,0)');
   ctx.globalCompositeOperation = 'screen';
   ctx.fillStyle = glare;
@@ -108,6 +123,7 @@ export function drawWeatherSky(ctx, width, height, options) {
   // Never inherit alpha or blend mode from the frame before this layer.
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
+  if (weather) drawSeasonVeil(ctx, width, height, weather.season);
   if (weather?.extremeSun) drawExtremeSun(ctx, width, height, 1.5);
   if (kind === 'storm') {
     ctx.fillStyle = 'rgba(20,28,38,0.16)';

@@ -50,6 +50,8 @@ import { nearestPlaceService, placeServicePoints, placeServiceAllowsAction, CABI
 import { createPanelController } from './panel-controller.mjs';
 import { discoverWorldMapCells, mergeWorldMapExploration, isWorldMapCellKnown, worldMapCellIndex, worldMapExplorationLabel, zoomWorldMapAround, preloadWorldMapCaches } from './world-map.mjs';
 import { createPlacePanel } from './place-panel.mjs';
+import { attachDialogDrag } from './dialog-drag.mjs';
+attachDialogDrag(document);
 import { isCabin } from './cabin-access.mjs';
 import { AXE_TOOL_IDS, AXE_TOOL_SPECS, PICKAXE_TOOL_IDS, PICKAXE_TOOL_SPECS, axeToolFor, pickaxeToolFor } from './tool-progression.mjs';
 import { createDraggableHud } from './draggable-hud.mjs';

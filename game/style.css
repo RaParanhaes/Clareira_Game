@@ -1362,3 +1362,35 @@ body{background:#000}
 #settings-dialog .settings-group:has(>#performance-toggle)>p{grid-column:1/-1;margin:0}
 @media(max-width:560px){#settings-dialog .settings-group:has(>#performance-toggle){grid-template-columns:minmax(0,1fr)}}
 #settings-dialog .settings-group:has(>#performance-toggle)>.settings-action{width:100%}
+
+/* Sistema visual medieval-moderno (feat/ui-menus-visual): madeira, latão e ferro com linhas limpas. */
+:root{--wood-1:#6b4628;--wood-2:#3e2815;--brass:#d2a862;--brass-hi:#f3d89a;--parchment:#efe3c3;--iron:#23292c;--iron-hi:#5d666a}
+.inventory-dialog,#lodging-dialog,#world-map-dialog,#settings-dialog,#staff-tools-dialog,#appearance-dialog,#xp-potion-confirm,#ability-confirm-dialog{
+  color:#f1e6cc;
+  box-shadow:0 0 0 2px var(--iron),0 0 0 4px var(--brass),0 0 0 6px var(--iron),0 26px 64px #000c}
+.inventory-dialog::backdrop,#lodging-dialog::backdrop,#world-map-dialog::backdrop,#settings-dialog::backdrop,#staff-tools-dialog::backdrop,#appearance-dialog::backdrop{background:#070d0ac0;backdrop-filter:blur(2px)}
+.inventory-dialog-head,.lodging-heading,.world-map-header,.staff-tools-head{
+  background:linear-gradient(180deg,var(--wood-1),var(--wood-2));border-bottom:2px solid var(--brass);border-radius:7px 7px 0 0;
+  box-shadow:inset 0 1px 0 #ffffff1f;
+  background-image:radial-gradient(circle at 12px 50%,#f3d89a80 1.4px,transparent 2px),radial-gradient(circle at calc(100% - 12px) 50%,#f3d89a80 1.4px,transparent 2px),linear-gradient(180deg,var(--wood-1),var(--wood-2))}
+.inventory-dialog-head h2,.lodging-heading h2,.world-map-header h2,.staff-tools-head h2{font-family:Georgia,'Palatino Linotype',serif;color:#fbeac4;text-shadow:0 2px 0 #0008;letter-spacing:.01em}
+.inventory-dialog-head .eyebrow,.lodging-heading .eyebrow,.world-map-header .eyebrow,.staff-tools-head .eyebrow{color:#f0cf82;letter-spacing:.16em}
+.icon-button,.mobile-menu-toggle,.settings-action,.lodging-option button,.lodging-trade button,.staff-secondary-action,.staff-back,.destination-map-button{
+  border:1px solid var(--brass);border-radius:4px;background:linear-gradient(180deg,var(--wood-1),var(--wood-2));color:#f7e8c7;font-weight:700;letter-spacing:.02em;
+  box-shadow:inset 0 1px 0 #ffffff29,inset 0 -2px 0 #0b0604,0 2px 0 #0b0604,0 6px 14px #0007;transition:transform .12s ease,filter .12s ease,box-shadow .12s ease}
+.icon-button:not(:disabled):hover,.settings-action:not(:disabled):hover,.lodging-option button:not(:disabled):hover,.lodging-trade button:not(:disabled):hover,.staff-secondary-action:not(:disabled):hover,.destination-map-button:hover{filter:brightness(1.14);border-color:var(--brass-hi)}
+.icon-button:not(:disabled):active,.settings-action:not(:disabled):active,.lodging-option button:not(:disabled):active,.lodging-trade button:not(:disabled):active{transform:translateY(1px);box-shadow:inset 0 2px 4px #0009,0 1px 0 #0b0604}
+:is(button,summary,input,select,textarea):focus-visible{outline:2px solid var(--brass-hi);outline-offset:2px}
+.lodging-option{border:1px solid #6f7f63;border-left:4px solid var(--brass);border-radius:6px;background:linear-gradient(160deg,#2b4039,#1d2f2a)}
+.shell.is-authenticated .mini-map{background:linear-gradient(180deg,#6b4628,#3a2514);border:2px solid var(--brass);border-radius:8px;padding:6px;box-shadow:inset 0 0 0 1px #0008,0 8px 20px #000b}
+.mini-map-caption{background:var(--parchment);color:#3b2716;border-radius:3px;padding:3px 6px;box-shadow:inset 0 -1px 0 #0003}
+.mini-map-caption small{color:#5a3f22}
+#mini-map-canvas{border:2px solid #24170b;border-radius:3px;box-shadow:0 0 0 1px var(--brass)}
+.mini-map-open-hint{color:#f0dfb8;font-weight:600}
+@media (pointer:fine){
+  .inventory-dialog-head,.lodging-heading,.world-map-header,.staff-tools-head,.settings-dialog>header,.settings-dialog .inventory-dialog-head{cursor:grab}
+  .inventory-dialog-head :is(button,input,a),.lodging-heading button,.world-map-header button,.staff-tools-head button{cursor:pointer}
+}
+dialog.is-dragging{transition:none;cursor:grabbing}
+dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header,.staff-tools-head){cursor:grabbing}
+.player-menu .icon-button{min-height:36px;padding:6px 10px;font-size:13px}

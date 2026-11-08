@@ -94,11 +94,13 @@ export function createEconomyStore(pool) {
               q.rate_bps,q.calculated_at
          FROM world_governments g
          JOIN profiles actor ON actor.id=$2 JOIN accounts a ON a.id=actor.account_id
-          AND (g.leader_profile_id=actor.id OR a.role='admin')
+         LEFT JOIN government_economy_roles delegated ON delegated.government_id=g.government_id
+          AND delegated.profile_id=actor.id AND delegated.role='minister'
          JOIN government_fund_accounts f ON f.government_id=g.government_id AND f.fund_code='general'
          LEFT JOIN government_tax_policies p ON p.government_id=g.government_id AND p.active
          LEFT JOIN government_tax_quotes q ON q.government_id=p.government_id AND q.tax_code=p.tax_code
         WHERE g.government_id=$1 AND g.status='active'
+          AND (g.leader_profile_id=actor.id OR a.role='admin' OR delegated.role='minister')
         ORDER BY p.tax_code`, [governmentId, actorProfileId],
     );
     if (!rows.length) return null;
@@ -126,8 +128,11 @@ export function createEconomyStore(pool) {
       const auth=await client.query(
         `SELECT g.government_id FROM world_governments g
          JOIN profiles actor ON actor.id=$2 JOIN accounts a ON a.id=actor.account_id
-          AND (g.leader_profile_id=actor.id OR a.role='admin')
-         WHERE g.government_id=$1 AND g.status='active' FOR UPDATE OF g`,[governmentId,actorProfileId]);
+         LEFT JOIN government_economy_roles delegated ON delegated.government_id=g.government_id
+          AND delegated.profile_id=actor.id AND delegated.role='minister'
+         WHERE g.government_id=$1 AND g.status='active'
+          AND (g.leader_profile_id=actor.id OR a.role='admin' OR delegated.role='minister')
+         FOR UPDATE OF g`,[governmentId,actorProfileId]);
       if(!auth.rowCount) throw Object.assign(new Error('Você não pode alterar os impostos deste governo.'),{status:403});
       const current=await client.query('SELECT version FROM government_tax_policies WHERE government_id=$1 AND tax_code=$2 ORDER BY version DESC LIMIT 1 FOR UPDATE',[governmentId,taxCode]);
       const version=Number(current.rows[0]?.version||0)+1;

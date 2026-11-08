@@ -793,15 +793,25 @@ export function createPostgresStore(pool) {
       return { dayKey, completed:result.rows.map(row => row.contract_id) };
     },
 
-    async completeResourceContract({ profileId, contractId, dayKey }) {
+    async completeResourceContract({ profileId, contractId, dayKey, inventoryAfter }) {
       const contract = RESOURCE_CONTRACTS.find(item => item.id === contractId);
-      if (typeof profileId !== 'string' || !/^[0-9a-f-]{36}$/i.test(profileId) || !contract || dayKey !== resourceContractDayKey()) {
+      if (typeof profileId !== 'string' || !/^[0-9a-f-]{36}$/i.test(profileId)
+          || !contract || dayKey !== resourceContractDayKey() || !inventoryAfter || typeof inventoryAfter !== 'object') {
         throw Object.assign(new Error('Esta encomenda não está disponível.'), { status:400 });
       }
+      const values = validateInventory(inventoryAfter);
       return withTransaction(pool, async client => {
         await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', ['lodging-profile', profileId]);
         const profile = await client.query('SELECT id FROM profiles WHERE id = $1 AND is_guest = false', [profileId]);
         if (!profile.rowCount) throw Object.assign(new Error('Crie uma conta para guardar as moedas da encomenda.'), { status:403 });
+        const saved = await client.query(
+          "SELECT COALESCE(sum(quantity),0)::integer AS quantity FROM inventory_items " +
+          "WHERE profile_id=$1 AND item_id LIKE 'slot:%:' || $2",
+          [profileId, contract.item],
+        );
+        if (Number(saved.rows[0].quantity) !== values[contract.item] + contract.quantity) {
+          throw Object.assign(new Error('Os materiais da mochila mudaram. Atualize a encomenda e tente novamente.'), { status:409 });
+        }
         const inserted = await client.query(
           'INSERT INTO resource_contract_completions (profile_id, contract_day, contract_id) VALUES ($1, $2::date, $3) ' +
           'ON CONFLICT DO NOTHING RETURNING contract_id',
@@ -812,7 +822,21 @@ export function createPostgresStore(pool) {
         const nextValue = currencyValue(wallet) + contract.reward;
         if (nextValue > MAX_WALLET_VALUE) throw Object.assign(new Error('A carteira atingiu o limite técnico de armazenamento.'), { status:409 });
         const nextWallet = walletFromValue(nextValue);
+        await writeProgress(client, profileId, values);
         await storeWallet(client, profileId, nextWallet);
+        const transactionId = randomUUID();
+        await client.query(
+          'INSERT INTO economy_journal_transactions(transaction_id,event_type,actor_profile_id,reference_id) VALUES($1,$2,$3,$4)',
+          [transactionId, 'resource_contract_reward', profileId, contractId + ':' + dayKey],
+        );
+        await client.query(
+          "INSERT INTO economy_journal_lines(transaction_id,line_number,account_code,profile_id,amount_bronze) VALUES($1,1,'profile',$2,$3)",
+          [transactionId, profileId, contract.reward],
+        );
+        await client.query(
+          "INSERT INTO economy_journal_lines(transaction_id,line_number,account_code,amount_bronze) VALUES($1,2,'market_treasury',$2)",
+          [transactionId, -contract.reward],
+        );
         const completed = await client.query(
           'SELECT contract_id FROM resource_contract_completions WHERE profile_id = $1 AND contract_day = $2::date ORDER BY contract_id',
           [profileId, dayKey],

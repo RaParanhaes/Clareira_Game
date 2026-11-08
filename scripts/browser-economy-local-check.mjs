@@ -178,7 +178,7 @@ try {
     await page.screenshot({path:`${output}/${name}-economy-dashboard.png`,fullPage:true});
     await page.locator('.economy-role-form input[name="username"]').fill('conta_teste');
     await page.locator('.economy-role-form select[name="role"]').selectOption('minister');
-    await click('[data-service-action="economyRoleSet"]');
+    await click('.economy-role-form [data-service-action="economyRoleSet"]');
     assert.equal(await page.locator('.commerce-review').count(),1,'role appointment requires review');
     await page.screenshot({path:`${output}/${name}-economy-appointment.png`,fullPage:true});
     await click('[data-service-action="__confirm"]');

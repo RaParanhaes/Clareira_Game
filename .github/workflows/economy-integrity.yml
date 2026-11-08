@@ -1,0 +1,78 @@
+name: Economy integrity
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: economy-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  economy-integrity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: clareira
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: clareira_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U clareira -d clareira_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://clareira:test-only-password@127.0.0.1:5432/clareira_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Syntax-check changed runtime and test files
+        run: |
+          node --check database/store.mjs
+          node --check database/economy-contract-atomic.integration.test.mjs
+          node --check database/economy-tool-purchase.integration.test.mjs
+          node --check database/economy-market-cycle.integration.test.mjs
+          node --check database/economy-store.mjs
+          node --check database/economy-management.mjs
+          node --check database/economy-management.integration.test.mjs
+          node --check database/government-treasury.integration.test.mjs
+          node --check database/economy.integration.test.mjs
+          node --check game/economy-place-services.test.mjs
+          node --check game/place-services.mjs
+          node --check game/place-panel.mjs
+          node --check scripts/prototype-server.mjs
+          node --check scripts/browser-commerce-ui-check.mjs
+          node --check scripts/browser-commerce-functions-check.mjs
+          node --check scripts/browser-economy-local-check.mjs
+      - name: Validate game content contracts
+        run: npm run content:check
+      - name: Economy, wallet and commerce regression tests
+        run: node --test --test-concurrency=1 database/economy.integration.test.mjs database/economy-contract-atomic.integration.test.mjs database/economy-tool-purchase.integration.test.mjs database/economy-market-cycle.integration.test.mjs database/economy-management.integration.test.mjs database/government-treasury.integration.test.mjs game/economy-place-services.test.mjs game/wallet-range.test.mjs scripts/place-service-actions.test.mjs
+      - name: Install headless browser (temporary runner only)
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install chromium --only-shell --with-deps
+      - name: Validate economy UI in desktop and mobile Chromium
+        run: node scripts/browser-economy-local-check.mjs logs/economy-visual
+      - name: Upload economy screenshots and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: economy-ui-visual-${{ github.run_number }}
+          path: logs/economy-visual/
+          retention-days: 3
+          if-no-files-found: ignore

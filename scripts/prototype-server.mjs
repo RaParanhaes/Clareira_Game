@@ -449,6 +449,33 @@ export function createPrototypeServer({
   }, heartbeatIntervalMs);
   webSocketHeartbeatTimer.unref();
   const peers = new Map();
+  const loadEconomyContext = async (profileId,preferredId=marketGovernmentId) => {
+    if(!profileId || !storage.listAuthorizedEconomyGovernments || !storage.getGovernmentEconomyPanel)
+      return {governmentId:marketGovernmentId,management:null,taxes:null};
+    const governments=await storage.listAuthorizedEconomyGovernments({actorProfileId:profileId});
+    const selected=governments.find(g=>g.governmentId===preferredId)?.governmentId
+      || governments.find(g=>g.governmentId===marketGovernmentId)?.governmentId
+      || governments[0]?.governmentId || marketGovernmentId;
+    const management=governments.length ? await storage.getGovernmentEconomyPanel({
+      governmentId:selected,actorProfileId:profileId,
+    }) : null;
+    const taxes=selected===marketGovernmentId && management?.permissions.manageTaxes && storage.getGovernmentTaxPanel
+      ? await storage.getGovernmentTaxPanel({governmentId:selected,actorProfileId:profileId}) : null;
+    return {governmentId:selected,management,taxes};
+  };
+  const refreshEconomyMembers = async governmentId => {
+    await Promise.all([...peers.values()].filter(p=>p.accountId
+      && (!governmentId || p.economyGovernmentId===governmentId)).map(async p=>{
+      try {
+        const context=await loadEconomyContext(p.accountId,p.economyGovernmentId);
+        p.economyGovernmentId=context.governmentId;
+        p.economyManagementPanel=context.management;
+        p.governmentTaxPanel=context.taxes;
+      } catch(error) {
+        process.stderr.write(`Could not update economic government context: ${error.message}\n`);
+      }
+    }));
+  };
   const acceptedMovementDiagnosticReports=new Map();
   const acceptedPerformanceReports=new Map();
   const activeDimensionTransits = new Map();
@@ -854,13 +881,13 @@ export function createPrototypeServer({
     });
   };
 
-  const persistMarketSale = (player, itemId, quantity) => {
+  const persistMarketSale = (player, itemId, quantity, expectedPriceBronze = null) => {
     const profileId = player.accountId;
     if (!profileId || !storage.settleNpcSale) return Promise.reject(new Error('O mercado persistente não está disponível.'));
     const previous = progressWrites.get(profileId) || Promise.resolve();
     const inventoryAfter = inventorySnapshot(player.inventory);
     const next = previous.catch(() => {}).then(() => storage.settleNpcSale({
-      profileId, itemId, quantity, inventoryAfter, governmentId:marketGovernmentId,
+      profileId, itemId, quantity, inventoryAfter, governmentId:marketGovernmentId, expectedPriceBronze,
     }));
     progressWrites.set(profileId, next);
     return next.catch(error => {
@@ -1074,6 +1101,7 @@ export function createPrototypeServer({
       resourceContracts: resourceContractBoard(viewer.contractState, Date.now()),
       marketQuotes,
       governmentTaxPanel: viewer.governmentTaxPanel || null,
+      economyManagementPanel: viewer.economyManagementPanel || null,
       resourceContractsRequireAccount: !viewer.accountId,
       arrivalTutorial: viewer.arrivalTutorial || null,
   });
@@ -1184,7 +1212,7 @@ export function createPrototypeServer({
       'inventoryState', 'flightPilotAllowed', 'roomOwnerName', 'roomCanEdit', 'canOwnerVisitHomes', 'roomKey', 'roomKind', 'roomBuildingId',
       'roomLodgingMode', 'lodgingClaim', 'lodgingClaims', 'lodgingLeases', 'lodgingLease', 'recurringLeasesAvailable', 'cabinKeys',
       'issuedCabinKeys', 'cabinOccupancy', 'propertyListings', 'propertyRentalListings', 'propertyRequests', 'resourceContracts', 'marketQuotes', 'objectCatalog',
-      'governmentTaxPanel', 'resourceContractsRequireAccount', 'arrivalTutorial', 'dimensions',
+      'governmentTaxPanel', 'economyManagementPanel', 'resourceContractsRequireAccount', 'arrivalTutorial', 'dimensions',
     ],
   });
   let pendingBroadcast = null;
@@ -1739,14 +1767,20 @@ export function createPrototypeServer({
     const persistedDimensionPositions=new Map(savedDimensionPositions.map(entry=>[entry.dimensionId,{...entry}]));
     if(location==='clearing')dimensionPositions.set(dimensionId,{dimensionId,x:position.x,y:position.y,
       worldVersion:coordinateVersionForDimension(dimensionId)});
+    const initialEconomyContext=profile.guest
+      ? {governmentId:marketGovernmentId,management:null,taxes:null}
+      : await loadEconomyContext(profile.id).catch(()=>({
+        governmentId:marketGovernmentId,management:null,taxes:null,
+      }));
     const player = {
       socket,
       registration,
       id,
       name: playerName,
       accountId: profile.guest ? null : profile.id,
-      governmentTaxPanel: profile.guest || !storage.getGovernmentTaxPanel ? null
-        : await storage.getGovernmentTaxPanel({ governmentId: marketGovernmentId, actorProfileId: profile.id }).catch(() => null),
+      economyGovernmentId:initialEconomyContext.governmentId,
+      governmentTaxPanel:initialEconomyContext.taxes,
+      economyManagementPanel:initialEconomyContext.management,
       sessionId,
       homeRoomKey,
       roomKey,
@@ -2162,7 +2196,7 @@ export function createPrototypeServer({
         notice(socket,'A fagulha deixou um galho e uma folha para você. O Bosque das Brasas espera.','chime',{arrivalReady:true});
         broadcast(false);return;
       }
-      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew'].includes(message.name)) return;
+      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyMaterial', 'lodgeBuyTool', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew'].includes(message.name)) return;
       if (message.name === 'allocateAttribute') {
         const key = typeof message.attribute === 'string' ? message.attribute : '';
         if (!ATTRIBUTE_KEYS.includes(key)) { notice(socket, 'Esse atributo não existe.'); return; }
@@ -2339,6 +2373,7 @@ export function createPrototypeServer({
         broadcast(false);
         return;
       }
+      if (player.marketPurchasePending) { notice(socket, 'Aguarde a confirmação da sua compra anterior.', 'soft'); return; }
       if (player.woodworkBusy) { notice(socket, 'Termine esta etapa do trabalho antes de começar outra.', 'soft'); return; }
       if (now() - player.lastActionAt < ACTION_COOLDOWN_MS) {
         const rejectedInteraction = ['collect', 'interact', 'useFurniture'].includes(message.name)
@@ -2381,7 +2416,98 @@ export function createPrototypeServer({
         return;
       }
 
+      if (message.name === 'economyGovernmentSelect') {
+        if(!player.accountId || typeof message.governmentId!=='string') {
+          notice(socket,'É necessário um cargo econômico ativo para consultar este tesouro.');return;
+        }
+        try {
+          const context=await loadEconomyContext(player.accountId,message.governmentId);
+          if(context.governmentId!==message.governmentId || !context.management) {
+            notice(socket,'Você não possui autorização neste governo.');return;
+          }
+          player.economyGovernmentId=context.governmentId;
+          player.economyManagementPanel=context.management;
+          player.governmentTaxPanel=context.taxes;
+          notice(socket,'Tesouro do governo selecionado.','chime');broadcast(false);
+        } catch(error) { notice(socket,error.message || 'Não foi possível consultar o tesouro.'); }
+        return;
+      }
+
+      if (['economyFundTransfer','economyProjectPropose','economyProjectDecide'].includes(message.name)) {
+        const governmentId=player.economyGovernmentId||marketGovernmentId;
+        if(!player.accountId || !storage.transferGovernmentFunds) {
+          notice(socket,'Entre com uma conta autorizada para administrar este tesouro.');return;
+        }
+        try {
+          let result;
+          if(message.name==='economyFundTransfer'){
+            result=await storage.transferGovernmentFunds({
+              governmentId,actorProfileId:player.accountId,fromFund:message.fromFund,
+              toFund:message.toFund,amountBronze:Number(message.amountBronze),requestId:message.requestId,
+            });
+          } else if(message.name==='economyProjectPropose'){
+            result=await storage.proposeGovernmentProject({
+              governmentId,actorProfileId:player.accountId,projectId:message.projectId,
+              title:message.title,projectType:message.projectType,budgetBronze:Number(message.budgetBronze),
+            });
+          } else {
+            result=await storage.decideGovernmentProject({
+              governmentId,actorProfileId:player.accountId,projectId:message.projectId,
+              decision:message.decision,
+            });
+          }
+          await refreshEconomyMembers(governmentId);
+          const response=message.name==='economyFundTransfer'
+            ? result.duplicate?'Esta transferência já havia sido registrada.':'Transferência concluída entre fundos do mesmo governo.'
+            : message.name==='economyProjectPropose'
+              ? result.duplicate?'Esta proposta já foi registrada.':'Proposta pública registrada. Nenhuma moeda foi movimentada.'
+              : result.duplicate?'Esta decisão já havia sido registrada.'
+                : result.status==='funded'?'Orçamento reservado para o projeto; nenhuma despesa foi executada.'
+                  :'Projeto cancelado e eventual reserva liberada.';
+          notice(socket,response,'chime');broadcast(false);
+        } catch(error) { notice(socket,error.message || 'Não foi possível concluir a operação do tesouro.'); }
+        return;
+      }
+
+      if (message.name === 'economyRefresh') {
+        if (!player.accountId || !storage.getGovernmentEconomyPanel) {
+          notice(socket, 'Entre com uma conta autorizada para consultar os indicadores.'); return;
+        }
+        try {
+          const context=await loadEconomyContext(player.accountId,player.economyGovernmentId);
+          player.economyGovernmentId=context.governmentId;
+          player.economyManagementPanel=context.management;
+          player.governmentTaxPanel=context.taxes;
+          if (!context.management) {
+            notice(socket, 'Esta conta não possui um cargo econômico ativo.'); broadcast(false); return;
+          }
+          notice(socket, 'Indicadores econômicos atualizados.', 'chime'); broadcast(false);
+        } catch (error) { notice(socket, error.message || 'Não foi possível atualizar o painel econômico.'); }
+        return;
+      }
+
+      if (message.name === 'economyRoleSet') {
+        if (!player.accountId || !storage.setGovernmentEconomyRole) {
+          notice(socket, 'Entre com uma conta autorizada para administrar cargos.'); return;
+        }
+        try {
+          const result = await storage.setGovernmentEconomyRole({
+            governmentId:player.economyGovernmentId||marketGovernmentId,actorProfileId:player.accountId,
+            username:message.username,role:message.role,
+          });
+          if (result.changed) await refreshEconomyMembers();
+          notice(socket,result.changed
+            ? result.role ? `Cargo de ${result.username} atualizado.` : `Cargo de ${result.username} revogado.`
+            : 'A conta já possui essa configuração de cargo.','chime');
+          broadcast(false);
+        } catch (error) { notice(socket,error.message || 'Não foi possível atualizar o cargo.'); }
+        return;
+      }
+
       if (message.name === 'governmentTaxPolicySet') {
+        if(player.economyGovernmentId!==marketGovernmentId) {
+          notice(socket,'Configure os impostos na jurisdição correspondente.');return;
+        }
         if (!player.accountId || !storage.updateGovernmentTaxPolicy) {
           notice(socket, 'Entre com uma conta autorizada pelo governo para alterar impostos.'); return;
         }
@@ -2396,6 +2522,7 @@ export function createPrototypeServer({
           await storage.refreshGovernmentTaxQuote({ governmentId: marketGovernmentId, taxCode, force: true });
           marketQuotes = await storage.refreshQuotes({ governmentId: marketGovernmentId, force: true });
           player.governmentTaxPanel = await storage.getGovernmentTaxPanel({ governmentId: marketGovernmentId, actorProfileId: player.accountId });
+          await refreshEconomyMembers(marketGovernmentId);
           notice(socket, `Imposto atualizado para a versão ${result.version}.`, 'chime'); broadcast();
         } catch (error) { notice(socket, error.message || 'Não foi possível atualizar o imposto.'); }
         return;
@@ -2625,15 +2752,18 @@ export function createPrototypeServer({
         if (!player.accountId) { notice(socket, 'Entre com uma conta para guardar as moedas desta venda.'); return; }
         const item = typeof message.item === 'string' ? message.item : '';
         const quote = marketQuotes[item];
-        const price = Number.isSafeInteger(quote?.sellPrice) ? quote.sellPrice : TRADE_PRICES[item];
+        const price = Number.isSafeInteger(quote?.buyPrice) ? quote.buyPrice : TRADE_PRICES[item];
         const quantity = Number.isSafeInteger(message.quantity) && message.quantity >= 1 && message.quantity <= 50 ? message.quantity : 0;
         if (!quantity) { notice(socket, 'Informe uma quantidade inteira entre 1 e 50 para vender.'); return; }
         if (!price) { notice(socket, 'Esse material não está na tabela da recepção.'); return; }
+         if (message.expectedPriceBronze !== undefined && message.expectedPriceBronze !== price) {
+           notice(socket, 'A cotação mudou. Revise a venda antes de confirmar.'); return;
+         }
         if ((player.inventory[item] || 0) < quantity) { notice(socket, 'Você não tem essa quantidade no Inventário.'); return; }
         player.inventory[item] -= quantity;
         try {
           const settlement = storage.settleNpcSale
-            ? await persistMarketSale(player, item, quantity)
+            ? await persistMarketSale(player, item, quantity, message.expectedPriceBronze ?? null)
             : (await persistPlayer(player), {
               wallet:await storage.creditWallet(player.accountId, price * quantity), unitPrice:price, amount:price * quantity,
             });
@@ -2647,6 +2777,10 @@ export function createPrototypeServer({
             coal:['carvão mineral','carvões minerais'], charcoal:['carvão vegetal','carvões vegetais'],
             copperIngot:['lingote de cobre','lingotes de cobre'], ironIngot:['lingote de ferro','lingotes de ferro'],
           };
+          if (storage.getQuotes) {
+            try { marketQuotes = await storage.getQuotes(); }
+            catch (refreshError) { process.stderr.write(`Could not refresh market availability: ${refreshError.message}\n`); }
+          }
           notice(socket, `Venda concluída: ${quantity} ${itemLabels[item][quantity === 1 ? 0 : 1]} por ${formatCoins(settlement.amount)}.`, 'chime');
           broadcast();
         } catch (error) {
@@ -2654,6 +2788,44 @@ export function createPrototypeServer({
           try { await persistPlayer(player); } catch {}
           notice(socket, error.message || 'Não consegui salvar esta venda. Seus materiais foram devolvidos.');
         }
+        return;
+      }
+
+      if (message.name === 'lodgeBuyMaterial') {
+        if (player.location !== 'room' || player.roomKind !== 'lobby' || player.roomBuildingId !== 'arrival') {
+          notice(socket, 'A compra de materiais está disponível somente no balcão da vila.'); return;
+        }
+        if (!player.accountId) { notice(socket, 'Entre com uma conta para comprar materiais.'); return; }
+        if (!storage.settleNpcPurchase) { notice(socket, 'O mercado de materiais requer PostgreSQL.'); return; }
+        const itemId = typeof message.item === 'string' ? message.item : '';
+        const quantity = message.quantity;
+        if (!Object.hasOwn(TRADE_PRICES, itemId)) { notice(socket, 'Este material não está disponível no balcão.'); return; }
+        if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 50) {
+          notice(socket, 'Informe uma quantidade inteira entre 1 e 50 para comprar.'); return;
+        }
+        if (!Number.isSafeInteger(message.expectedPriceBronze) || message.expectedPriceBronze < 1) {
+          notice(socket, 'Atualize o balcão para consultar o preço da compra.'); return;
+        }
+        const profileId = player.accountId;
+        const inventoryBefore = inventorySnapshot(player.inventory);
+        const previous = progressWrites.get(profileId) || Promise.resolve();
+        const next = previous.catch(() => {}).then(() => storage.settleNpcPurchase({
+          profileId, itemId, quantity, inventoryBefore, expectedPriceBronze:message.expectedPriceBronze,
+        }));
+        progressWrites.set(profileId, next);
+        player.marketPurchasePending = true;
+        try {
+          const result = await next;
+          restoreInventory(player.inventory, result.inventory);
+          if (storage.getQuotes) {
+            try { marketQuotes = await storage.getQuotes(); }
+            catch (refreshError) { process.stderr.write(`Could not refresh market availability: ${refreshError.message}\n`); }
+          }
+          notice(socket, `Compra concluída: ${quantity} × ${itemId} por ${formatCoins(result.grossAmount)}.`, 'chime');
+          broadcast(false);
+        } catch (error) {
+          notice(socket, error.message || 'Não foi possível comprar o material. Nenhuma moeda foi cobrada.');
+        } finally { player.marketPurchasePending = false; }
         return;
       }
 
@@ -2683,17 +2855,29 @@ export function createPrototypeServer({
           }
           const before = inventorySnapshot(player.inventory);
           removeInventoryItem(player.inventory, contract.item, contract.quantity);
-          try { await persistPlayer(player); }
-          catch { restoreInventory(player.inventory, before); notice(socket, 'Não consegui salvar os materiais; a encomenda continua disponível.'); return; }
+          const atomic = storage.backend === 'postgres';
           try {
-            const result = await storage.completeResourceContract({ profileId:player.accountId, contractId:contract.id, dayKey });
+            let result;
+            if (atomic) {
+              const profileId = player.accountId;
+              const inventoryAfter = inventorySnapshot(player.inventory);
+              const previous = progressWrites.get(profileId) || Promise.resolve();
+              const next = previous.catch(() => {}).then(() => storage.completeResourceContract({
+                profileId, contractId:contract.id, dayKey, inventoryAfter,
+              }));
+              progressWrites.set(profileId, next);
+              result = await next;
+            } else {
+              await persistPlayer(player);
+              result = await storage.completeResourceContract({ profileId:player.accountId, contractId:contract.id, dayKey });
+            }
             player.contractState = result.contractState;
             for (const key of CURRENCY_KEYS) player.inventory[key] = result.wallet[key] || 0;
             notice(socket, `Encomenda entregue: ${contract.quantity} materiais por ${formatCoins(contract.reward)}.`, 'chime');
             broadcast(false);
           } catch (error) {
             restoreInventory(player.inventory, before);
-            await persistPlayer(player).catch(() => {});
+            if (!atomic) await persistPlayer(player).catch(() => {});
             notice(socket, error.message || 'Não consegui concluir a encomenda; seus materiais foram devolvidos.');
           }
         } finally { resourceContractLocks.delete(lockKey); }
@@ -2712,6 +2896,24 @@ export function createPrototypeServer({
         if (player.inventory[tool] || (AXE_TOOL_IDS.includes(tool) && axeToolFor(player.inventory))
             || (PICKAXE_TOOL_IDS.includes(tool) && pickaxeToolFor(player.inventory))) { notice(socket, 'Você já tem uma ferramenta desse tipo no Inventário.'); return; }
         if (!canAddInventoryItems(player.inventory, { [tool]:1 })) { notice(socket, 'Libere um espaço no Inventário antes de comprar a ferramenta.'); return; }
+        if (storage.settleToolPurchase) {
+          const profileId = player.accountId;
+          const inventoryBefore = inventorySnapshot(player.inventory);
+          const previous = progressWrites.get(profileId) || Promise.resolve();
+          const next = previous.catch(() => {}).then(() => storage.settleToolPurchase({
+            profileId, toolId:tool, inventoryBefore, expectedPriceBronze:message.expectedPriceBronze ?? null,
+          }));
+          progressWrites.set(profileId, next);
+          try {
+            const result = await next;
+            restoreInventory(player.inventory, result.inventory);
+            notice(socket, `Compra concluída: ${tool === 'stoneAxe' ? 'machado de pedra' : 'picareta de pedra'} por ${formatCoins(result.price)}.`, 'chime');
+            broadcast(false);
+          } catch (error) {
+            notice(socket, error.message || 'Não consegui concluir a compra. Nenhuma moeda foi cobrada.');
+          }
+          return;
+        }
         let wallet;
         try { wallet = await storage.debitWallet(player.accountId, price); }
         catch (error) { notice(socket, error.message || 'Não consegui concluir a compra.'); return; }

@@ -13,15 +13,16 @@ export const SERVICE_SECTIONS = Object.freeze({
   rooms: Object.freeze({ label: 'Quartos', description: 'Consultar diárias e acessar seu quarto.' }),
   properties: Object.freeze({ label: 'Propriedades', description: 'Consultar, anunciar e comprar propriedades.' }),
   directory: Object.freeze({ label: 'Hospedagens da vila', description: 'Conhecer os lugares e onde reservar.' }),
-  trade: Object.freeze({ label: 'Vender materiais', description: 'Trocar materiais do Inventário por moedas.' }),
+  trade: Object.freeze({ label: 'Mercado de materiais', description: 'Vender recursos à vila ou comprar materiais disponíveis no estoque do balcão.' }),
   orders: Object.freeze({ label: 'Encomendas', description: 'Consultar pedidos e entregar materiais.' }),
   tools: Object.freeze({ label: 'Comprar ferramentas', description: 'Consultar as ferramentas deste balcão.' }),
-  government: Object.freeze({ label: 'Governo e impostos', description: 'Consultar o tesouro e ajustar as alíquotas deste governo.' }),
+  government: Object.freeze({ label: 'Governo e impostos', description: 'Ajustar alíquotas do governo autorizado.' }),
+  economy: Object.freeze({ label: 'Gestão econômica', description: 'Indicadores, fundos, preços e cargos de economia.' }),
   keys: Object.freeze({ label: 'Chaves da cabana', description: 'Entregar ou revogar chaves para outras contas.' }),
 });
 
 const arrivalExchange = Object.freeze({
-  ...reception(['trade', 'orders', 'tools', 'government'], 'Trocas da vila', .86), id: 'exchange',
+  ...reception(['trade', 'orders', 'tools', 'government', 'economy'], 'Trocas da vila', .86), id: 'exchange',
 });
 export const PLACE_SERVICES = {
   arrival: Object.freeze([reception(['directory'], 'Informações', .14), arrivalExchange]),
@@ -39,7 +40,10 @@ subscribeObjectCatalog(()=>{
  for(const key of Object.keys(PLACE_SERVICES))delete PLACE_SERVICES[key];
  for(const key of Object.keys(CABIN_EXTERIOR_SERVICES))delete CABIN_EXTERIOR_SERVICES[key];
  for(const b of objectBuildings()){
-  if(b.services?.length)PLACE_SERVICES[b.id]=b.services;
+  if(b.services?.length)PLACE_SERVICES[b.id]=b.id==='arrival'
+    ? b.services.map(service=>service.id==='exchange'
+      ? {...service,sections:[...new Set([...(service.sections||[]),'economy'])]} : service)
+    : b.services;
   if(b.kind==='cabin')CABIN_EXTERIOR_SERVICES[b.id]={id:'property-sign',label:'Placa da cabana',prompt:'Consultar',sections:['properties','keys'],radius:1.05,anchor:{kind:'building-sign',x:b.door.x-1.8,y:b.door.y+1.1}};
  }
 });
@@ -86,11 +90,13 @@ export function nearestPlaceService(context, position, layout, canReach = () => 
 }
 
 const ACTION_SECTIONS = Object.freeze({
-  lodgeEnter: ['rooms', 'properties'], lodgeSell: ['trade'],
+  lodgeEnter: ['rooms', 'properties'], lodgeSell: ['trade'], lodgeBuyMaterial: ['trade'],
   lodgeBuyTool: ['tools'], lodgeCompleteContract: ['orders'],
   cabinGrantKey: ['keys'], cabinRevokeKey: ['keys'],
   setLodgingAutoRenew: ['rooms','properties'],
-  governmentTaxPolicySet: ['government'],
+  governmentTaxPolicySet: ['government'], economyRefresh: ['economy'], economyRoleSet: ['economy'],
+  economyGovernmentSelect: ['economy'], economyFundTransfer: ['economy'],
+  economyProjectPropose: ['economy'], economyProjectDecide: ['economy'],
   propertyRequest:['properties','directory'], propertyQuote:['properties','directory'], propertyRentList:['properties'], propertyRentDelist:['properties'], propertyRent:['properties','directory'],
   propertyList: ['properties'], propertyDelist: ['properties'], propertyBuy: ['properties', 'directory'],
 });

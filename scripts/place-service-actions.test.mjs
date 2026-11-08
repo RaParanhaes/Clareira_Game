@@ -37,6 +37,8 @@ test('server rejects remote/wrong-counter transactions and permits a sale at the
     ...[0, -1, 51, 1.5].map((quantity,index) => ({username:`InvalidSale${index}`,place:'arrival',point:'exchange',action:{name:'lodgeSell',item:'wood',quantity},rejection:'quantidade inteira entre 1 e 50'})),
     {username:'UnknownSale',place:'arrival',point:'exchange',action:{name:'lodgeSell',item:'gold',quantity:1},rejection:'não está na tabela'},
     {username:'InsufficientSale',place:'arrival',point:'exchange',action:{name:'lodgeSell',item:'wood',quantity:4},rejection:'não tem essa quantidade'},
+    { username: 'WrongBuyCounter', place: 'arrival', point: 'reception', action: { name: 'lodgeBuyMaterial', item: 'wood', quantity: 1, expectedPriceBronze: 1 }, rejection:'não é oferecido' },
+    { username: 'JsonBuyUnavailable', place: 'arrival', point: 'exchange', action: { name: 'lodgeBuyMaterial', item: 'wood', quantity: 1, expectedPriceBronze: 1 }, rejection:'requer PostgreSQL' },
     { username: 'VillageTrade', place: 'arrival', point: 'exchange', action: { name: 'lodgeSell', item: 'wood', quantity: 1 } },
   ];
   let room, socket;

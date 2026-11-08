@@ -1274,21 +1274,21 @@ body{background:#000}
 #lodging-options .lodging-option{grid-template-columns:minmax(0,1fr);gap:10px;padding:14px;background:#20322d;border:1px solid #5c6951;box-shadow:none}
 #lodging-options .lodging-option small{font-size:13px;line-height:1.5}
 #lodging-options .lodging-option button{width:100%}
-#lodging-options .commerce-sale{grid-template-columns:minmax(0,1fr) auto;padding:14px;gap:12px;background:#20322d;border:1px solid #5c6951;box-shadow:none}
-#lodging-options .commerce-sale>label{grid-column:1/-1;font-size:15px;font-weight:700}
-#lodging-options .commerce-sale small{font-size:12px;line-height:1.5}
+#lodging-options :is(.commerce-sale,.commerce-purchase){grid-template-columns:minmax(0,1fr) auto;padding:14px;gap:12px;background:#20322d;border:1px solid #5c6951;box-shadow:none}
+#lodging-options :is(.commerce-sale,.commerce-purchase)>label{grid-column:1/-1;font-size:15px;font-weight:700}
+#lodging-options :is(.commerce-sale,.commerce-purchase) small{font-size:12px;line-height:1.5}
 #lodging-options .commerce-quantity{display:flex;gap:6px;align-items:center}
 #lodging-options .commerce-quantity button{min-width:44px;min-height:44px;font-size:20px}
 #lodging-options .commerce-quantity input{box-sizing:border-box;width:64px;min-height:44px;font-size:16px;text-align:center}
 #lodging-options .commerce-total{grid-column:1/-1;color:#f5d78d}
-#lodging-options .commerce-sale>button{grid-column:2;grid-row:2;min-width:84px}
+#lodging-options :is(.commerce-sale,.commerce-purchase)>button{grid-column:2;grid-row:2;min-width:84px}
 #lodging-options .commerce-review p{margin:0;font-size:15px;line-height:1.6}
 .lodging-status:empty{display:none}
 .lodging-auto-renew{min-height:44px}
 #lodging-options .commerce-property-list{grid-template-columns:minmax(0,1fr);gap:12px;padding:14px}
 #lodging-options .commerce-property-list label{display:grid;gap:8px}
 #property-asking-price{box-sizing:border-box;width:100%;min-height:44px;font-size:16px}
-@media(max-width:360px){#lodging-options .commerce-sale{padding:10px;gap:10px}#lodging-options .commerce-sale>button{grid-column:1/-1;grid-row:auto}#lodging-options .commerce-quantity{grid-column:1/-1;justify-content:space-between}}
+@media(max-width:360px){#lodging-options :is(.commerce-sale,.commerce-purchase){padding:10px;gap:10px}#lodging-options :is(.commerce-sale,.commerce-purchase)>button{grid-column:1/-1;grid-row:auto}#lodging-options .commerce-quantity{grid-column:1/-1;justify-content:space-between}}
 
 #lodging-options .commerce-tax-form{grid-template-columns:minmax(0,1fr);gap:12px;padding:12px}
 #lodging-options .commerce-tax-form label{display:grid;gap:6px}
@@ -1334,3 +1334,36 @@ body{background:#000}
 /* Property and rental forms keep touch controls readable on narrow screens. */
 #lodging-options .lodging-option>label:has([data-property-price]),#lodging-options .lodging-option>label:has([data-rental-period]){display:grid;gap:8px;width:100%;min-width:0}
 #lodging-options [data-property-price],#lodging-options [data-rental-period]{box-sizing:border-box;width:100%;max-width:100%;min-height:44px;padding:10px;font:inherit;font-size:16px;color:#f5e6c7;background:#1c2d2e;border:2px solid #80603c;border-radius:0}
+
+/* Government economy dashboard: keep management readable inside the existing service modal. */
+#lodging-options .economy-kpi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+#lodging-options .economy-kpi{display:grid;align-content:start;gap:5px;min-width:0;padding:12px;border:1px solid #726345;background:#27372f}
+#lodging-options .economy-kpi small{color:#d1c8aa;font-size:11px;line-height:1.45}
+#lodging-options .economy-kpi strong{color:#f5daa1;font-size:16px;line-height:1.35;overflow-wrap:anywhere}
+#lodging-options .economy-list-row{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;padding:9px 10px;min-width:0;border:1px solid #62543a;background:#30362e}
+#lodging-options .economy-list-row strong{font-size:13px;color:#f2dcad;overflow-wrap:anywhere}
+#lodging-options .economy-list-row small,#lodging-options .economy-day-row small{color:#cfc8b5;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+#lodging-options .economy-day-row{display:grid;gap:5px;padding:5px 0}
+#lodging-options .economy-trend-track{height:9px;background:#1a2522;overflow:hidden;border:1px solid #5b6850}
+#lodging-options .economy-trend-bar{display:block;height:100%;background:#a9ba79}
+#lodging-options .economy-role-form{display:grid;gap:10px;min-width:0;padding:12px;border:1px solid #786344;background:#29362e}
+#lodging-options .economy-role-form label{display:grid;gap:5px;min-width:0;color:#f1dfb8;font-size:13px}
+#lodging-options .economy-role-form input,#lodging-options .economy-role-form select{box-sizing:border-box;width:100%;min-width:0;min-height:44px;padding:8px;color:#f3e4c2;background:#1b2c28;border:2px solid #917550;font:inherit}
+#lodging-options .economy-role-form button,#lodging-options .economy-staff-row button{min-height:44px}
+#lodging-options .economy-staff-row{grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 10px}
+#lodging-options .economy-staff-row strong{grid-column:1}
+#lodging-options .economy-staff-row small{grid-column:1}
+#lodging-options .economy-staff-row button{grid-column:2;grid-row:1/3}
+@media(max-width:360px){
+ #lodging-options .economy-kpi-grid{grid-template-columns:minmax(0,1fr)}
+ #lodging-options .economy-staff-row{grid-template-columns:minmax(0,1fr)}
+ #lodging-options .economy-staff-row button{grid-column:1;grid-row:auto}
+}
+
+/* Treasury controls share the compact administration modal on every viewport. */
+#lodging-options .economy-government-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:8px;min-width:0}
+#lodging-options .economy-government-choices button,
+#lodging-options .economy-project-card button{box-sizing:border-box;max-width:100%;min-width:0;min-height:44px;white-space:normal;overflow-wrap:anywhere}
+#lodging-options .economy-project-card{gap:8px}
+#lodging-options .economy-transfer-form select,
+#lodging-options .economy-project-form select{width:100%;min-width:0}

@@ -2,6 +2,7 @@ import { createHousingMarketStore } from './housing-market.mjs';
 import { createPropertyMarketStatisticsStore } from './property-market-statistics.mjs';
 import {createPostgresObjectStore} from './object-store.mjs';
 import { createEconomyStore } from './economy-store.mjs';
+import { createEconomyManagementStore } from './economy-management.mjs';
 import {createJsonObjectStore} from './json-object-store.mjs';
 import { createJsonInteractionStore } from './json-interaction-store.mjs';
 import { createAccountStore, saveAccountProgress } from '../scripts/account-store.mjs';
@@ -71,6 +72,7 @@ export function createStorageAdapter({
     ...postgres,
     ...createPostgresObjectStore(pool),
     ...economy,
+    ...createEconomyManagementStore(pool),
     ...createHousingMarketStore(pool),
     ...createPropertyMarketStatisticsStore(pool),
     staffManagement: createStaffManagementStore(pool),

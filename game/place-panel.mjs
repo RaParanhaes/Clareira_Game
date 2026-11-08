@@ -323,9 +323,31 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
     } else if (route === 'economy') {
       const panel=state.economyManagementPanel;
       const kpis=panel.kpis||{};
+      const governmentNames={village:'Vila',kingdom:'Reino',realm:'Domínio',castle:'Castelo'};
+      const fundNames={general:'Geral',donations:'Doações',materials:'Materiais',
+        construction:'Construção',territory:'Território',diplomacy:'Diplomacia'};
+      const projectNames={donation:'Doação',material_purchase:'Compra de materiais',
+        construction:'Construção',territory_expansion:'Expansão territorial',diplomacy:'Diplomacia'};
+      const projectStatuses={proposed:'Proposto',funded:'Verba reservada',cancelled:'Cancelado',
+        approved:'Aprovado',in_progress:'Em execução',completed:'Concluído'};
       fragment.append(element('p',
-        `${economyRoleNames[panel.role]||'Equipe econômica'} · últimos ${panel.periodGameDays||7} dias do jogo · atualizado ${new Date(panel.sampledAt||Date.now()).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`,
+        `${governmentNames[panel.governmentType]||panel.governmentType||'Governo'} · ${panel.settlementId||panel.governmentId} · mundo ${panel.worldId||'desconhecido'} · ${economyRoleNames[panel.role]||'Equipe econômica'}`,
         'lodging-note'));
+      fragment.append(element('p',
+        `Últimos ${panel.periodGameDays||7} dias do jogo · consulta ${new Date(panel.sampledAt||Date.now()).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} · ${panel.parentGovernmentId?'governo superior: '+panel.parentGovernmentId:'sem governo superior cadastrado'}.`,
+        'lodging-note'));
+      if((panel.governments||[]).length>1) {
+        fragment.append(element('strong','Selecionar tesouro autorizado'));
+        const selector=element('div','','economy-government-choices');
+        for(const government of panel.governments){
+          const current=government.governmentId===panel.governmentId;
+          const button=actionButton(
+            `${current?'✓ ':''}${governmentNames[government.governmentType]||government.governmentType}: ${government.settlementId}`,
+            'economyGovernmentSelect',{governmentId:government.governmentId},current);
+          selector.append(button);
+        }
+        fragment.append(selector);
+      }
       const summary=element('div','','economy-kpi-grid');
       const values=[
         ['Materiais entregues ao NPC',formatCount(kpis.soldToNpc)],
@@ -351,12 +373,88 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
         ? imbalance===0?'Diário financeiro conciliado na janela consultada (diferença zero).'
           : `Atenção: diferença contábil de ${formatMoney(imbalance)} na janela consultada.`
         : 'Conciliação contábil indisponível para esta janela.','lodging-note'));
-      fragment.append(element('strong','Tesouro e fundos públicos'));
+      const totalFunds=(panel.funds||[]).reduce((sum,f)=>sum+(f.balanceBronze||0),0);
+      const totalReserved=(panel.funds||[]).reduce((sum,f)=>sum+(f.reservedBronze||0),0);
+      fragment.append(element('strong','Tesouro e orçamento por finalidade'));
+      fragment.append(element('p',
+        `Total ${formatMoney(totalFunds)} · reservado ${formatMoney(totalReserved)} · disponível ${formatMoney(totalFunds-totalReserved)}. Reservar não é gastar e mover verba entre fundos não cria moeda.`,
+        'lodging-note'));
+      if(panel.initialTreasuryBronze!==null&&panel.initialTreasuryBronze!==undefined)
+        fragment.append(element('p',`Verba inicial efetivamente emitida: ${formatMoney(panel.initialTreasuryBronze)}.`,'lodging-note'));
+      else if(panel.budgetTemplateBronze!==null&&panel.budgetTemplateBronze!==undefined)
+        fragment.append(element('p',
+          `Modelo de orçamento inicial: ${formatMoney(panel.budgetTemplateBronze)} (não significa que o valor já foi emitido).`,
+          'lodging-note'));
       for(const fund of panel.funds||[]){
         const row=element('div','','economy-list-row');
         row.append(element('strong',({general:'Geral',donations:'Doações',materials:'Materiais',construction:'Construção',territory:'Território',diplomacy:'Diplomacia'})[fund.fundCode]||fund.fundCode),
-          element('small',`Saldo ${formatMoney(fund.balanceBronze)} · reservado ${formatMoney(fund.reservedBronze)}`));
+          element('small',`Saldo ${formatMoney(fund.balanceBronze)} · reservado ${formatMoney(fund.reservedBronze)} · livre ${formatMoney(fund.balanceBronze-fund.reservedBronze)}`));
         fragment.append(row);
+      }
+      if(panel.permissions?.manageFunds && (panel.funds||[]).length>1){
+        fragment.append(element('strong','Redistribuir recursos do próprio governo'));
+        const form=element('div','','economy-role-form economy-transfer-form');
+        for(const [name,label] of [['fromFund','De qual fundo'],['toFund','Para qual fundo']]){
+          const wrap=element('label',label),select=element('select');
+          select.name=name;select.dataset.focusKey='economy-transfer-'+name;
+          for(const fund of panel.funds){
+            const option=element('option',fundNames[fund.fundCode]||fund.fundCode);option.value=fund.fundCode;
+            select.append(option);
+          }
+          if(name==='toFund' && select.options.length>1)select.selectedIndex=1;
+          wrap.append(select);form.append(wrap);
+        }
+        const value=element('label','Quantidade em bronzes');
+        const input=element('input');input.type='number';input.name='amountBronze';input.min='1';
+        input.max='999999999';input.step='1';input.required=true;input.inputMode='numeric';
+        input.placeholder='Ex.: 300';input.dataset.focusKey='economy-transfer-amount';
+        value.append(input);form.append(value);
+        form.append(actionButton('Revisar transferência','economyFundTransfer'));
+        fragment.append(form);
+      }
+      fragment.append(element('strong','Projetos e compromissos públicos'));
+      fragment.append(element('p','Propor ou reservar verba não executa pagamentos. Nenhuma obra, compra ou transferência a jogadores acontece automaticamente.','lodging-note'));
+      if(panel.permissions?.proposeProjects){
+        const form=element('div','','economy-role-form economy-project-form');
+        const nameLabel=element('label','Nome do projeto');
+        const name=element('input');name.name='title';name.type='text';name.required=true;
+        name.minLength=4;name.maxLength=80;name.placeholder='Ex.: Reconstruir a ponte';
+        name.dataset.focusKey='economy-project-title';nameLabel.append(name);form.append(nameLabel);
+        const typeLabel=element('label','Finalidade');
+        const type=element('select');type.name='projectType';type.dataset.focusKey='economy-project-kind';
+        for(const [key,label] of Object.entries(projectNames)){
+          const option=element('option',label);option.value=key;type.append(option);
+        }
+        typeLabel.append(type);form.append(typeLabel);
+        const amountLabel=element('label','Orçamento solicitado (bronzes)');
+        const amount=element('input');amount.name='budgetBronze';amount.type='number';
+        amount.min='1';amount.max='999999999';amount.step='1';amount.required=true;
+        amount.inputMode='numeric';amount.dataset.focusKey='economy-project-budget';
+        amountLabel.append(amount);form.append(amountLabel);
+        form.append(actionButton('Propor projeto','economyProjectPropose'));
+        fragment.append(form);
+      }
+      if(!(panel.projects||[]).length)fragment.append(element('p','Nenhum projeto público registrado para este governo.','lodging-note'));
+      for(const project of panel.projects||[]){
+        const card=element('div','','economy-list-row economy-project-card');
+        card.append(element('strong',project.title),
+          element('small',`${projectNames[project.projectType]||project.projectType} · ${projectStatuses[project.status]||project.status} · orçamento ${formatMoney(project.budgetBronze)} · gasto ${formatMoney(project.spentBronze)}`));
+        if(panel.permissions?.approveProjects && project.status==='proposed')
+          card.append(actionButton('Reservar verba','economyProjectDecide',
+            {projectId:project.projectId,decision:'fund'}));
+        if(panel.permissions?.approveProjects && ['proposed','funded'].includes(project.status))
+          card.append(actionButton('Cancelar projeto','economyProjectDecide',
+            {projectId:project.projectId,decision:'cancel'}));
+        fragment.append(card);
+      }
+      if((panel.transfers||[]).length){
+        fragment.append(element('strong','Últimas movimentações internas'));
+        for(const transfer of panel.transfers){
+          const card=element('div','','economy-list-row');
+          card.append(element('small',
+            `${fundNames[transfer.fromFund]||transfer.fromFund} → ${fundNames[transfer.toFund]||transfer.toFund} · ${formatMoney(transfer.amountBronze)}`));
+          fragment.append(card);
+        }
       }
       if((panel.daily||[]).length) {
         fragment.append(element('strong','Compras e entregas por dia do jogo'));
@@ -496,6 +594,15 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
       const pending = draft; draft = null;
       const state = getState();
       const priceNow = operationPrice(pending.message, state);
+      const economicRequirements={
+        economyRoleSet:'manageRoles',economyFundTransfer:'manageFunds',
+        economyProjectPropose:'proposeProjects',economyProjectDecide:'approveProjects',
+      };
+      const capability=economicRequirements[pending.message.name];
+      if(capability && (!state.economyManagementPanel?.permissions?.[capability]
+          || state.economyManagementPanel.governmentId!==pending.message.governmentId)){
+        status.textContent='Sua autorização ou o tesouro selecionado mudou.';controller.back();return;
+      }
       if (pending.message.name==='economyRoleSet' && !state.economyManagementPanel?.permissions?.manageRoles) {
         status.textContent='Sua autorização para administrar cargos mudou.';controller.back();return;
       }
@@ -525,8 +632,65 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
       message.askingPriceBronze = Number(input.value);
       if (!Number.isSafeInteger(message.askingPriceBronze) || message.askingPriceBronze < 1) return;
     }
+    if (name === 'economyGovernmentSelect') {
+      if(!getState().economyManagementPanel?.governments?.some(g=>g.governmentId===message.governmentId)){
+        status.textContent='Este governo não está na lista de acesso autorizado.';return;
+      }
+    }
+    if (name === 'economyFundTransfer') {
+      const panel=getState().economyManagementPanel;
+      if(!panel?.permissions?.manageFunds) {status.textContent='Você não pode redistribuir recursos públicos.';return;}
+      const form=button.closest('.economy-transfer-form');
+      const source=form?.querySelector('[name="fromFund"]');
+      const target=form?.querySelector('[name="toFund"]');
+      const amount=form?.querySelector('[name="amountBronze"]');
+      if(!source?.value||!target?.value||!amount?.reportValidity())return;
+      message.fromFund=source.value;message.toFund=target.value;message.amountBronze=Number(amount.value);
+      const available=panel.funds.find(f=>f.fundCode===message.fromFund);
+      if(source.value===target.value||!Number.isSafeInteger(message.amountBronze)||message.amountBronze<1
+          ||!available||message.amountBronze>available.balanceBronze-available.reservedBronze){
+        status.textContent='Escolha fundos diferentes e um valor dentro do saldo livre.';return;
+      }
+      message.requestId=crypto.randomUUID();message.governmentId=panel.governmentId;
+      draft={message,price:0,cost:0,title:'Revisar transferência pública',
+        summary:`Movimentar ${formatMoney(message.amountBronze)} de ${message.fromFund} para ${message.toFund} no tesouro ${panel.governmentId}.`,
+        detail:'Movimentação interna sem emissão ou gasto de moedas. O servidor verifica o saldo não reservado e registra duas linhas contábeis.'};
+      controller.navigate('commerce-review');return;
+    }
+    if (name === 'economyProjectPropose') {
+      const panel=getState().economyManagementPanel;
+      if(!panel?.permissions?.proposeProjects){status.textContent='Seu cargo não pode propor projetos.';return;}
+      const form=button.closest('.economy-project-form');
+      const title=form?.querySelector('[name="title"]');
+      const type=form?.querySelector('[name="projectType"]');
+      const amount=form?.querySelector('[name="budgetBronze"]');
+      if(!title?.reportValidity()||!amount?.reportValidity()||!type?.value)return;
+      message.title=title.value.trim();message.projectType=type.value;
+      message.budgetBronze=Number(amount.value);
+      if(message.title.length<4||!Number.isSafeInteger(message.budgetBronze)||message.budgetBronze<1)return;
+      message.projectId=crypto.randomUUID();message.governmentId=panel.governmentId;
+      draft={message,price:0,cost:0,title:'Revisar proposta de projeto',
+        summary:`${message.title} · orçamento de ${formatMoney(message.budgetBronze)} · categoria ${message.projectType}.`,
+        detail:'A proposta não movimenta dinheiro. A liderança deverá aprovar e reservar o orçamento posteriormente.'};
+      controller.navigate('commerce-review');return;
+    }
+    if (name === 'economyProjectDecide') {
+      const panel=getState().economyManagementPanel;
+      if(!panel?.permissions?.approveProjects){status.textContent='Somente a liderança pode decidir.';return;}
+      const project=panel.projects?.find(p=>p.projectId===message.projectId);
+      if(!project || !['fund','cancel'].includes(message.decision))return;
+      message.governmentId=panel.governmentId;
+      draft={message,price:0,cost:0,title:message.decision==='fund'?'Reservar orçamento público':'Cancelar projeto público',
+        summary:`${project.title} · ${formatMoney(project.budgetBronze)} · fundo ${project.fundCode}.`,
+        detail:message.decision==='fund'
+          ? 'A reserva reduz o saldo disponível, mas não gasta nem emite moeda. Falta de saldo bloqueará a operação.'
+          : 'O cancelamento libera a reserva remanescente. Nenhum valor será devolvido a carteiras de jogadores.'};
+      controller.navigate('commerce-review');return;
+    }
     if (name === 'economyRoleSet') {
-      const permissions=getState().economyManagementPanel?.permissions;
+      const panel=getState().economyManagementPanel;
+      message.governmentId=panel?.governmentId;
+      const permissions=panel?.permissions;
       if (!permissions?.manageRoles) { status.textContent='Cargo econômico não autorizado.'; return; }
       if (!message.username) {
         const form=button.closest('.economy-role-form');
@@ -603,7 +767,8 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
   });
 
   function operationPrice(message, state) {
-    if(['propertyRequest','propertyRentDelist','economyRoleSet','economyRefresh'].includes(message.name))return 0;
+    if(['propertyRequest','propertyRentDelist','economyRoleSet','economyRefresh',
+      'economyGovernmentSelect','economyFundTransfer','economyProjectPropose','economyProjectDecide'].includes(message.name))return 0;
     if(['propertyQuote','propertyRentList'].includes(message.name))return message.askingPriceBronze || 0;
     if (['setLodgingAutoRenew', 'propertyDelist', 'cabinRevokeKey'].includes(message.name)) return 0;
     if (message.name === 'lodgeSell') return state.marketQuotes?.[message.item]?.buyPrice ?? TRADE_PRICES[message.item];

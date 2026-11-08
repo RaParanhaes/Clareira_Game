@@ -19,13 +19,16 @@ test('NPC stock circulates between players with atomic payment, single delivery 
   const market = createEconomyStore(pool);
   const ids = [];
   const itemId = 'copperIngot';
-  let oldQuote, oldStock, oldFund;
+  let oldQuote, oldStock, oldFund, oldRemainder;
   try {
     await runMigrations(pool);
     await market.ensureGoods();
     oldQuote = await pool.query("SELECT buy_price_bronze,sell_price_bronze FROM economy_quotes WHERE item_id=$1 AND region_id='global'",[itemId]);
     oldStock = await pool.query("SELECT quantity,reserved FROM economy_market_stock WHERE market_id='arrival:market' AND region_id='global' AND item_id=$1",[itemId]);
     oldFund = await pool.query("SELECT balance_bronze FROM government_fund_accounts WHERE government_id='surface:arrival' AND fund_code='general'");
+    oldRemainder = await pool.query(
+      "SELECT remainder_numerator FROM government_tax_remainders WHERE government_id='surface:arrival' AND tax_code='market_sale'",
+    );
     assert.equal(Number(oldStock.rows[0].quantity), 0, 'the isolated CI database starts without merchant stock');
     await pool.query("UPDATE economy_quotes SET buy_price_bronze=51,sell_price_bronze=60 WHERE item_id=$1 AND region_id='global'",[itemId]);
 
@@ -139,6 +142,14 @@ test('NPC stock circulates between players with atomic payment, single delivery 
       "UPDATE government_fund_accounts SET balance_bronze=$1 WHERE government_id='surface:arrival' AND fund_code='general'",
       [oldFund.rows[0].balance_bronze],
     );
+    if (oldRemainder?.rowCount) {
+      await pool.query(
+        "UPDATE government_tax_remainders SET remainder_numerator=$1 WHERE government_id='surface:arrival' AND tax_code='market_sale'",
+        [oldRemainder.rows[0].remainder_numerator],
+      );
+    } else {
+      await pool.query("DELETE FROM government_tax_remainders WHERE government_id='surface:arrival' AND tax_code='market_sale'");
+    }
     await pool.end();
   }
 });

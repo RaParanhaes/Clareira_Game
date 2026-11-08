@@ -2686,17 +2686,29 @@ export function createPrototypeServer({
           }
           const before = inventorySnapshot(player.inventory);
           removeInventoryItem(player.inventory, contract.item, contract.quantity);
-          try { await persistPlayer(player); }
-          catch { restoreInventory(player.inventory, before); notice(socket, 'Não consegui salvar os materiais; a encomenda continua disponível.'); return; }
+          const atomic = storage.backend === 'postgres';
           try {
-            const result = await storage.completeResourceContract({ profileId:player.accountId, contractId:contract.id, dayKey });
+            let result;
+            if (atomic) {
+              const profileId = player.accountId;
+              const inventoryAfter = inventorySnapshot(player.inventory);
+              const previous = progressWrites.get(profileId) || Promise.resolve();
+              const next = previous.catch(() => {}).then(() => storage.completeResourceContract({
+                profileId, contractId:contract.id, dayKey, inventoryAfter,
+              }));
+              progressWrites.set(profileId, next);
+              result = await next;
+            } else {
+              await persistPlayer(player);
+              result = await storage.completeResourceContract({ profileId:player.accountId, contractId:contract.id, dayKey });
+            }
             player.contractState = result.contractState;
             for (const key of CURRENCY_KEYS) player.inventory[key] = result.wallet[key] || 0;
             notice(socket, `Encomenda entregue: ${contract.quantity} materiais por ${formatCoins(contract.reward)}.`, 'chime');
             broadcast(false);
           } catch (error) {
             restoreInventory(player.inventory, before);
-            await persistPlayer(player).catch(() => {});
+            if (!atomic) await persistPlayer(player).catch(() => {});
             notice(socket, error.message || 'Não consegui concluir a encomenda; seus materiais foram devolvidos.');
           }
         } finally { resourceContractLocks.delete(lockKey); }

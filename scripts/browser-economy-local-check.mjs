@@ -253,6 +253,10 @@ try {
         governmentId:'surface:royal',governmentType:'kingdom',settlementId:'royal',
         funds:[{fundCode:'general',balanceBronze:710,reservedBronze:0}],
         stock:[],daily:[],monetary:null,projects:[],transfers:[],
+        kpis:{soldToNpc:null,boughtFromNpc:null,grossSalesBronze:null,
+          npcPurchaseRevenueBronze:null,marketStock:null,marketVarieties:null,
+          treasuryReceiptsBronze:0,treasuryExpensesBronze:0,
+          transactions:1,journalBalanceBronze:null},
       });
       economyPanel.refresh(economyPoint,'visual-government');
     });

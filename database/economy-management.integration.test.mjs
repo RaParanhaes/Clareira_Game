@@ -132,6 +132,6 @@ test('economy permission rules are least privilege and never grant role administ
   assert.deepEqual(economyPermissions({role:'auditor'}),{view:true,manageTaxes:false,manageRoles:false,manageFunds:false,proposeProjects:false,approveProjects:false});
   assert.deepEqual(economyPermissions({role:'treasurer'}),{view:true,manageTaxes:false,manageRoles:false,manageFunds:true,proposeProjects:true,approveProjects:false});
   assert.deepEqual(economyPermissions({role:'minister'}),{view:true,manageTaxes:true,manageRoles:false,manageFunds:false,proposeProjects:true,approveProjects:false});
-  assert.deepEqual(economyPermissions({role:'unexpected'}),{view:false,manageTaxes:false,manageRoles:false});
+  assert.deepEqual(economyPermissions({role:'unexpected'}),{view:false,manageTaxes:false,manageRoles:false,manageFunds:false,proposeProjects:false,approveProjects:false});
   assert.deepEqual(economyPermissions({isLeader:true}),{view:true,manageTaxes:true,manageRoles:true,manageFunds:true,proposeProjects:true,approveProjects:true});
 });

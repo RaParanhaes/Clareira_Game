@@ -49,6 +49,7 @@ jobs:
           node --check database/economy-store.mjs
           node --check database/economy-management.mjs
           node --check database/economy-management.integration.test.mjs
+          node --check database/government-treasury.integration.test.mjs
           node --check database/economy.integration.test.mjs
           node --check game/economy-place-services.test.mjs
           node --check game/place-services.mjs
@@ -60,7 +61,7 @@ jobs:
       - name: Validate game content contracts
         run: npm run content:check
       - name: Economy, wallet and commerce regression tests
-        run: node --test --test-concurrency=1 database/economy.integration.test.mjs database/economy-contract-atomic.integration.test.mjs database/economy-tool-purchase.integration.test.mjs database/economy-market-cycle.integration.test.mjs database/economy-management.integration.test.mjs game/economy-place-services.test.mjs game/wallet-range.test.mjs scripts/place-service-actions.test.mjs
+        run: node --test --test-concurrency=1 database/economy.integration.test.mjs database/economy-contract-atomic.integration.test.mjs database/economy-tool-purchase.integration.test.mjs database/economy-market-cycle.integration.test.mjs database/economy-management.integration.test.mjs database/government-treasury.integration.test.mjs game/economy-place-services.test.mjs game/wallet-range.test.mjs scripts/place-service-actions.test.mjs
       - name: Install headless browser (temporary runner only)
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1

@@ -341,6 +341,7 @@ const warmedCabinsNearby=new Set();
 let resourceContracts = [];
 let marketQuotes = {};
 let governmentTaxPanel = null;
+let economyManagementPanel = null;
 let serverClockOffsetMs = null;
 let serverClockRoundTripMs = null;
 let gameDayAnchor = null;
@@ -2380,6 +2381,7 @@ function connect() {
     if (Array.isArray(message.resourceContracts)) resourceContracts = message.resourceContracts;
     if (message.marketQuotes && typeof message.marketQuotes === 'object' && !Array.isArray(message.marketQuotes)) marketQuotes = message.marketQuotes;
     if (Object.hasOwn(message, 'governmentTaxPanel')) governmentTaxPanel = message.governmentTaxPanel;
+    if (Object.hasOwn(message, 'economyManagementPanel')) economyManagementPanel = message.economyManagementPanel;
     if(Array.isArray(message.animals)){
       const visibleAnimalIds=new Set();
       for(const animal of message.animals){
@@ -3975,7 +3977,7 @@ const placePanel = createPlacePanel({
   dialog: ui.lodgingDialog, controller: panels,
   getState: () => ({ guest: currentProfile?.guest === true, inventory: localInventory,
     worldTime:gameDayTimestampMs(), claim: activeLodgingClaim, claims:lodgingClaims, lodgingLeases, propertyRequests, propertyRentalListings, lodgingLease: activeLodgingLease, recurringLeasesAvailable, contracts: resourceContracts, marketQuotes,
-    cabinKeys, issuedCabinKeys, cabinOccupancy, propertyListings, governmentTaxPanel }),
+    cabinKeys, issuedCabinKeys, cabinOccupancy, propertyListings, governmentTaxPanel, economyManagementPanel }),
   onAction: (message, point) => {
     const nearby = nearestReceptionService();
     if (!sceneReady || nearby?.key !== point.key || !placeServiceAllowsAction(nearby, message)) {

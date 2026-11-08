@@ -1359,3 +1359,11 @@ body{background:#000}
  #lodging-options .economy-staff-row{grid-template-columns:minmax(0,1fr)}
  #lodging-options .economy-staff-row button{grid-column:1;grid-row:auto}
 }
+
+/* Treasury controls share the compact administration modal on every viewport. */
+#lodging-options .economy-government-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:8px;min-width:0}
+#lodging-options .economy-government-choices button,
+#lodging-options .economy-project-card button{box-sizing:border-box;max-width:100%;min-width:0;min-height:44px;white-space:normal;overflow-wrap:anywhere}
+#lodging-options .economy-project-card{gap:8px}
+#lodging-options .economy-transfer-form select,
+#lodging-options .economy-project-form select{width:100%;min-width:0}

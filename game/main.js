@@ -5679,16 +5679,12 @@ function drawWorldShadows(frameFires, litFires=frameFires) {
     for(const light of localLights){
       const sourceId=String(light.id||light.fire?.id||'');
       if(sourceId&&sourceId===String(direction.source?.id||''))continue;
-      let targetX,targetY;
-      if(light.owner===building.id){
-        const nx=light.nx||0,ny=light.ny||0,normalLength=Math.hypot(nx,ny);
-        targetX=light.x+(normalLength?nx/normalLength*edge:0);
-        targetY=light.y+(normalLength?ny/normalLength*edge:0);
-      }else{
-        targetX=Math.max(b.left-edge,Math.min(b.right+edge,light.x));
-        targetY=Math.max(b.top-edge,Math.min(b.bottom+edge,light.y));
-        if(Math.hypot(light.x-targetX,light.y-targetY)>light.reach)continue;
-      }
+      // A building's own windows and porch lantern must not erase its own shadow;
+      // only neighboring emitters fill it.
+      if(light.owner===building.id)continue;
+      const targetX=Math.max(b.left-edge,Math.min(b.right+edge,light.x));
+      const targetY=Math.max(b.top-edge,Math.min(b.bottom+edge,light.y));
+      if(Math.hypot(light.x-targetX,light.y-targetY)>light.reach)continue;
       const amount=lightAmount(light,{x:targetX,y:targetY,
         height:surfaceHeight(targetX,targetY,'clearing')+.3},architecturalScene.obstacles);
       if(amount>localFill)localFill=amount;
@@ -5845,7 +5841,7 @@ function drawNight(){
  const edgePower=isArrival?ARRIVAL_CAMPFIRE_EDGE_POWER:1.35;
  const fireProfile=isArrival?{reach:CAMPFIRE_LIGHT_RADIUS_TILES,falloffExponent:edgePower}
    :nightEmitterProfile(CAMPFIRE_LIGHT_RADIUS_TILES,edgePower,{night:nightFactor,hasMoon:gameDay.hasMoon});
- mask.globalCompositeOperation='source-over';mask.globalAlpha=exteriorNightOpacity(gameDay,{theme:dimensionTheme,dimensionId:worldDimensionId});mask.fillStyle=({dark:'#000000',sky:'#173044',magic:'#06091b',inferno:'#120604',giants:'#06100e',energy:'#020a18'})[dimensionTheme]||'#020812';mask.fillRect(-NIGHT_MASK_PAD,-NIGHT_MASK_PAD,viewWidth+NIGHT_MASK_PAD*2,viewHeight+NIGHT_MASK_PAD*2);mask.globalAlpha=1;
+ mask.globalCompositeOperation='source-over';mask.globalAlpha=exteriorNightOpacity(gameDay,{theme:dimensionTheme,dimensionId:worldDimensionId});mask.fillStyle=({dark:'#000000',sky:'#173044',magic:'#06091b',inferno:'#120604',giants:'#06100e',energy:'#020a18'})[dimensionTheme]||'#0c1a2a';mask.fillRect(-NIGHT_MASK_PAD,-NIGHT_MASK_PAD,viewWidth+NIGHT_MASK_PAD*2,viewHeight+NIGHT_MASK_PAD*2);mask.globalAlpha=1;
  mask.globalCompositeOperation='destination-out';
  if(isArrival&&arrivalFireIgnition()<1){
   const hearth=dimensionList.find(item=>item.id===worldDimensionId)?.campfire;

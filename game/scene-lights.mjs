@@ -12,11 +12,11 @@ export function exteriorEmitters(buildings,daylight=1,hasMoon=false){
       const baseReach=w.light?.reach??5.8+w.z*.18;
       const profile=nightEmitterProfile(baseReach,w.light?.falloffExponent??1.4,{night:nightFactor,hasMoon});
       return {...w,kind:'window',height:w.z,reach:profile.reach,strength:sourceStrength*nightFactor,
-        falloffExponent:profile.falloffExponent,color:w.light?.color||'#efbc79',owner:building.id};
+        falloffExponent:profile.falloffExponent,color:w.light?.color||'#f29a4e',owner:building.id};
     }),
     {id:`${building.id}:porch`,kind:'lantern',owner:building.id,x:building.door.x+.84,y:building.bounds.bottom+.06,
       height:3.25,nx:0,ny:1,reach:porch.reach,strength:.9*nightFactor,
-      falloffExponent:porch.falloffExponent,color:'#ffcf88'},
+      falloffExponent:porch.falloffExponent,color:'#ff9f4a'},
   ]);
 }
 export function interiorEmitters(layout,furniture=[],daylight=1,time=0,hasMoon=false){

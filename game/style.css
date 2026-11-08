@@ -1355,3 +1355,10 @@ body{background:#000}
 @media(min-width:560px){
   #lodging-options:has(>.lodging-option:nth-child(2)){grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
 }
+
+/* Polimento de UI (feat/ui-menus-visual): ações de configurações em grade e com alvo de toque de 44px. */
+#settings-dialog .settings-action{min-height:44px;font-size:14px;line-height:1.2}
+#settings-dialog .settings-group:has(>#performance-toggle){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#settings-dialog .settings-group:has(>#performance-toggle)>p{grid-column:1/-1;margin:0}
+@media(max-width:560px){#settings-dialog .settings-group:has(>#performance-toggle){grid-template-columns:minmax(0,1fr)}}
+#settings-dialog .settings-group:has(>#performance-toggle)>.settings-action{width:100%}

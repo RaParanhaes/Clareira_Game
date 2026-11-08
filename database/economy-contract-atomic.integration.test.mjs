@@ -40,6 +40,16 @@ test('resource delivery consumes materials, credits reward and journals in one P
     assert.deepEqual(failedState.completed, []);
     assert.equal((await store.accounts.getSession(registered.token)).profile.inventory.wood, 25);
 
+    const forged = createInventory(before);
+    forged.wood = 5;
+    forged.plank = 1;
+    await assert.rejects(
+      store.completeResourceContract({
+        profileId, contractId:'dry-sticks', dayKey, inventoryAfter:inventorySnapshot(forged),
+      }),
+      error => error.status === 409 && /materiais.*mudaram/.test(error.message),
+      'delivery cannot silently add unrelated items to the persisted inventory',
+    );
     const after = createInventory(before);
     after.wood = 5;
     const settlement = await store.completeResourceContract({

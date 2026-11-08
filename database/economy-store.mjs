@@ -3,7 +3,8 @@ import { gameDayKey } from '../game/game-calendar.mjs';
 import { randomUUID } from 'node:crypto';
 import { CURRENCY_KEYS, MAX_WALLET_VALUE, TRADE_PRICES, currencyValue, formatCoins, walletFromValue } from '../game/lodging-catalog.mjs';
 import { calculateDynamicQuote, calculateGovernmentTaxRate, calculateInputCost, calculateMoneySupplyPriceFactor, ECONOMY_RECIPES, MONEY_SUPPLY_POLICY } from '../game/economy.mjs';
-import { inventoryRows } from '../game/inventory.mjs';
+import { createInventory, inventoryFromRows, inventoryRows, inventorySnapshot, removeInventoryItem } from '../game/inventory.mjs';
+import { validateInventory } from '../scripts/account-store.mjs';
 import { isCabin } from '../game/cabin-access.mjs';
 import { accumulateGovernmentTax } from './tax-remainders.mjs';
 
@@ -361,13 +362,16 @@ export function createEconomyStore(pool) {
       );
       const profile = await client.query('SELECT id FROM profiles WHERE id=$1 AND is_guest=false', [profileId]);
       if (!profile.rowCount) throw Object.assign(new Error('Crie uma conta para guardar as moedas desta venda.'), { status: 403 });
-      const persistedItem = await client.query(
-        "SELECT COALESCE(sum(quantity),0)::integer AS quantity FROM inventory_items " +
-        "WHERE profile_id=$1 AND item_id LIKE 'slot:%:' || $2",
-        [profileId, itemId],
+      const savedRows = await client.query(
+        'SELECT item_id,quantity FROM inventory_items WHERE profile_id=$1 ORDER BY item_id FOR UPDATE',
+        [profileId],
       );
-      const expectedRemaining = Number(persistedItem.rows[0]?.quantity || 0) - quantity;
-      if (expectedRemaining < 0 || expectedRemaining !== inventoryAfter[itemId]) {
+      const persisted = validateInventory(inventoryFromRows(
+        savedRows.rows.map(row => ({ itemId:row.item_id, quantity:Number(row.quantity) })),
+      ));
+      const expectedAfter = createInventory(persisted);
+      if (removeInventoryItem(expectedAfter, itemId, quantity) !== quantity
+          || JSON.stringify(validateInventory(expectedAfter)) !== JSON.stringify(validateInventory(inventoryAfter))) {
         throw Object.assign(new Error('A mochila mudou. Atualize a venda e tente novamente.'), { status:409 });
       }
       const unitPrice = quoteResult.rowCount ? Number(quoteResult.rows[0].buy_price_bronze) : TRADE_PRICES[itemId];

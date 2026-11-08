@@ -1274,21 +1274,21 @@ body{background:#000}
 #lodging-options .lodging-option{grid-template-columns:minmax(0,1fr);gap:10px;padding:14px;background:#20322d;border:1px solid #5c6951;box-shadow:none}
 #lodging-options .lodging-option small{font-size:13px;line-height:1.5}
 #lodging-options .lodging-option button{width:100%}
-#lodging-options .commerce-sale{grid-template-columns:minmax(0,1fr) auto;padding:14px;gap:12px;background:#20322d;border:1px solid #5c6951;box-shadow:none}
-#lodging-options .commerce-sale>label{grid-column:1/-1;font-size:15px;font-weight:700}
-#lodging-options .commerce-sale small{font-size:12px;line-height:1.5}
+#lodging-options :is(.commerce-sale,.commerce-purchase){grid-template-columns:minmax(0,1fr) auto;padding:14px;gap:12px;background:#20322d;border:1px solid #5c6951;box-shadow:none}
+#lodging-options :is(.commerce-sale,.commerce-purchase)>label{grid-column:1/-1;font-size:15px;font-weight:700}
+#lodging-options :is(.commerce-sale,.commerce-purchase) small{font-size:12px;line-height:1.5}
 #lodging-options .commerce-quantity{display:flex;gap:6px;align-items:center}
 #lodging-options .commerce-quantity button{min-width:44px;min-height:44px;font-size:20px}
 #lodging-options .commerce-quantity input{box-sizing:border-box;width:64px;min-height:44px;font-size:16px;text-align:center}
 #lodging-options .commerce-total{grid-column:1/-1;color:#f5d78d}
-#lodging-options .commerce-sale>button{grid-column:2;grid-row:2;min-width:84px}
+#lodging-options :is(.commerce-sale,.commerce-purchase)>button{grid-column:2;grid-row:2;min-width:84px}
 #lodging-options .commerce-review p{margin:0;font-size:15px;line-height:1.6}
 .lodging-status:empty{display:none}
 .lodging-auto-renew{min-height:44px}
 #lodging-options .commerce-property-list{grid-template-columns:minmax(0,1fr);gap:12px;padding:14px}
 #lodging-options .commerce-property-list label{display:grid;gap:8px}
 #property-asking-price{box-sizing:border-box;width:100%;min-height:44px;font-size:16px}
-@media(max-width:360px){#lodging-options .commerce-sale{padding:10px;gap:10px}#lodging-options .commerce-sale>button{grid-column:1/-1;grid-row:auto}#lodging-options .commerce-quantity{grid-column:1/-1;justify-content:space-between}}
+@media(max-width:360px){#lodging-options :is(.commerce-sale,.commerce-purchase){padding:10px;gap:10px}#lodging-options :is(.commerce-sale,.commerce-purchase)>button{grid-column:1/-1;grid-row:auto}#lodging-options .commerce-quantity{grid-column:1/-1;justify-content:space-between}}
 
 #lodging-options .commerce-tax-form{grid-template-columns:minmax(0,1fr);gap:12px;padding:12px}
 #lodging-options .commerce-tax-form label{display:grid;gap:6px}

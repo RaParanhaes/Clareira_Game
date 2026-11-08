@@ -137,7 +137,7 @@ test('village and kingdom treasuries keep independent balances, audited allocati
     assert.deepEqual(entries.rows.map(row=>[row.fund_code,Number(row.amount_bronze)]),
       [['general',-200],['construction',200]]);
     const history=await pool.query('SELECT event_type FROM government_project_events WHERE government_id=$1',[village]);
-    assert.equal(history.rowCount,6,'two proposals, two fundings and one cancellation include audit events');
+    assert.equal(history.rowCount,5,'two proposals, two fundings and one cancellation include audit events');
   }finally{
     for(const id of [village,kingdom]){
       await pool.query('DELETE FROM government_project_events WHERE government_id=$1',[id]);

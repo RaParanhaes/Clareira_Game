@@ -1334,3 +1334,24 @@ body{background:#000}
 /* Property and rental forms keep touch controls readable on narrow screens. */
 #lodging-options .lodging-option>label:has([data-property-price]),#lodging-options .lodging-option>label:has([data-rental-period]){display:grid;gap:8px;width:100%;min-width:0}
 #lodging-options [data-property-price],#lodging-options [data-rental-period]{box-sizing:border-box;width:100%;max-width:100%;min-height:44px;padding:10px;font:inherit;font-size:16px;color:#f5e6c7;background:#1c2d2e;border:2px solid #80603c;border-radius:0}
+
+/* Polimento de UI (feat/ui-menus-visual): minimapa legível e dica de toque em pílula. */
+.shell.is-authenticated .mini-map{width:clamp(190px,18vw,236px);gap:5px;padding:7px;border-width:2px;border-color:#c99d62}
+.mini-map-caption{font-size:10px;letter-spacing:.14em;padding:2px 4px}
+.mini-map-caption small{font-size:10px;color:#cfe0c4}
+#mini-map-canvas{border:2px solid #7d5c36;box-shadow:inset 0 0 0 1px #e2c58b33}
+.mini-map-open-hint{font-size:10px;color:#d8dcc9;padding:2px 4px}
+.touch-walk-hint{padding:4px 10px;border:1px solid #d5bb8059;border-radius:999px;background:#0b1114e6;color:#f1e4c4;font-size:12px;line-height:1.3;box-shadow:0 4px 12px #020609a8}
+@media(max-width:720px){
+  .shell.is-authenticated .mini-map{width:clamp(138px,40vw,164px);padding:5px}
+  .mini-map-caption,.mini-map-caption small,.mini-map-open-hint{font-size:9px}
+}
+
+/* Polimento de UI (feat/ui-menus-visual): comparação de casas e quartos no balcão. */
+.lodging-option{padding:12px 13px;border:1px solid #6f7f63;border-left:4px solid #c99d62;border-radius:6px;background:linear-gradient(160deg,#2b4039,#203230);box-shadow:0 2px 0 #0a1410;transition:border-color .15s ease,transform .15s ease}
+.lodging-option:hover{border-color:#e2c58b;transform:translateY(-1px)}
+.lodging-option strong{font-size:15px;line-height:1.25;color:#f7e7c0}
+.lodging-option small{font-size:12px;line-height:1.4;color:#c3cfbf}
+@media(min-width:560px){
+  #lodging-options:has(>.lodging-option:nth-child(2)){grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+}

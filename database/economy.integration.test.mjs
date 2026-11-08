@@ -186,6 +186,7 @@ test('PostgreSQL seeds quotes and settles NPC sale wallet plus measured demand a
     assert.equal(result.amount, 100);
     assert.equal(result.wallet.silver, 1);
     assert.equal(result.wallet.bronze, 0);
+    for (const [coin, amount] of Object.entries(result.wallet)) inventory[coin] = amount;
     inventory.copperIngot = 0;
     const smallSale = await market.settleNpcSale({ profileId, itemId:'copperIngot', quantity:1, inventoryAfter:inventorySnapshot(inventory), expectedPriceBronze:51 });
     assert.equal(smallSale.grossAmount, 51);

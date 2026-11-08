@@ -18,6 +18,7 @@ import { WORLD_NATURE_ORIGIN } from './world-scale.mjs';
 import { DIMENSION_THEMES } from './dimension-themes.mjs';
 import {applyObjectCatalog,getObjectCatalog,objectCatalogRevision} from './object-state.mjs';
 import {roomView} from './room-view.mjs';
+import { drawNight, carriedLanternSources, setNightDeps } from './lighting-renderer.mjs';
 import { exteriorEmitters, interiorEmitters, roomLightObstacles, lightAmount, roomGlowProfile, actorWindowLight } from './scene-lights.mjs';
 import { buildingWindows, buildingArchitecture } from './architectural-elements.mjs';
 import { lightmapFor, paintLightmap, processLightmapQueue, lightmapStats } from './lightmap-renderer.mjs';
@@ -77,7 +78,7 @@ export function inspectVillageNpcActors() {
 import {drawMaterial} from './materials.mjs';
 import {blendBody} from './locomotion.mjs';
 const bodyAnimations=new Map();
-import {FIRE_LIGHT_REACH,dominantLight,nightBrightness,flameEnvelope,flameLightEnvelope,exteriorNightOpacity,nightEmitterProfile} from './lighting.mjs';
+import {FIRE_LIGHT_REACH,dominantLight,nightBrightness,flameEnvelope,flameLightEnvelope,exteriorNightOpacity,nightEmitterProfile,celestialLightState,createShadowDirectionResolver,buildingLocalFill,nightVeilColor} from './lighting.mjs';
 import { CAMPFIRE_AURA_DISPLAY_SIZE, CAMPFIRE_AURA_FRAME_COUNT, CAMPFIRE_AURA_FRAME_HEIGHT,
   CAMPFIRE_AURA_LIGHT_SCALE, campfireAuraFrameIndex } from './campfire-aura.mjs';
 import { CAMPFIRE_HEARTH_ANCHOR, CAMPFIRE_HEARTH_FRAME_HEIGHT,
@@ -5586,70 +5587,8 @@ function drawWorldShadows(frameFires, litFires=frameFires) {
   const carriedLanternProfile=nightEmitterProfile(4.8,1.7,{night:gameDay.night,hasMoon:gameDay.hasMoon});
   for(const light of carriedLanternSources())localLights.push({...light,kind:'lantern',reach:carriedLanternProfile.reach,
     falloffExponent:carriedLanternProfile.falloffExponent,strength:.65});
-  const sunStrength=gameDay.sunlightStrength??gameDay.daylight;
-  const moonStrength=gameDay.moonlightStrength;
-  const hasSun=Boolean(gameDay.sunPosition&&sunStrength>=moonStrength&&sunStrength>.01);
-  const globalLight=(()=>{
-    if(sunStrength<=.001&&moonStrength<=.001)return null;
-    // Celestial rays belong to the world: phone aspect ratio must not rotate them.
-    const sunDirection=celestialShadowDirection(gameDay.sunPosition),moonDirection=celestialShadowDirection(gameDay.moonPosition);
-    // At dawn and dusk the sun and moon overlap in strength; blend their directions
-    // so the single stylized shadow turns smoothly instead of snapping across the scene.
-    const mixedX=sunDirection.x*sunStrength+moonDirection.x*moonStrength;
-    const mixedY=sunDirection.y*sunStrength+moonDirection.y*moonStrength;
-    const mixedLength=Math.hypot(mixedX,mixedY);
-    const direction=mixedLength>.001
-      ? {x:mixedX/mixedLength,y:mixedY/mixedLength}
-      : hasSun?sunDirection:moonDirection;
-    const elevation=hasSun?gameDay.sunElevation:gameDay.moonElevation;
-    return {
-      kind:hasSun?'sun':'moon',
-      directionX:direction.x,directionY:direction.y,
-      lightStrength:Math.max(sunStrength,moonStrength),
-      strength:hasSun ? .34 + .5*sunStrength : moonShadowProfile(moonStrength,elevation).strength,
-      // Shadows lengthen as either celestial light approaches the horizon.
-      lengthScale:hasSun ? .18+1.45*(1-elevation) : moonShadowProfile(moonStrength,elevation).lengthScale,
-    };
-  })();
-  const shadowDirection=(x,y,ignoreOwner=null)=>{
-    const p=point(x,y);
-    let strongestLocalLight=null,strongestLocalStrength=0,strongestLocalDistance=0;
-    for(const light of localLights){
-      // A building cannot cast a shadow from its own windows or porch lantern,
-      // but neighboring buildings' lights still illuminate its roof and walls.
-      if(ignoreOwner&&light.owner===ignoreOwner)continue;
-      const distance=Math.hypot(x-light.x,y-light.y);
-      if(distance>=light.reach)continue;
-      const strength=lightAmount(light,{x,y,height:surfaceHeight(x,y,'clearing')+.3},architecturalScene.obstacles);
-      if(strength>strongestLocalStrength){strongestLocalLight=light;strongestLocalStrength=strength;strongestLocalDistance=distance;}
-    }
-    // Blend nearby emitters with the broad sky light so shadows turn gradually as
-    // a fire or window becomes the stronger source.
-    if(strongestLocalLight){
-      const ratio=globalLight?strongestLocalStrength/Math.max(.01,globalLight.lightStrength):Infinity;
-      const blendProgress=globalLight?Math.max(0,Math.min(1,(ratio-.65)/.9)):1;
-      const localMix=blendProgress*blendProgress*(3-2*blendProgress);
-      if(localMix>.001){
-        const source=point(strongestLocalLight.x,strongestLocalLight.y,camera,strongestLocalLight.height);
-        const localAngle=Math.atan2(p.y-source.y,p.x-source.x);
-        const globalAngle=globalLight?Math.atan2(globalLight.directionY,globalLight.directionX):localAngle;
-        let angleDelta=Math.atan2(Math.sin(localAngle-globalAngle),Math.cos(localAngle-globalAngle));
-        if(Math.abs(Math.abs(angleDelta)-Math.PI)<.001)angleDelta=Math.PI;
-        const angle=globalAngle+angleDelta*localMix;
-        const localProfile=localShadowProfile(strongestLocalStrength,strongestLocalLight.kind,strongestLocalDistance);
-        const localStrength=localProfile.strength,localLength=localProfile.lengthScale;
-        return {
-          x:Math.cos(angle),y:Math.sin(angle),
-          source:!globalLight||localMix>.78?{kind:strongestLocalLight.kind,id:strongestLocalLight.id||strongestLocalLight.fire?.id,x:strongestLocalLight.x,y:strongestLocalLight.y}:{kind:globalLight.kind},
-          strength:globalLight?globalLight.strength+(localStrength-globalLight.strength)*localMix:localStrength,
-          lengthScale:globalLight?globalLight.lengthScale+(localLength-globalLight.lengthScale)*localMix:localLength,
-        };
-      }
-    }
-    if(!globalLight)return {x:0,y:1,source:{kind:'ambient'},strength:0,lengthScale:1};
-    return {x:globalLight.directionX,y:globalLight.directionY,source:{kind:globalLight.kind},
-      strength:globalLight.strength,lengthScale:globalLight.lengthScale};
-  };
+  const globalLight=celestialLightState(gameDay);
+  const shadowDirection=createShadowDirectionResolver({globalLight,localLights,obstacles:architecturalScene.obstacles,point,surfaceHeight,getCamera:()=>camera});
   frameShadowDirectionAt=shadowDirection;
 
 
@@ -5674,21 +5613,7 @@ function drawWorldShadows(frameFires, litFires=frameFires) {
     // cast a visible shadow into the viewport.
     if(hull.every(p=>p.x<0)||hull.every(p=>p.x>viewWidth)||hull.every(p=>p.y<0)||hull.every(p=>p.y>viewHeight))continue;
     const centerX=(b.left+b.right)/2,centerY=(b.top+b.bottom)/2;
-    const edge=.24;
-    let localFill=0;
-    for(const light of localLights){
-      const sourceId=String(light.id||light.fire?.id||'');
-      if(sourceId&&sourceId===String(direction.source?.id||''))continue;
-      // A building's own windows and porch lantern must not erase its own shadow;
-      // only neighboring emitters fill it.
-      if(light.owner===building.id)continue;
-      const targetX=Math.max(b.left-edge,Math.min(b.right+edge,light.x));
-      const targetY=Math.max(b.top-edge,Math.min(b.bottom+edge,light.y));
-      if(Math.hypot(light.x-targetX,light.y-targetY)>light.reach)continue;
-      const amount=lightAmount(light,{x:targetX,y:targetY,
-        height:surfaceHeight(targetX,targetY,'clearing')+.3},architecturalScene.obstacles);
-      if(amount>localFill)localFill=amount;
-    }
+    const localFill=buildingLocalFill(building,direction,localLights,architecturalScene.obstacles,surfaceHeight);
     const groundShadow=attenuateShadowWithLocalLight(buildingGroundShadowStrength(direction),localFill);
     drawFootprintShadow(hull,0,0,groundShadow);
     const wing=buildingArchitecture(building).frontWing;
@@ -5737,38 +5662,43 @@ function drawWorldShadows(frameFires, litFires=frameFires) {
   }
 
 }
-const nightMask=document.createElement('canvas');
-const NIGHT_MASK_SCALE=.25;
-const NIGHT_LIGHT_FPS=30;
-const NIGHT_MASK_PAD=640;
-function paintNightMask(anchor=camera){
- const shiftX=-((camera.x-anchor.x)-(camera.y-anchor.y))*TILE_X;
- const shiftY=-((camera.x-anchor.x)+(camera.y-anchor.y))*TILE_Y;
- ctx.save();ctx.imageSmoothingEnabled=true;
- ctx.drawImage(nightMask,(NIGHT_MASK_PAD-shiftX)*NIGHT_MASK_SCALE,(NIGHT_MASK_PAD-shiftY)*NIGHT_MASK_SCALE,
-   viewWidth*NIGHT_MASK_SCALE,viewHeight*NIGHT_MASK_SCALE,0,0,viewWidth,viewHeight);
- ctx.restore();
-}
+// Live view of main.js state for the night renderer (see game/lighting-renderer.mjs).
+const nightRenderDeps={
+  get FRAME_LIT_FIRES(){return FRAME_LIT_FIRES;},
+  get SHADOW_RGB_STOPS(){return SHADOW_RGB_STOPS;},
+  get TILE_X(){return TILE_X;},
+  get TILE_Y(){return TILE_Y;},
+  get activeAvatarAppearance(){return activeAvatarAppearance;},
+  get addSphericalFalloffStops(){return addSphericalFalloffStops;},
+  get arrivalFireIgnition(){return arrivalFireIgnition;},
+  get camera(){return camera;},
+  set camera(v){camera=v;},
+  get clientServerTime(){return clientServerTime;},
+  get ctx(){return ctx;},
+  get currentSceneLights(){return currentSceneLights;},
+  get dimensionList(){return dimensionList;},
+  get dimensionTheme(){return dimensionTheme;},
+  get drawRoomLighting(){return drawRoomLighting;},
+  get fires(){return fires;},
+  get gameDay(){return gameDay;},
+  get livePlayers(){return livePlayers;},
+  get localRenderPosition(){return localRenderPosition;},
+  get nightMaskKey(){return nightMaskKey;},
+  set nightMaskKey(v){nightMaskKey=v;},
+  get paintSceneLightmaps(){return paintSceneLightmaps;},
+  get point(){return point;},
+  get reducedMotion(){return reducedMotion;},
+  get selfId(){return selfId;},
+  get spriteScale(){return spriteScale;},
+  get teleportEffects(){return teleportEffects;},
+  get viewHeight(){return viewHeight;},
+  get viewWidth(){return viewWidth;},
+  get worldClock(){return worldClock;},
+  get worldDimensionId(){return worldDimensionId;},
+  get worldLocation(){return worldLocation;},
+};
+setNightDeps(nightRenderDeps);
 let nightMaskKey='';
-function carriedLanternSources(){
- const sources=[],seen=new Set();
- for(const player of livePlayers.values()){
-  const appearance=player.id===selfId?(activeAvatarAppearance||player.appearance):player.appearance;
-  if(!appearance||(![appearance.mainHandId,appearance.offHandId].includes('equipment.lantern')&&appearance.item!=='lantern'))continue;
-  if(player.location&&player.location!=='clearing')continue;
-  if(player.dimensionId&&player.dimensionId!==worldDimensionId)continue;
-  const position=player.id===selfId?localRenderPosition:player;
-  if(!Number.isFinite(position?.x)||!Number.isFinite(position?.y))continue;
-  const key=String(player.id||'');if(seen.has(key))continue;seen.add(key);
-  sources.push({id:key,x:position.x,y:position.y,height:surfaceHeight(position.x,position.y,'clearing')+.82});
- }
- if(selfId&&!seen.has(selfId)&&activeAvatarAppearance
-   &&([activeAvatarAppearance.mainHandId,activeAvatarAppearance.offHandId].includes('equipment.lantern')||activeAvatarAppearance.item==='lantern')){
-  sources.push({id:selfId,x:localRenderPosition.x,y:localRenderPosition.y,
-    height:surfaceHeight(localRenderPosition.x,localRenderPosition.y,'clearing')+.82});
- }
- return sources;
-}
 function paintFirelightColor(time, intensity = 1){
  ctx.save();ctx.globalCompositeOperation='screen';
  const isArrival=worldDimensionId.startsWith('arrival-');
@@ -5800,141 +5730,7 @@ function paintFirelightColor(time, intensity = 1){
  }
  ctx.restore();
 }
-function windowFacadeGeometry(project,building,win,light){
-  const alongX=Boolean(win.ny),alongY=Boolean(win.nx);
-  if(!alongX&&!alongY)return null;
-  const halfSpan=Math.max(.8,Math.min(1.65,(win.width||1)*1.25));
-  const wall={x1:win.x-(alongX?halfSpan:0),y1:win.y-(alongY?halfSpan:0),
-    x2:win.x+(alongX?halfSpan:0),y2:win.y+(alongY?halfSpan:0),
-    bottom:Math.max(0,win.bottom-.95),top:Math.min(win.top+.85,Math.max(building.height||0,win.top+.2))};
-  if(wall.top<=wall.bottom)return null;
-  const points=facadePanel(project,wall,0,0,1,1);
-  const center=project(win.x,win.y,(win.bottom+win.top)/2);
-  const radiusX=TILE_X*(1.35+Math.min(.55,(light.reach||0)*.045));
-  const radiusY=Math.max(HEIGHT_PIXELS*spriteScale*1.85,(wall.top-wall.bottom)*HEIGHT_PIXELS*spriteScale*.55);
-  return {points,center,radiusX,radiusY};
-}
 
-function drawNight(){
- if(worldLocation==='room'){drawRoomLighting();return;}
- if(worldLocation!=='clearing')return;
- const nightFactor = dimensionTheme === 'dark' ? .36 + gameDay.night * .64 : gameDay.night;
- // The mask and roof/window cutouts are expensive, and contribute nothing
- // during full daylight. The main canvas is redrawn each frame, so it is safe
- // to omit the mask entirely until night begins.
- if(nightFactor<=0)return;
- const maskWidth=Math.ceil((viewWidth+NIGHT_MASK_PAD*2)*NIGHT_MASK_SCALE);
- const maskHeight=Math.ceil((viewHeight+NIGHT_MASK_PAD*2)*NIGHT_MASK_SCALE);
- if(nightMask.width!==maskWidth||nightMask.height!==maskHeight){nightMask.width=maskWidth;nightMask.height=maskHeight;nightMaskKey='';}
- const lightFrame=FRAME_LIT_FIRES.length?Math.floor(worldClock*NIGHT_LIGHT_FPS):0;
- const nightCamera={x:Math.round(camera.x),y:Math.round(camera.y)};
- const teleportLights=teleportEffects.lightingPoints(worldDimensionId,clientServerTime());
- const teleportLightKey=teleportLights.map(light=>`${light.id}:${light.frame}`).join(';');
- const lanterns=carriedLanternSources();
- const lanternKey=lanterns.map(light=>`${light.id}:${light.x.toFixed(2)}:${light.y.toFixed(2)}`).join(';');
- const key=`${nightCamera.x}:${nightCamera.y}:${TILE_X}:${worldDimensionId}:${dimensionTheme}:${lightFrame}:${teleportLightKey}:${lanternKey}:${gameDay.hasMoon?1:0}:${(gameDay.moonlightStrength||0).toFixed(3)}:${Math.round(nightFactor*100)}:${nightMask.width}:${nightMask.height}:${lightmapStats().revision}:`+FRAME_LIT_FIRES.map(f=>`${f.id||''}:${f.x}:${f.y}`).join(';');
- if(key===nightMaskKey){paintNightMask(nightCamera);return;}nightMaskKey=key;
- const currentCamera=camera;camera=nightCamera;
- const mask=nightMask.getContext('2d');mask.setTransform(NIGHT_MASK_SCALE,0,0,NIGHT_MASK_SCALE,0,0);mask.translate(NIGHT_MASK_PAD,NIGHT_MASK_PAD);mask.clearRect(-NIGHT_MASK_PAD,-NIGHT_MASK_PAD,viewWidth+NIGHT_MASK_PAD*2,viewHeight+NIGHT_MASK_PAD*2);
- const isArrival=worldDimensionId.startsWith('arrival-');
- const arrivalReach=isArrival?ARRIVAL_CAMPFIRE_REACH_MULTIPLIER:1;
- const edgePower=isArrival?ARRIVAL_CAMPFIRE_EDGE_POWER:1.35;
- const fireProfile=isArrival?{reach:CAMPFIRE_LIGHT_RADIUS_TILES,falloffExponent:edgePower}
-   :nightEmitterProfile(CAMPFIRE_LIGHT_RADIUS_TILES,edgePower,{night:nightFactor,hasMoon:gameDay.hasMoon});
- mask.globalCompositeOperation='source-over';mask.globalAlpha=exteriorNightOpacity(gameDay,{theme:dimensionTheme,dimensionId:worldDimensionId});mask.fillStyle=({dark:'#000000',sky:'#173044',magic:'#06091b',inferno:'#120604',giants:'#06100e',energy:'#020a18'})[dimensionTheme]||'#0c1a2a';mask.fillRect(-NIGHT_MASK_PAD,-NIGHT_MASK_PAD,viewWidth+NIGHT_MASK_PAD*2,viewHeight+NIGHT_MASK_PAD*2);mask.globalAlpha=1;
- mask.globalCompositeOperation='destination-out';
- if(isArrival&&arrivalFireIgnition()<1){
-  const hearth=dimensionList.find(item=>item.id===worldDimensionId)?.campfire;
-  if(hearth){
-   const p=point(hearth.x,hearth.y),radius=TILE_X*.9;
-   const glimpse=mask.createRadialGradient(p.x,p.y,0,p.x,p.y,radius);
-   glimpse.addColorStop(0,'#000000');glimpse.addColorStop(.5,'#000000a0');glimpse.addColorStop(1,'#00000000');
-   mask.save();mask.globalAlpha=.4*(1-arrivalFireIgnition());mask.fillStyle=glimpse;
-   mask.fillRect(p.x-radius,p.y-radius,radius*2,radius*2);mask.restore();
-  }
- }
- for(const fire of fires.values()){
-
-  const strength=campfireFlameStrength(fire,performance.now())*(worldDimensionId.startsWith('arrival-')?arrivalFireIgnition():1);if(strength<=0)continue;
-  const p=point(fire.x,fire.y),lightTime=lightFrame/NIGHT_LIGHT_FPS;
-  const pulse=campfireGlowPulse(flameLightEnvelope(lightTime,fire,reducedMotion));
-  const radius=TILE_X*fireProfile.reach*arrivalReach*(.32+.68*strength)*pulse*(worldDimensionId.startsWith('arrival-') ? .35+.65*arrivalFireIgnition() : 1);
-  const sway=reducedMotion?0:windSwayAt(fire.x,fire.y,lightTime)*windStrengthAt(fire.x,fire.y)*5;
-  const lightX=p.x+sway,lightY=p.y-7;
-  mask.save();mask.translate(lightX,lightY);mask.scale(1,.66);
-  const glow=mask.createRadialGradient(0,0,0,0,0,radius);
-  addSphericalFalloffStops(glow,1,SHADOW_RGB_STOPS,fireProfile.falloffExponent);
-  mask.globalAlpha=strength*pulse;mask.fillStyle=glow;mask.fillRect(-radius,-radius,radius*2,radius*2);mask.restore();
- }
- if(worldDimensionId==='surface'){
-   mask.save();
-   for(const building of [RECEPTION_BUILDING,...VILLAGE_BUILDINGS].filter(b=>b.roofVisible!==false))for(const plane of roofGeometry(building).planes){
-     mask.beginPath();mask.rect(-NIGHT_MASK_PAD,-NIGHT_MASK_PAD,viewWidth+NIGHT_MASK_PAD*2,viewHeight+NIGHT_MASK_PAD*2);
-     plane.forEach(([x,y,z],index)=>{const p=point(x,y,camera,z);if(index)mask.lineTo(p.x,p.y);else mask.moveTo(p.x,p.y);});mask.closePath();mask.clip('evenodd');
-   }
-   // Ground light must not erase darkness from a vertical facade that happens
-   // to cover the same screen pixels. Window panes/glow are handled below.
-   mask.save();
-   for(const building of [RECEPTION_BUILDING,...VILLAGE_BUILDINGS]){
-     const b=building.bounds,h=building.height;
-     for(const face of [[[b.left,b.bottom,0],[b.right,b.bottom,0],[b.right,b.bottom,h],[b.left,b.bottom,h]],
-       [[b.right,b.top,0],[b.right,b.bottom,0],[b.right,b.bottom,h],[b.right,b.top,h]]]){
-       mask.beginPath();mask.rect(-NIGHT_MASK_PAD,-NIGHT_MASK_PAD,viewWidth+NIGHT_MASK_PAD*2,viewHeight+NIGHT_MASK_PAD*2);
-       face.forEach(([x,y,z],i)=>{const p=point(x,y,camera,z);if(i)mask.lineTo(p.x,p.y);else mask.moveTo(p.x,p.y);});mask.closePath();mask.clip('evenodd');
-     }
-   }
-   paintSceneLightmaps(mask,.72);
-   // Preserve the emitter's amber tint at night instead of only revealing
-   // the unlit green terrain underneath the darkness cutout.
-   mask.globalCompositeOperation='source-over';
-   mask.restore();
-   // Clear the actual luminous panes, without a halo leaking through the roof.
-   const project=(x,y,z)=>point(x,y,camera,z);
-   for(const light of currentSceneLights().lights.filter(light=>light.kind==='lantern'&&light.strength>0)){
-     const points=facadePanel(project,{x1:light.x-.14,y1:light.y,x2:light.x+.14,y2:light.y,bottom:2.98,top:3.48},0,0,1,1);
-     mask.beginPath();points.forEach(([x,y],i)=>i?mask.lineTo(x,y):mask.moveTo(x,y));mask.closePath();mask.fillStyle='#000';mask.fill();
-   }
-   const litWindows=new Map(currentSceneLights().lights.filter(light=>light.kind==='window'&&light.strength>0).map(light=>[light.id,light]));
-   for(const building of [RECEPTION_BUILDING,...VILLAGE_BUILDINGS])for(const win of buildingWindows(building)){
-     const light=litWindows.get(win.id);if(!light)continue;
-     const patch=windowFacadeGeometry(project,building,win,light);
-     if(patch){
-       const {points,center,radiusX,radiusY}=patch;
-       mask.save();mask.beginPath();points.forEach(([x,y],i)=>i?mask.lineTo(x,y):mask.moveTo(x,y));mask.closePath();mask.clip();
-       mask.globalCompositeOperation='destination-out';mask.globalAlpha=Math.min(.72,light.strength*.78);
-       mask.translate(center.x,center.y);mask.scale(1,radiusY/radiusX);
-       const glow=mask.createRadialGradient(0,0,0,0,0,radiusX);
-       glow.addColorStop(0,'rgba(0,0,0,.82)');
-       glow.addColorStop(.42,'rgba(0,0,0,.48)');
-       glow.addColorStop(.78,'rgba(0,0,0,.16)');
-       glow.addColorStop(1,'rgba(0,0,0,0)');
-       mask.fillStyle=glow;mask.fillRect(-radiusX,-radiusX,radiusX*2,radiusX*2);mask.restore();
-     }
-     const wall={x1:win.x-(win.ny?win.width/2:0),y1:win.y-(win.nx?win.width/2:0),
-       x2:win.x+(win.ny?win.width/2:0),y2:win.y+(win.nx?win.width/2:0),bottom:win.bottom,top:win.top};
-     const points=facadePanel(project,wall,.1,.1,.9,.9);
-     mask.beginPath();points.forEach(([x,y],i)=>i?mask.lineTo(x,y):mask.moveTo(x,y));mask.closePath();mask.fillStyle='#000';mask.fill();
-   }
-   mask.restore();
- }
- const lanternProfile=nightEmitterProfile(4.8,1.7,{night:nightFactor,hasMoon:gameDay.hasMoon});
- for(const source of lanterns){
-  const p=point(source.x,source.y,camera,source.height),radius=TILE_X*lanternProfile.reach;
-  mask.save();mask.translate(p.x,p.y-4);mask.scale(1,.7);
-  const glow=mask.createRadialGradient(0,0,0,0,0,radius);
-  glow.addColorStop(0,'#000000ff');glow.addColorStop(.22,'#000000e8');
-  glow.addColorStop(.55,'#0000008c');glow.addColorStop(1,'#00000000');
-  mask.fillStyle=glow;mask.fillRect(-radius,-radius,radius*2,radius*2);mask.restore();
- }
- for(const light of teleportLights){
-  const p=point(light.x,light.y,camera,0),radius=TILE_X*6.5;
-  mask.save();mask.translate(p.x,p.y-4);mask.scale(1.12,.82);
-  const glow=mask.createRadialGradient(0,0,0,0,0,radius);
-  glow.addColorStop(0,'#000000f5');glow.addColorStop(.32,'#000000cf');glow.addColorStop(.68,'#00000070');glow.addColorStop(1,'#00000000');
-  mask.globalAlpha=light.strength;mask.fillStyle=glow;mask.beginPath();mask.arc(0,0,radius,0,Math.PI*2);mask.fill();mask.restore();
- }
- mask.globalCompositeOperation='source-over';camera=currentCamera;paintNightMask(nightCamera);
-}
 
 function paintResource(resource, p) {
   const bob = 0;

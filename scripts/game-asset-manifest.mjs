@@ -22,8 +22,6 @@ const nonRuntimeFiles = new Set([
   // bootstrap without holding the verified runtime cache or login form.
   'art/clareira-login-vila-v1.webp',
   'art/clareira-login-vila-v2.webp',
-  'art/clareira-login-loop-v3.mp4',
-  'art/clareira-login-loop-v4.mp4',
   'art/clareira-login-loop-v5.mp4',
   'art/clareira-login-poster-v5.webp',
   // Design reference only; it is not loaded by the game client.

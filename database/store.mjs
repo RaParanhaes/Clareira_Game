@@ -11,7 +11,7 @@ import { normalizeAppearance } from '../game/appearance.mjs';
 import { WORLD_DIMENSION_ID, WORLD_DOCUMENT_ID, emptyWorldDefinition, normalizeWorldDefinition } from '../game/world-edits.mjs';
 import { normalizePlayerLocation, normalizePlayerDimensionPosition } from '../scripts/player-location-store.mjs';
 import { CURRENCY_KEYS, MAX_WALLET_VALUE, TOOL_PRICES, currencyValue, formatCoins, walletFromValue } from '../game/lodging-catalog.mjs';
-import { STONE_AXE_DURABILITY, STONE_PICKAXE_DURABILITY, addInventoryItem, canAddInventoryItems, createInventory, findInventorySlot, inventoryFromRows, inventoryRows, inventorySnapshot } from '../game/inventory.mjs';
+import { STONE_AXE_DURABILITY, STONE_PICKAXE_DURABILITY, addInventoryItem, canAddInventoryItems, createInventory, findInventorySlot, inventoryFromRows, inventoryRows, inventorySnapshot, removeInventoryItem } from '../game/inventory.mjs';
 import { AXE_TOOL_IDS, PICKAXE_TOOL_IDS, axeToolFor, pickaxeToolFor } from '../game/tool-progression.mjs';
 import { RESOURCE_CONTRACTS, normalizeResourceContractState, resourceContractDayKey } from '../game/resource-contracts.mjs';
 import { normalizeInteractionEvent } from './interaction-events.mjs';
@@ -865,12 +865,10 @@ export function createPostgresStore(pool) {
         await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', ['lodging-profile', profileId]);
         const profile = await client.query('SELECT id FROM profiles WHERE id = $1 AND is_guest = false', [profileId]);
         if (!profile.rowCount) throw Object.assign(new Error('Crie uma conta para guardar as moedas da encomenda.'), { status:403 });
-        const saved = await client.query(
-          "SELECT COALESCE(sum(quantity),0)::integer AS quantity FROM inventory_items " +
-          "WHERE profile_id=$1 AND item_id LIKE 'slot:%:' || $2",
-          [profileId, contract.item],
-        );
-        if (Number(saved.rows[0].quantity) !== values[contract.item] + contract.quantity) {
+        const savedInventory = await loadInventory(client, profileId);
+        const expectedAfter = createInventory(savedInventory);
+        if (removeInventoryItem(expectedAfter, contract.item, contract.quantity) !== contract.quantity
+            || JSON.stringify(validateInventory(expectedAfter)) !== JSON.stringify(values)) {
           throw Object.assign(new Error('Os materiais da mochila mudaram. Atualize a encomenda e tente novamente.'), { status:409 });
         }
         const inserted = await client.query(
@@ -879,8 +877,7 @@ export function createPostgresStore(pool) {
           [profileId, dayKey, contractId],
         );
         if (!inserted.rowCount) throw Object.assign(new Error('Você já entregou esta encomenda hoje.'), { status:409 });
-        const wallet = await loadInventory(client, profileId);
-        const nextValue = currencyValue(wallet) + contract.reward;
+        const nextValue = currencyValue(savedInventory) + contract.reward;
         if (nextValue > MAX_WALLET_VALUE) throw Object.assign(new Error('A carteira atingiu o limite técnico de armazenamento.'), { status:409 });
         const nextWallet = walletFromValue(nextValue);
         await writeProgress(client, profileId, values);

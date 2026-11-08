@@ -1,12 +1,13 @@
 name: Economy integrity
 
 on:
-  push:
-    branches:
-      - 'feat/economia-*'
   pull_request:
     branches:
       - main
+
+concurrency:
+  group: economy-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

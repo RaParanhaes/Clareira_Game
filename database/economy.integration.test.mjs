@@ -171,6 +171,13 @@ test('PostgreSQL seeds quotes and settles NPC sale wallet plus measured demand a
     );
     const beforeSale = await pool.query("SELECT COALESCE(sum(quantity),0)::integer AS quantity FROM inventory_items WHERE profile_id=$1 AND item_id LIKE 'slot:%:copperIngot'", [profileId]);
     assert.equal(Number(beforeSale.rows[0].quantity), 3, 'stale quote rejection preserves inventory');
+    const forged = createInventory(inventory);
+    forged.plank = 1;
+    await assert.rejects(
+      market.settleNpcSale({ profileId, itemId:'copperIngot', quantity:2, inventoryAfter:inventorySnapshot(forged), expectedPriceBronze:51 }),
+      error => error.status === 409 && /mochila mudou/.test(error.message),
+      'a market sale must not persist unrelated items from an inconsistent snapshot',
+    );
     const result = await market.settleNpcSale({ profileId, itemId:'copperIngot', quantity:2, inventoryAfter:inventorySnapshot(inventory), expectedPriceBronze:51 });
     assert.equal(result.unitPrice, 51);
     assert.equal(result.grossAmount, 102);

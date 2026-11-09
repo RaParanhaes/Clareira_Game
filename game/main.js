@@ -5197,6 +5197,23 @@ function drawElevatedSurface(level,accessLeft,accessBottom,room) {
 
 }
 
+// Parquet planks for the public hotel lobby. Each plank is a 2 × 0.5 tile
+// rectangle in one palette tone; rows are offset by half a plank, and the
+// joint outline keeps the butt joints readable at the game's zoom.
+function drawHotelParquet(bounds,tones){
+  const palette=tones?.length?tones:['#8b6c4d','#987654','#816448','#927351'];
+  const row=.5,plank=2,joint='#4f3b2b66';
+  for(let index=0,y=bounds.top;y<bounds.bottom-1e-6;y+=row,index++){
+    const shift=index%2?plank/2:0;
+    for(let x=bounds.left-plank+shift,plankIndex=index*3;x<bounds.right;x+=plank,plankIndex++){
+      const x0=Math.max(bounds.left,x),x1=Math.min(bounds.right,x+plank),y1=Math.min(bounds.bottom,y+row);
+      if(x1-x0<1e-6)continue;
+      const corners=[[x0,y],[x1,y],[x1,y1],[x0,y1]].map(([px,py])=>{const p=point(px,py,camera,0);return [p.x,p.y]});
+      drawPixelPolygon(corners,palette[((plankIndex%palette.length)+palette.length)%palette.length],joint);
+    }
+  }
+}
+
 function drawRoomInterior() {
   const roomLayout=currentRoomLayout(),bounds=roomLayout.bounds;
   const palette=roomLayout.palette||{};
@@ -5215,6 +5232,9 @@ function drawRoomInterior() {
     ctx.closePath();ctx.clip();
   }
   drawMaterial(drawPixelPolygon,floorCorners,4,12,palette.floor||['#8b6c4d','#927352','#86694b','#90704d'],'#57453555',true);
+  // The public lobby gets crafted parquet: planks alternate tones and butt-join
+  // on a staggered grid, so the floor reads as wood rather than a flat sheet.
+  if(roomLayout.id==='hotel-lobby')drawHotelParquet(bounds,palette.floor);
   // Two woven waiting-area rugs use the authored hotel rug palette while
   // keeping the central approach to the counter and entrance unobstructed.
   if(roomLayout.id==='hotel-lobby' && roomLayout.rug){
@@ -5352,6 +5372,23 @@ function drawRoomFixture(item) {
   if(item.kind!=='bed-cover')drawSoftShadow(p.x,p.y+2*spriteScale,(item.width+item.depth)*TILE_X*.35,
     (item.width+item.depth)*TILE_Y*.25,0,.24);
   drawRoomFixtureAsset(ctx,item,p,{tileX:TILE_X,tileY:TILE_Y,heightPixels:HEIGHT_PIXELS,scale:spriteScale});
+  if(item.surfaceProps)drawSurfaceProps(item,height);
+}
+
+// Small decorative objects on a table top: a flat book or a clay jar. Their
+// sizes are in screen pixels, scaled like the room sprites.
+function drawSurfaceProps(item,baseHeight){
+  const top=baseHeight+item.height;
+  for(const prop of item.surfaceProps){
+    const base=point(item.x+prop.dx,item.y+prop.dy,camera,top+(prop.h||0));
+    if(prop.kind==='book'){
+      const w=8*spriteScale,h=3*spriteScale;
+      drawPixelPolygon([[base.x-w/2,base.y],[base.x+w/2,base.y],[base.x+w/2,base.y-h],[base.x-w/2,base.y-h]],prop.color||'#7a3e2e','#2e1d16');
+    }else{
+      const r=3.5*spriteScale,h=7*spriteScale;
+      drawPixelPolygon([[base.x-r,base.y],[base.x+r,base.y],[base.x+r*.6,base.y-h],[base.x-r*.6,base.y-h]],'#c9a36a','#4d3a25');
+    }
+  }
 }
 
 function drawRoomCounter() {

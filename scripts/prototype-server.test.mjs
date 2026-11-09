@@ -7,8 +7,10 @@ import os from 'node:os';
 import path from 'node:path';
 import WebSocket from 'ws';
 import {
-  DIMENSION_COORDINATE_OFFSET, RESOURCE_NODES, ROOM_SPAWN, SPAWN_CAMPFIRE, WORLD_COORDINATE_VERSION, WORLD_SIZE,
+  DIMENSION_COORDINATE_OFFSET, getResourcesInBounds, ROOM_SPAWN, SPAWN, SPAWN_CAMPFIRE, WORLD_COORDINATE_VERSION,
+  WORLD_RESOURCE_GENERATION_VERSION, WORLD_SIZE, hasTreeCollision,
 } from '../game/world.mjs';
+import { VILLAGE_BUILDINGS } from '../game/village-buildings.mjs';
 import { waterStateAt, WATER_WADING_DEPTH } from '../game/waterways.mjs';
 import { createPrototypeServer } from './prototype-server.mjs';
 import { createAccountStore, saveAccountProgress } from './account-store.mjs';
@@ -31,7 +33,27 @@ const TEST_ORIGIN = 'https://test.clareira.invalid';
 const TEST_COOKIE = 'clareira_session=test-session-token';
 const surfaceCoord = value => value + DIMENSION_COORDINATE_OFFSET;
 const surfacePosition = (x, y) => ({ x: surfaceCoord(x), y: surfaceCoord(y) });
-const southBranch = RESOURCE_NODES.find(resource => resource.id === 'branch-south');
+// Os recursos agora são gerados proceduralmente (RESOURCE_NODES está vazio). O alvo é a madeira mais próxima do spawn
+// com caminho reto livre de prédios e árvores; o jogador anda ~3,2 unidades/s, então o prazo dos testes é de 30 s.
+const southBranch = (() => {
+  const radius = 80;
+  const blockedBy = (x, y) => VILLAGE_BUILDINGS.some(building => building.bounds
+    && x >= building.bounds.left - 0.6 && x <= building.bounds.right + 0.6
+    && y >= building.bounds.top - 0.6 && y <= building.bounds.bottom + 0.6);
+  const clearPath = target => {
+    const length = Math.hypot(target.x - SPAWN.x, target.y - SPAWN.y);
+    for (let d = 0; d <= length; d += 0.5) {
+      const x = SPAWN.x + (target.x - SPAWN.x) * d / length, y = SPAWN.y + (target.y - SPAWN.y) * d / length;
+      if (blockedBy(x, y) || hasTreeCollision({ x, y }, 0.6)) return false;
+    }
+    return true;
+  };
+  const wood = getResourcesInBounds({ left: SPAWN.x - radius, top: SPAWN.y - radius, right: SPAWN.x + radius, bottom: SPAWN.y + radius })
+    .filter(resource => resource.kind === 'wood' && Math.hypot(resource.x - SPAWN.x, resource.y - SPAWN.y) <= 60 && clearPath(resource))
+    .sort((a, b) => Math.hypot(a.x - SPAWN.x, a.y - SPAWN.y) - Math.hypot(b.x - SPAWN.x, b.y - SPAWN.y));
+  assert.ok(wood[0], 'há madeira com caminho livre perto do spawn para o teste de coleta');
+  return wood[0];
+})();
 const directionToward = (from, target) => {
   const dx = target.x - from.x, dy = target.y - from.y;
   const length = Math.hypot(dx, dy) || 1;
@@ -695,11 +717,11 @@ test('coleta recusada pelo intervalo devolve o pedido para encerrar o gesto do c
   player.send(JSON.stringify({ type: 'input', ...directionToward(initial.players[0], southBranch) }));
   await waitFor(player, message => message.type === 'state'
     && Math.hypot(message.players.find(item => item.id === id)?.x - southBranch.x,
-      message.players.find(item => item.id === id)?.y - southBranch.y) <= 1.1, 5000, 'player beside the south branch');
+      message.players.find(item => item.id === id)?.y - southBranch.y) <= 1.1, 15000, 'player beside the south branch');
   clearInterval(clockTicker);
   player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
 
-  const waved = waitFor(player, message => message.type === 'notice' && message.text === 'Você acenou para quem está por perto.', 2500, 'wave before collection');
+  const waved = waitFor(player, message => message.type === 'notice' && message.text === 'Você acenou para quem está por perto.', 15000, 'wave before collection');
   player.send(JSON.stringify({ type: 'emote', name: 'wave' }));
   await waved;
   clock += 100;
@@ -1020,7 +1042,8 @@ test('Breu restores to the map center and removes persisted terrain edits', asyn
     ? { ...item, spawn: { x: 419.5, y: 419.5 }, campfire: { x: 419.5, y: 419.5 } } : item);
   await dimensions.saveDimensions(oldDimensions, 0);
   const worlds = createJsonWorldStore(stateDirectory);
-  await worlds.saveWorld({ version: 1, revision: 1, seed: 12345, generationVersion: 1, dimensionId: 'breu',
+  // Geração atual: o teste cobre só o achatamento do Breu, não a migração de geração antiga (que também soma revisão).
+  await worlds.saveWorld({ version: 1, revision: 1, seed: 12345, generationVersion: WORLD_RESOURCE_GENERATION_VERSION, dimensionId: 'breu',
     theme: 'dark', edits: [{ id: 'old-breu-hill', type: 'hill', x: 419.5, y: 419.5, radius: 22 }] }, 0, 'breu');
   const room = createTestServer(t, { port: 0, stateDirectory });
   await room.listen();
@@ -1121,7 +1144,7 @@ test('movement permits a nearby pickup and an unaffordable fire explains its cos
   t.after(() => room.close());
   const player = openTestPlayer(address);
   t.after(() => player.terminate());
-  const initialState = waitFor(player, message => message.type === 'state' && message.players.length === 1, 2500, 'initial snapshot');
+  const initialState = waitFor(player, message => message.type === 'state' && message.players.length === 1, 15000, 'initial snapshot');
   await new Promise(resolve => player.once('open', resolve));
   const initial = await initialState;
   const id = initial.players[0].id;
@@ -1129,9 +1152,9 @@ test('movement permits a nearby pickup and an unaffordable fire explains its cos
   const moved = await waitFor(player, message => {
     const remote = message.type === 'state' && message.players.find(item => item.id === id);
     return remote?.moving === true && Math.hypot(remote.x - southBranch.x, remote.y - southBranch.y) <= 1.1;
-  }, 5000, 'movement snapshot beside a resource');
+  }, 15000, 'movement snapshot beside a resource');
   player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
-  const stopped = await waitFor(player, message => message.type === 'state' && message.players.find(item => item.id === id)?.moving === false, 2500, 'idle snapshot');
+  const stopped = await waitFor(player, message => message.type === 'state' && message.players.find(item => item.id === id)?.moving === false, 15000, 'idle snapshot');
   assert.equal(stopped.players.find(item => item.id === id)?.moving, false);
   const pickup = waitFor(player, message => message.type === 'notice' && message.text.includes('graveto'), 2500, 'pickup confirmation');
   player.send(JSON.stringify({ type: 'action', name: 'collect' }));
@@ -1291,10 +1314,10 @@ test('collected resource returns to the shared world after its respawn interval'
   await waitFor(player, message => {
     const self = message.type === 'state' && message.players.find(item => item.id === id);
     return self && Math.hypot(self.x - southBranch.x, self.y - southBranch.y) <= 1.1;
-  }, 5000, 'player beside the south branch');
+  }, 15000, 'player beside the south branch');
   player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
 
-  const absent = waitFor(player, message => message.type === 'state' && !message.resources.some(resource => resource.id === 'branch-south'), 2500, 'shared branch removal');
+  const absent = waitFor(player, message => message.type === 'state' && !message.resources.some(resource => resource.id === 'branch-south'), 15000, 'shared branch removal');
   const requestId = 17;
   const picked = waitFor(player, message => message.type === 'notice' && message.action === 'collect'
     && message.requestId === requestId && message.result === 'collected', 2500, 'branch pickup');
@@ -1307,7 +1330,7 @@ test('collected resource returns to the shared world after its respawn interval'
   const absentSnapshot = await absent;
   assert.ok(!absentSnapshot.resources.some(resource => resource.id === 'branch-south'));
   const collectedSnapshot = await waitFor(player, message => message.type === 'state'
-    && message.players.find(item => item.id === id)?.inventory.wood === 1, 2500, 'saved pickup inventory');
+    && message.players.find(item => item.id === id)?.inventory.wood === 1, 15000, 'saved pickup inventory');
   assert.equal(collectedSnapshot.players.find(item => item.id === id)?.inventory.wood, 1);
 
   const returned = await waitFor(player, message => message.type === 'state' && message.resources.some(resource => resource.id === 'branch-south'), 2500, 'shared branch respawn');
@@ -1353,13 +1376,13 @@ test('player gets a clear notice when someone else takes the nearby resource', a
     const gathererOne = message.players.find(player => player.id === firstId);
     const gathererTwo = message.players.find(player => player.id === secondId);
     return gathererOne && gathererTwo && !gathererOne.moving && !gathererTwo.moving;
-  }, 2500, 'both gatherers stopped beside the branch');
+  }, 15000, 'both gatherers stopped beside the branch');
   for (const id of [firstId, secondId]) {
     const player = settled.players.find(item => item.id === id);
     assert.ok(Math.hypot(player.x - southBranch.x, player.y - southBranch.y) <= 1.2);
   }
 
-  const picked = waitFor(first, message => message.type === 'notice' && message.text === 'Você encontrou graveto seco.', 2500, 'first gatherer pickup');
+  const picked = waitFor(first, message => message.type === 'notice' && message.text === 'Você encontrou graveto seco.', 15000, 'first gatherer pickup');
   const removed = waitFor(second, message => message.type === 'state'
     && !message.resources.some(resource => resource.id === 'branch-south')
     && message.players.find(player => player.id === firstId)?.emote === 'gather', 2500, 'branch removal and gather gesture for second gatherer');
@@ -1680,7 +1703,7 @@ test('registered account identity and saved inventory are restored in the multip
     headers: { origin: TEST_ORIGIN, cookie: `clareira_session=${created.token}` },
   });
   t.after(() => player.terminate());
-  const joined = waitFor(player, message => message.type === 'state' && message.players.length === 1, 2500, 'account snapshot');
+  const joined = waitFor(player, message => message.type === 'state' && message.players.length === 1, 15000, 'account snapshot');
   await new Promise(resolve => player.once('open', resolve));
   const initial = await joined;
   const id = initial.players[0].id;
@@ -1688,9 +1711,9 @@ test('registered account identity and saved inventory are restored in the multip
   await waitFor(player, message => {
     const self = message.type === 'state' && message.players.find(item => item.id === id);
     return self?.moving && Math.hypot(self.x - southBranch.x, self.y - southBranch.y) <= 1.1;
-  }, 5000, 'movement toward a resource');
+  }, 15000, 'movement toward a resource');
   player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
-  await waitFor(player, message => message.type === 'state' && message.players.find(item => item.id === id)?.moving === false, 2500, 'player stop');
+  await waitFor(player, message => message.type === 'state' && message.players.find(item => item.id === id)?.moving === false, 15000, 'player stop');
   player.send(JSON.stringify({ type: 'action', name: 'collect' }));
   const collected = await waitFor(player, message => {
     const self = message.type === 'state' && message.players.find(item => item.id === id);

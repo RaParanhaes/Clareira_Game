@@ -1,5 +1,6 @@
 import { GAME_RENTAL_DAYS, gameDaysToMs } from '../game/game-calendar.mjs';
 import { lodgingStorageKey } from '../game/lodging-catalog.mjs';
+import { PRESET_REMOVE_MESSAGE, isPresetFurniture, placedFurnitureCount, withPresetFurniture } from '../game/room-presets.mjs';
 import { INVENTORY_ACTIONS, applyInventoryCommand } from '../game/inventory-prediction.mjs';
 import { applyRoomChestMove } from './room-chest-actions.mjs';
 import { roomChestId } from '../database/room-chest-store.mjs';
@@ -477,11 +478,19 @@ export function createPrototypeServer({
       || player.lodgingClaims.find(c=>lodgingRoomKey(c)===lodgingRoomKey(player.lodgingClaim||{})) || player.lodgingClaims[0] || null;
   };
   const roomStates = new Map();
+  // Predefinidos entram no array do quarto uma vez por estado. Layouts sem predefinidos
+  // (lobbies públicos) não mudam nada.
+  const roomPresetMode = (kind, buildingId, claimMode) => (kind === 'lodging' && isCabin(buildingId) ? 'owned' : claimMode || null);
+  const seedRoomPresets = (state, mode) => {
+    if (state?.furniture && (state.kind === 'legacy' || state.kind === 'lodging')) withPresetFurniture(state.furniture, getRoomLayout(state.kind, state.buildingId, mode));
+    return state;
+  };
   const cabinRoomLoads = new Map();
   const loadCabinRoomState = (roomKey, ownerProfileId, playerName, claim, buildingId) => {
     const existing=roomStates.get(roomKey);if(existing)return Promise.resolve(existing);
     if(cabinRoomLoads.has(roomKey))return cabinRoomLoads.get(roomKey);
     const loading=storage.loadRoom(ownerProfileId, lodgingStorageKey(claim)).then(furniture=>{
+      withPresetFurniture(furniture,getRoomLayout('lodging',buildingId,'owned'));
       const state=roomStates.get(roomKey)||{furniture,name:roomDisplayName(roomKey,playerName,claim),kind:'lodging',buildingId};
       roomStates.set(roomKey,state);return state;
     }).finally(()=>cabinRoomLoads.delete(roomKey));
@@ -1646,7 +1655,7 @@ export function createPrototypeServer({
       kind: 'legacy',
       buildingId: null,
     };
-    roomStates.set(homeRoomKey, homeRoomState);
+    roomStates.set(homeRoomKey, seedRoomPresets(homeRoomState, null));
     const activeRoomDetails = roomDetails(roomKey);
     const activeRoomMode = activeRoomDetails.kind === 'lodging' && isCabin(activeRoomDetails.buildingId) ? 'owned' : lodgingClaim?.mode;
     const activeRoomLayout = getRoomLayout(activeRoomDetails.kind, activeRoomDetails.buildingId, activeRoomMode);
@@ -1660,13 +1669,13 @@ export function createPrototypeServer({
     });
     roomState.kind ||= activeRoomDetails.kind;
     roomState.buildingId ??= activeRoomDetails.buildingId;
-    roomStates.set(roomKey, roomState);
+    roomStates.set(roomKey, seedRoomPresets(roomState, activeRoomMode));
     if (lodgingClaim) {
       const lodgingKey = lodgingRoomKey({ ...lodgingClaim, profileId: profile.id });
       const detail = roomDetails(lodgingKey);
-      if (!roomStates.has(lodgingKey)) roomStates.set(lodgingKey, {
+      if (!roomStates.has(lodgingKey)) roomStates.set(lodgingKey, seedRoomPresets({
         furniture: await storage.loadRoom(profile.id, lodgingStorageKey(lodgingClaim)), name: roomDisplayName(lodgingKey, playerName, lodgingClaim), kind: detail.kind, buildingId: detail.buildingId,
-      });
+      }, roomPresetMode(detail.kind, detail.buildingId, lodgingClaim.mode)));
     }
     const arrivalDimension = personalArrivalDimension(sessionId);
     const dimensionId = !forcedCabinOutsideId && resume?.dimensionId === arrivalDimension.id
@@ -2472,7 +2481,7 @@ export function createPrototypeServer({
             kind: detail.kind,
             buildingId: detail.buildingId,
           };
-          roomStates.set(roomKey, state);
+          roomStates.set(roomKey, seedRoomPresets(state, result.claim.mode));
           player.location = 'room'; player.roomKey = roomKey; player.roomKind = 'lodging';
           player.roomBuildingId = result.claim.buildingId;
           player.roomState = state; player.roomFurniture = state.furniture;
@@ -2601,7 +2610,7 @@ export function createPrototypeServer({
           const state = roomStates.get(roomKey) || {
             furniture: await storage.loadRoom(player.accountId, lodgingStorageKey(claim)), name: roomDisplayName(roomKey, player.name, claim), kind: detail.kind, buildingId: detail.buildingId,
           };
-          roomStates.set(roomKey, state);
+          roomStates.set(roomKey, seedRoomPresets(state, claim.mode));
           player.location = 'room'; player.roomKey = roomKey; player.roomKind = 'lodging';
           player.roomBuildingId = claim.buildingId; player.roomState = state; player.roomFurniture = state.furniture;
           player.position = { ...getRoomLayout('lodging', claim.buildingId, claim.mode).spawn };
@@ -2835,8 +2844,8 @@ export function createPrototypeServer({
         const customProperties=customModel&&customModel.properties?.catalogId===message.catalogId?copyData(customModel.properties):null;
         const savedProperties=customProperties?copyData(customProperties):null;
         if(savedProperties){delete savedProperties.kind;delete savedProperties.id;}
-        if ((!furnitureByKind(message.kind)||message.catalogId&&!customProperties||customProperties&&customProperties.kind!==message.kind) || player.roomFurniture.length >= ROOM_FURNITURE_LIMIT) {
-          furnitureNotice(player.roomFurniture.length >= ROOM_FURNITURE_LIMIT
+        if ((!furnitureByKind(message.kind)||message.catalogId&&!customProperties||customProperties&&customProperties.kind!==message.kind) || placedFurnitureCount(player.roomFurniture) >= ROOM_FURNITURE_LIMIT) {
+          furnitureNotice(placedFurnitureCount(player.roomFurniture) >= ROOM_FURNITURE_LIMIT
             ? 'O quarto já está cheio de móveis.' : 'Esse móvel ainda não está disponível.');
           return;
         }
@@ -2917,6 +2926,7 @@ export function createPrototypeServer({
         if(!use&&[...peers.values()].some(other=>other.location==='room'&&other.roomKey===player.roomKey&&other.furnitureUse?.id===item.id)){
           furnitureNotice('Alguém está usando este móvel.');return;
         }
+        if(message.name==='removeFurniture'&&isPresetFurniture(item)){furnitureNotice(PRESET_REMOVE_MESSAGE);return;}
         if(message.name==='removeFurniture'&&supported.length){furnitureNotice('Retire primeiro os objetos que estão apoiados neste móvel.');return;}
         if(use&&furnitureUse(item)==='sit'){
           const previous = { position: { ...player.position }, sitting: player.sitting, emote: player.emote };

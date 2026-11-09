@@ -9,8 +9,9 @@ test('assembly copies have independent IDs, local architecture and interiors lin
  const view=applyObjectCatalog(c,{validateOnly:true}),source=view.buildings.get('lodging-rill-guesthouse'),clone=view.buildings.get('example');
  assert.equal(clone.bounds.left-source.bounds.left,100);assert.equal(clone.door.x-source.door.x,100);
  assert.equal(clone.windowObjects[0].y-source.windowObjects[0].y,20);
- const layout=view.rooms.get('lodging:example:rent');assert.ok(layout);assert.equal(layout.fixtures.length,5);
- assert.equal(canOccupyRoom(layout.fixtures[0],.25,[],layout),false);
+ const layout=view.rooms.get('lodging:example:rent');assert.ok(layout);assert.equal(layout.fixtures.length+layout.presets.length,5);
+ // Predefined pieces are room furniture: they block the player through the room's furniture list.
+ assert.equal(canOccupyRoom(layout.presets[0],.25,layout.presets,layout),false);
  assert.ok(c.objects.filter(o=>o.parentId==='building:example').every(o=>o.id.startsWith('building:example/')));
  assert.equal(seed.objects.some(o=>o.id==='building:example'),false);
 });

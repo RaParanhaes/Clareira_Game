@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { canOccupyRoom, canPlaceRoomFurniture, findWalkPath, getRoomLayout, roomFurnitureSupport, stepRoomPlayer } from './world.mjs';
+import { withPresetFurniture } from './room-presets.mjs';
 
 const bench = { id: 'bench-1', kind: 'stool', x: 7.5, y: 8 };
 
@@ -16,12 +17,13 @@ test('bench placement accepts a clear half-tile on either flat floor and rejects
 });
 
 test('furniture placement follows the selected lodging footprint and fixed fixtures', () => {
+  // Predefined pieces are room furniture now, so the room's own list carries their footprints.
   const cabin = getRoomLayout('lodging', 'cabin-cedar-one', 'owned');
-  assert.equal(canPlaceRoomFurniture({ x: 6, y: 8.5 }, [], [], cabin), false,
+  assert.equal(canPlaceRoomFurniture({ x: 6, y: 8.5 }, withPresetFurniture([], cabin), [], cabin), false,
     'the cedar cabin plant keeps its actual footprint clear');
 
   const apartment = getRoomLayout('lodging', 'lodging-ember-hotel', 'owned');
-  assert.equal(canPlaceRoomFurniture({ x: 3.5, y: 7 }, [], [], apartment), true,
+  assert.equal(canPlaceRoomFurniture({ x: 3.5, y: 7 }, withPresetFurniture([], apartment), [], apartment), true,
     'the wider apartment accepts furniture on its extra floor space');
 });
 

@@ -21,7 +21,7 @@ test('lodging buildings use distinct interior plans that fit their exterior foot
   assert.equal(getRoomLayout('lodging', 'lodging-ember-hotel', 'owned').id, 'hotel-apartment');
   assert.notEqual(getRoomLayout('lodging', 'lodging-ember-hotel', 'rent').id,
     getRoomLayout('lodging', 'lodging-ember-hotel', 'owned').id);
-  assert.ok([...lobbies, ...stays].every(layout => layout.fixtures.length >= 3), 'each interior arrives furnished');
+  assert.ok([...lobbies, ...stays].every(layout => layout.fixtures.length + layout.presets.length >= 3), 'each interior arrives furnished');
 });
 
 test('furnished room footprints leave the entrance clear and block walking through furniture', () => {

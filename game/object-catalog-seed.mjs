@@ -34,13 +34,16 @@ for(const f of CONTENT.filter(c=>c.category==='furniture'&&c.status==='implement
  const layouts=builtinRoomLayouts();
  function room(layout,buildingId,roomKind,mode=null){
   const parent=buildingId?`building:${buildingId}`:null,id=`room:${buildingId||'legacy'}:${roomKind}:${mode||'main'}`;
-  const props=copyData(layout);delete props.fixtures;delete props.obstacles;delete props.waitingSeats;delete props.rug;delete props.counter;
+  const props=copyData(layout);delete props.fixtures;delete props.presets;delete props.obstacles;delete props.waitingSeats;delete props.rug;delete props.counter;
   props.roomKind=roomKind;props.lodgingMode=mode;add(id,'room',props,parent,null,`interior:${buildingId||'legacy'}`);
-  for(const [i,fixture]of layout.fixtures.entries()){
+  // Predefined room furniture is stored as fixture parts too (own id range, so existing fixture ids keep their meaning).
+  const parts=[...layout.fixtures.map((fixture,i)=>[`fixture-${i}`,fixture]),
+   ...(layout.presets||[]).map((item,i)=>[`preset-${i}`,{kind:item.kind,x:item.x,y:item.y,width:item.width,depth:item.depth,height:item.height,palette:item.palette}])];
+  for(const [key,fixture]of parts){
    const p=copyData(fixture),template=p.catalogId||`fixture.${p.kind}`;
    if(!p.catalogId){model(template,'fixture',{kind:p.kind,height:FIXTURE_HEIGHTS[p.kind]||p.height,palette:'cedar',...fixtureBehavior(p.kind)});
      if(p.height===(FIXTURE_HEIGHTS[p.kind]||p.height))delete p.height;}
-   add(`${id}/fixture-${i}`,'fixture',p,id,template,`interior:${buildingId||'legacy'}`);
+   add(`${id}/${key}`,'fixture',p,id,template,`interior:${buildingId||'legacy'}`);
   }
   if(layout.counter){const b=layout.counter;add(`${id}/counter`,'fixture',{kind:'counter',x:(b.left+b.right)/2,y:(b.top+b.bottom)/2,width:b.right-b.left,depth:b.bottom-b.top,height:b.height||BUILDING_STANDARD.counterHeight,...(b.surfaceModel?{surfaceModel:b.surfaceModel,surfaceCount:b.surfaceCount}:{})},id,model('fixture.counter','fixture',{kind:'counter',palette:'cedar',...fixtureBehavior('counter')}),`interior:${buildingId||'legacy'}`);}
   if(layout.rug)add(`${id}/rug`,'rug',layout.rug,id,null,`interior:${buildingId||'legacy'}`);

@@ -332,6 +332,7 @@ body.in-world{height:100svh;overflow:hidden;background:#0b141d}
 .room-build-options[hidden]{display:none}
 .room-build-tools{position:absolute;z-index:5;top:72px;right:16px;display:flex;flex-direction:column;align-items:flex-end;gap:5px;max-width:calc(100% - 32px);padding:5px;border:1px solid #d9bd7c66;border-radius:8px;background:#0b191de8;box-shadow:0 5px 16px #02080b70;pointer-events:auto;-webkit-user-select:none;user-select:none}
 .room-build-options{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:5px;max-width:100%}
+.room-build-count{flex:1 0 100%;margin:2px 0 0;text-align:right;font-size:.78rem;opacity:.85}
 .room-build-tools select,.room-build-tools button,.room-object-actions button{min-height:38px;border:1px solid #a98a5366;border-radius:5px;padding:7px 11px;background:#20352d;color:#e7d8ad;font-size:10px;font-weight:700;cursor:pointer;touch-action:manipulation}
 .room-build-tools button[aria-pressed=true]{border-color:#f1ce7f;background:#806039;color:#fff0c5;box-shadow:inset 0 0 0 1px #f1ce7f45}
 .room-build-tools button:focus-visible,.room-build-tools select:focus-visible{outline:2px solid #f1ce7f;outline-offset:2px}

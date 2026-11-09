@@ -1,4 +1,5 @@
-import { chromium } from '/opt/clareira-browser/node_modules/playwright-core/index.mjs';
+// Test runtime paths can be overridden: CLAREIRA_PLAYWRIGHT (module), CLAREIRA_CHROMIUM (binary).
+const { chromium } = await import(process.env.CLAREIRA_PLAYWRIGHT || '/opt/clareira-browser/node_modules/playwright-core/index.mjs');
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import os from 'node:os';
@@ -17,14 +18,12 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.resolve(process.argv[2] || 'logs/room-furniture-browser');
 const stateDirectory = await mkdtemp(path.join(os.tmpdir(), 'clareira-furniture-browser-'));
 await mkdir(output, { recursive: true });
-const probe = http.createServer();
-await new Promise((resolve, reject) => { probe.once('error', reject); probe.listen(0, '127.0.0.1', resolve); });
-const pagePort = probe.address().port;
-await new Promise(resolve => probe.close(resolve));
+// Temporary servers use ports outside the real preview (CLAREIRA_PAGE_PORT, default 8099).
+const pagePort = Number(process.env.CLAREIRA_PAGE_PORT || 8099);
 const allowedOrigin = `http://127.0.0.1:${pagePort}`;
 const storage = createStorageAdapter({ directory: stateDirectory });
 const locations = createJsonPlayerLocationStore(stateDirectory);
-const browser = await chromium.launch({ executablePath: '/root/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome',
+const browser = await chromium.launch({ executablePath: process.env.CLAREIRA_CHROMIUM || '/root/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome',
   headless: true, args: ['--no-sandbox'] });
 const results = [], errors = [];
 let preview, bridge, room;
@@ -123,6 +122,11 @@ async function openPage(user, viewport, mobile) {
   return { context, page, bridges };
 }
 
+// The build options start collapsed; open them once before using their controls.
+async function openBuildOptions(page) {
+  if (!(await page.locator('#room-build-options').isVisible())) await page.locator('#room-build-toggle').click();
+}
+
 async function runVisit(name, viewport, mobile, user) {
   const session = await openPage(user, viewport, mobile), { page } = session;
   try {
@@ -132,10 +136,10 @@ async function runVisit(name, viewport, mobile, user) {
     assert.equal(await page.locator('#room-build-tools').isVisible(), true, `${name}: room tools visible`);
 
     let item = { x: 6, y: 8 };
-    if (await page.locator('#room-kind').inputValue() !== 'stool') await page.locator('#room-kind').selectOption('stool');
-    if ((await inspect(page)).buildMode !== 'place') await page.locator('#room-place').click();
+    if (await openBuildOptions(page), await page.locator('#room-kind').inputValue() !== 'stool') await openBuildOptions(page), await page.locator('#room-kind').selectOption('stool');
+    if ((await inspect(page)).buildMode !== 'place') await openBuildOptions(page), await page.locator('#room-place').click();
     await worldTap(page, item.x, item.y, mobile);
-    try { await page.waitForFunction(() => window.checkMovement().roomFurniture.length === 1, null, { timeout: 8000 }); }
+    try { await page.waitForFunction(() => window.checkMovement().roomFurniture.filter(item=>!item.preset).length === 1, null, { timeout: 8000 }); }
     catch (error) {
       const state = await inspect(page), toast = await page.locator('#toast').innerText();
       await page.screenshot({ path: path.join(output, `${name}-placement-failure.png`) });
@@ -144,15 +148,15 @@ async function runVisit(name, viewport, mobile, user) {
         preview: state.roomPreview, furniture: state.roomFurniture, toast }));
       throw error;
     }
-    const placed = (await inspect(page)).roomFurniture[0];
+    const placed = (await inspect(page)).roomFurniture.filter(item=>!item.preset)[0];
     assert.equal(placed.kind, 'stool');
     assert.ok(Math.hypot(placed.x - item.x, placed.y - item.y) < .12,
       `${name}: stool snaps onto a legal tile (${JSON.stringify({ item, placed })})`);
-    await page.locator('#room-place').click();
+    await openBuildOptions(page), await page.locator('#room-place').click();
 
     await worldTap(page, item.x+.5, item.y-.5, mobile);
     await page.waitForFunction(() => {
-      const state = window.checkMovement(), furniture = state.roomFurniture[0];
+      const state = window.checkMovement(), furniture = state.roomFurniture.filter(item=>!item.preset)[0];
       return furniture && Math.hypot(state.position.x - furniture.x, state.position.y - furniture.y) < .85;
     }, null, { timeout: 12_000 });
     await page.waitForFunction(() => {
@@ -175,7 +179,7 @@ async function runVisit(name, viewport, mobile, user) {
     `${name}: depth follows the avatar across the furniture footprint`);
     await worldTap(page,item.x+.5,item.y-.5,mobile);
     await page.waitForFunction(() => {
-      const state=window.checkMovement(),furniture=state.roomFurniture[0];
+      const state=window.checkMovement(),furniture=state.roomFurniture.filter(item=>!item.preset)[0];
       return furniture&&Math.hypot(state.position.x-furniture.x,state.position.y-furniture.y)<.85;
     },null,{timeout:12_000});
 
@@ -193,8 +197,8 @@ async function runVisit(name, viewport, mobile, user) {
     await triggerContext(page,mobile);
     await page.waitForFunction(() => window.checkMovement().pose.sitting === false, null, { timeout: 5000 });
 
-    const furnitureId = (await inspect(page)).roomFurniture[0].id;
-    await page.locator('#room-move').click();
+    const furnitureId = (await inspect(page)).roomFurniture.filter(item=>!item.preset)[0].id;
+    await openBuildOptions(page), await page.locator('#room-move').click();
     await worldTap(page, item.x, item.y, mobile, 3);
     await page.waitForFunction(() => Boolean(window.checkMovement().roomMovingId), null, { timeout: 8000 });
     assert.equal((await inspect(page)).roomMovingId, furnitureId, `${name}: selects the source furniture`);
@@ -214,7 +218,7 @@ async function runVisit(name, viewport, mobile, user) {
     await tapPoint(page, movePoint, mobile);
     await page.waitForFunction(() => {
       const state = window.checkMovement();
-      return state.roomFurniture[0]?.x === 10 && state.roomFurniture[0]?.y === 10 && !state.roomMovingId;
+      return state.roomFurniture.filter(item=>!item.preset)[0]?.x === 10 && state.roomFurniture.filter(item=>!item.preset)[0]?.y === 10 && !state.roomMovingId;
     }, null, { timeout: 8000 });
     item = { x: 10, y: 10 };
     const moved = await inspect(page);
@@ -224,22 +228,22 @@ async function runVisit(name, viewport, mobile, user) {
         .roomFurnitureRender.find(value => value.id === id);
     }, furnitureId);
     const motionCaptured = midpoint?.progress > 0 && midpoint?.progress < 1
-      && midpoint.rendered.x > beforeMove.roomFurniture[0].x && midpoint.rendered.x < item.x;
+      && midpoint.rendered.x > beforeMove.roomFurniture.filter(item=>!item.preset)[0].x && midpoint.rendered.x < item.x;
     assert.ok(motionCaptured, `${name}: furniture render interpolates to the saved position; before=${JSON.stringify(beforeMove.roomFurnitureRender)} moved=${JSON.stringify(moved.roomFurnitureRender)} midpoint=${JSON.stringify(midpoint)} snapshot=${JSON.stringify(moved.roomFurnitureMotionDebug)}`);
-    assert.deepEqual({ x: moved.roomFurniture[0].x, y: moved.roomFurniture[0].y }, item);
+    assert.deepEqual({ x: moved.roomFurniture.filter(item=>!item.preset)[0].x, y: moved.roomFurniture.filter(item=>!item.preset)[0].y }, item);
 
-    await page.locator('#room-move').click();
+    await openBuildOptions(page), await page.locator('#room-move').click();
     await worldTap(page, item.x, item.y, mobile, 3);
     await page.waitForFunction(() => {
-      const state = window.checkMovement(), furniture = state.roomFurniture[0];
+      const state = window.checkMovement(), furniture = state.roomFurniture.filter(item=>!item.preset)[0];
       return furniture && Math.hypot(state.position.x - furniture.x, state.position.y - furniture.y) < .95;
     }, null, { timeout: 12_000 });
     await page.waitForTimeout(200);
 
-    await page.locator('#room-rotate').click();
+    await openBuildOptions(page), await page.locator('#room-rotate').click();
     const rotatePoint = await projectWorldPoint(page, item.x, item.y, -8 * (mobile ? 26 / 16 : 32 / 16));
     await tapPoint(page, rotatePoint, mobile);
-    await page.waitForFunction(() => window.checkMovement().roomFurniture[0]?.rotation === 1, null, { timeout: 8000 });
+    await page.waitForFunction(() => window.checkMovement().roomFurniture.filter(item=>!item.preset)[0]?.rotation === 1, null, { timeout: 8000 });
     const rotatedState = await inspect(page);
     const rotationMidpoint = await page.evaluate(id => {
       const entry = window.checkMovement().roomFurnitureRender.find(value => value.id === id);
@@ -251,7 +255,7 @@ async function runVisit(name, viewport, mobile, user) {
     assert.ok(rotationAnimated, `${name}: quarter-turn uses a short visual cross-fade`);
     await page.screenshot({ path: path.join(output, `${mobile ? 'mobile' : 'desktop'}-rotated.png`) });
     const rotationNotice = await page.locator('#toast').innerText();
-    await page.locator('#room-rotate').click();
+    await openBuildOptions(page), await page.locator('#room-rotate').click();
 
     const viewingPosition = { x: 7, y: 9 };
     await worldTap(page, viewingPosition.x, viewingPosition.y, mobile);
@@ -265,23 +269,23 @@ async function runVisit(name, viewport, mobile, user) {
 
     await worldTap(page, item.x, item.y, mobile, 4);
     await page.waitForFunction(() => {
-      const state = window.checkMovement(), furniture = state.roomFurniture[0];
+      const state = window.checkMovement(), furniture = state.roomFurniture.filter(item=>!item.preset)[0];
       return furniture && Math.hypot(state.position.x - furniture.x, state.position.y - furniture.y) < .95;
     }, null, { timeout: 12_000 });
     await page.waitForTimeout(300);
-    await page.locator('#room-remove').click();
+    await openBuildOptions(page), await page.locator('#room-remove').click();
     await worldTap(page, item.x, item.y, mobile);
-    await page.waitForFunction(() => window.checkMovement().roomFurniture.length === 0, null, { timeout: 8000 });
+    await page.waitForFunction(() => window.checkMovement().roomFurniture.filter(item=>!item.preset).length === 0, null, { timeout: 8000 });
     await page.waitForTimeout(300);
     await page.locator('#room-category').selectOption('mesas');
     assert.equal(await page.locator('#room-kind option').count(),10,`${name}: the medieval tables category exposes ten designs`);
     const medievalTableId='furniture.medieval-mesas-02',medievalTableCatalogId=medievalTableId;
-    await page.locator('#room-kind').selectOption(medievalTableId);
-    if ((await inspect(page)).buildMode !== 'place') await page.locator('#room-place').click();
+    await openBuildOptions(page), await page.locator('#room-kind').selectOption(medievalTableId);
+    if ((await inspect(page)).buildMode !== 'place') await openBuildOptions(page), await page.locator('#room-place').click();
     const tablePosition = { x: 6.5, y: 8.5 };
     await worldTap(page, tablePosition.x, tablePosition.y, mobile);
-    try { await page.waitForFunction(id => window.checkMovement().roomFurniture[0]?.kind === 'table'
-      &&window.checkMovement().roomFurniture[0]?.properties?.catalogId===id, medievalTableCatalogId, { timeout: 8000 }); }
+    try { await page.waitForFunction(id => window.checkMovement().roomFurniture.filter(item=>!item.preset)[0]?.kind === 'table'
+      &&window.checkMovement().roomFurniture.filter(item=>!item.preset)[0]?.properties?.catalogId===id, medievalTableCatalogId, { timeout: 8000 }); }
     catch (error) {
       const state = await inspect(page), toast = await page.locator('#toast').innerText();
       await page.screenshot({ path: path.join(output, `${name}-table-placement-failure.png`) });
@@ -289,8 +293,8 @@ async function runVisit(name, viewport, mobile, user) {
         preview: state.roomPreview, furniture: state.roomFurniture, toast }));
       throw error;
     }
-    assert.equal((await inspect(page)).roomFurniture[0].properties.label,'mesa de banquete I',`${name}: selected catalog design is persisted from the server`);
-    await page.locator('#room-place').click();
+    assert.equal((await inspect(page)).roomFurniture.filter(item=>!item.preset)[0].properties.label,'mesa de banquete I',`${name}: selected catalog design is persisted from the server`);
+    await openBuildOptions(page), await page.locator('#room-place').click();
     const approachTable = { x: 7.75, y: 9 };
     await worldTap(page, approachTable.x, approachTable.y, mobile);
     await page.waitForFunction(({ x, y }) => {
@@ -299,64 +303,64 @@ async function runVisit(name, viewport, mobile, user) {
     }, approachTable, { timeout: 12_000 });
     await page.waitForFunction(()=>{const state=window.checkMovement();return Math.hypot(state.position.x-state.server.x,state.position.y-state.server.y)<.06
       &&Math.hypot(state.server.vx||0,state.server.vy||0)<.12;},null,{timeout:4000});
-    await page.locator('#room-rotate').click();
+    await openBuildOptions(page), await page.locator('#room-rotate').click();
     await worldTap(page, tablePosition.x, tablePosition.y, mobile, -8 * (mobile ? 26 / 16 : 32 / 16));
-    await page.waitForFunction(() => window.checkMovement().roomFurniture[0]?.rotation === 1, null, { timeout: 8000 });
+    await page.waitForFunction(() => window.checkMovement().roomFurniture.filter(item=>!item.preset)[0]?.rotation === 1, null, { timeout: 8000 });
     await page.waitForTimeout(180);
-    const rotatedTable = (await inspect(page)).roomFurniture[0];
+    const rotatedTable = (await inspect(page)).roomFurniture.filter(item=>!item.preset)[0];
     const tableRotationScreenshot = path.join(output, `${mobile ? 'mobile' : 'desktop'}-table-rotated.png`);
     await page.screenshot({ path: tableRotationScreenshot });
     assert.equal(rotatedTable.rotation, 1, `${name}: rectangular table visibly keeps the quarter-turn orientation`);
     await page.waitForTimeout(300);
-    await page.locator('#room-remove').click();
+    await openBuildOptions(page), await page.locator('#room-remove').click();
     await worldTap(page, tablePosition.x, tablePosition.y, mobile);
-    await page.waitForFunction(() => window.checkMovement().roomFurniture.length === 0, null, { timeout: 8000 });
+    await page.waitForFunction(() => window.checkMovement().roomFurniture.filter(item=>!item.preset).length === 0, null, { timeout: 8000 });
     await page.waitForTimeout(300);
     await page.locator('#room-category').selectOption('basicos');
-    await page.locator('#room-kind').selectOption('bed');
+    await openBuildOptions(page), await page.locator('#room-kind').selectOption('bed');
     await page.waitForFunction(() => window.checkMovement().buildMode === 'place');
     const bedPosition={x:8,y:6.5};
     await worldTap(page,bedPosition.x,bedPosition.y,mobile);
-    try{await page.waitForFunction(() => window.checkMovement().roomFurniture.some(item=>item.kind==='bed'),null,{timeout:8000});}
+    try{await page.waitForFunction(() => window.checkMovement().roomFurniture.filter(item=>!item.preset).some(item=>item.kind==='bed'),null,{timeout:8000});}
     catch(error){const state=await inspect(page);console.error('BED PLACEMENT DIAGNOSTIC',JSON.stringify({position:state.position,
       mode:state.buildMode,preview:state.roomPreview,furniture:state.roomFurniture,toast:await page.locator('#toast').innerText()}));
       await page.screenshot({path:path.join(output,`${mobile?'mobile':'desktop'}-bed-placement-failure.png`)});throw error;}
-    let bed=(await inspect(page)).roomFurniture.find(value=>value.kind==='bed');
-    await page.locator('#room-place').click();
-    await page.locator('#room-move').click();
+    let bed=(await inspect(page)).roomFurniture.filter(item=>!item.preset).find(value=>value.kind==='bed');
+    await openBuildOptions(page), await page.locator('#room-place').click();
+    await openBuildOptions(page), await page.locator('#room-move').click();
     await worldTap(page,bed.x,bed.y,mobile,3);
     await page.waitForFunction(id=>window.checkMovement().roomMovingId===id,bed.id,{timeout:8000});
     const bedMovedTo={x:9,y:6.5};
     await worldTap(page,bedMovedTo.x,bedMovedTo.y,mobile);
     await page.waitForFunction(({x,y,id})=>{
-      const state=window.checkMovement(),item=state.roomFurniture.find(value=>value.id===id);
+      const state=window.checkMovement(),item=state.roomFurniture.filter(item=>!item.preset).find(value=>value.id===id);
       return item?.x===x&&item?.y===y&&!state.roomMovingId;
     },{...bedMovedTo,id:bed.id},{timeout:8000});
-    bed=(await inspect(page)).roomFurniture.find(value=>value.id===bed.id);
+    bed=(await inspect(page)).roomFurniture.filter(item=>!item.preset).find(value=>value.id===bed.id);
     assert.deepEqual({x:bed.x,y:bed.y},bedMovedTo,`${name}: bed move is accepted and saved`);
     const bedMovedScreenshot=path.join(output,`${mobile?'mobile':'desktop'}-bed-moved.png`);
     await page.screenshot({path:bedMovedScreenshot});
 
-    await page.locator('#room-move').click();
+    await openBuildOptions(page), await page.locator('#room-move').click();
     await worldTap(page,bed.x,bed.y,mobile,3);
     await page.waitForFunction(({x,y})=>{
       const p=window.checkMovement().position;return Math.hypot(p.x-x,p.y-y)<.95;
     },{x:bed.x,y:bed.y},{timeout:12000});
-    await page.locator('#room-rotate').click();
+    await openBuildOptions(page), await page.locator('#room-rotate').click();
     const bedRotatePoint=await projectWorldPoint(page,bed.x,bed.y,-8*(mobile?26/16:32/16));
     await tapPoint(page,bedRotatePoint,mobile);
-    await page.waitForFunction(id=>window.checkMovement().roomFurniture.find(value=>value.id===id)?.rotation===1,
+    await page.waitForFunction(id=>window.checkMovement().roomFurniture.filter(item=>!item.preset).find(value=>value.id===id)?.rotation===1,
       bed.id,{timeout:8000});
-    bed=(await inspect(page)).roomFurniture.find(value=>value.id===bed.id);
+    bed=(await inspect(page)).roomFurniture.filter(item=>!item.preset).find(value=>value.id===bed.id);
     assert.equal(bed.rotation,1,`${name}: bed quarter-turn is accepted and saved`);
     await tapPoint(page,bedRotatePoint,mobile);
-    await page.waitForFunction(id=>window.checkMovement().roomFurniture.find(value=>value.id===id)?.rotation===2,
+    await page.waitForFunction(id=>window.checkMovement().roomFurniture.filter(item=>!item.preset).find(value=>value.id===id)?.rotation===2,
       bed.id,{timeout:8000});
-    bed=(await inspect(page)).roomFurniture.find(value=>value.id===bed.id);
+    bed=(await inspect(page)).roomFurniture.filter(item=>!item.preset).find(value=>value.id===bed.id);
     assert.equal(bed.rotation,2,`${name}: second bed turn reaches the near-headboard orientation`);
     const bedRotatedScreenshot=path.join(output,`${mobile?'mobile':'desktop'}-bed-rotated.png`);
     await page.screenshot({path:bedRotatedScreenshot});
-    await page.locator('#room-rotate').click();
+    await openBuildOptions(page), await page.locator('#room-rotate').click();
 
     const bedApproach={x:9,y:7.5};
     await worldTap(page,bedApproach.x,bedApproach.y,mobile);
@@ -387,15 +391,15 @@ async function runVisit(name, viewport, mobile, user) {
     await page.waitForTimeout(300);
 
     await page.locator('#room-category').selectOption('banheiras');
-    await page.locator('#room-kind').selectOption('furniture.medieval-banheiras-01');
+    await openBuildOptions(page), await page.locator('#room-kind').selectOption('furniture.medieval-banheiras-01');
     await page.waitForFunction(() => window.checkMovement().buildMode === 'place');
     const showerPosition={x:7.5,y:9};
     await worldTap(page,showerPosition.x,showerPosition.y,mobile);
-    await page.waitForFunction(() => window.checkMovement().roomFurniture.some(item=>item.kind==='shower'),null,{timeout:8000});
-    const shower=(await inspect(page)).roomFurniture.find(value=>value.kind==='shower');
+    await page.waitForFunction(() => window.checkMovement().roomFurniture.filter(item=>!item.preset).some(item=>item.kind==='shower'),null,{timeout:8000});
+    const shower=(await inspect(page)).roomFurniture.filter(item=>!item.preset).find(value=>value.kind==='shower');
     assert.equal(shower.properties.catalogId,'furniture.medieval-banheiras-01',`${name}: the selected medieval tub is saved`);
     await page.waitForTimeout(300);
-    await page.locator('#room-place').click();
+    await openBuildOptions(page), await page.locator('#room-place').click();
     const showerApproach={x:7.5,y:8.3};
     await worldTap(page,showerApproach.x,showerApproach.y,mobile);
     await page.waitForFunction(({x,y})=>Math.hypot(window.checkMovement().position.x-x,window.checkMovement().position.y-y)<.9,showerApproach,{timeout:12000});
@@ -409,15 +413,15 @@ async function runVisit(name, viewport, mobile, user) {
     await worldTap(page,8.8,9,mobile);
     await page.waitForFunction(()=>!window.checkMovement().pose.showering&&!window.checkMovement().furnitureUse
       &&window.checkMovement().position.x>8.2,null,{timeout:12000});
-    await page.locator('#room-remove').click();
+    await openBuildOptions(page), await page.locator('#room-remove').click();
     await worldTap(page,shower.x,shower.y,mobile);
-    await page.waitForFunction(()=>window.checkMovement().roomFurniture.length===1,null,{timeout:8000});
+    await page.waitForFunction(()=>window.checkMovement().roomFurniture.filter(item=>!item.preset).length===1,null,{timeout:8000});
     assert.deepEqual(errors, [], `${name}: no browser errors`);
     results.push({ name, viewport, mobile, furniturePlaced: placed, collision: { x: collision.position.x, y: collision.position.y },
       depthOrder:[depthBehind,depthInFront],
       moved: { id: furnitureId, ...item, durationMs: moved.roomFurnitureRender[0].durationMs, motionCaptured },
       invalidPreview: mobile ? null : true,
-      rotation: rotatedState.roomFurniture[0]?.rotation, rotationAnimated, rotationNotice,
+      rotation: rotatedState.roomFurniture.filter(item=>!item.preset)[0]?.rotation, rotationAnimated, rotationNotice,
       rectangularTableRotation: rotatedTable.rotation, tableRotationScreenshot, removed: true, screenshot,
       furnitureAtlasLoaded:true,bed:{movedTo:bedMovedTo,rotation:bed.rotation,moveScreenshot:bedMovedScreenshot,
         rotationScreenshot:bedRotatedScreenshot,pose:'lying-under-covers',sleepingBedScreenshot},
@@ -441,7 +445,7 @@ try {
   const visits=process.env.CLAREIRA_BROWSER_MOBILE_ONLY==='1'?[mobileVisit]
     :process.env.CLAREIRA_BROWSER_DESKTOP_ONLY==='1'?[desktopVisit]:[desktopVisit,mobileVisit];
   for(const [name,viewport,mobile] of visits){
-    const username=`MobQA${name}${Date.now()%1_000_000_000}`;
+    const username=`QA${name.slice(0,4)}${Date.now()%1_000_000}`;
     const user=await storage.accounts.register({username,password:'senha-segura-de-teste'});
     await locations.savePlayerLocation(user.profile.id,{location:'room',dimensionId:'surface',x:7,y:9,
       roomKey:`account:${user.profile.id}`,roomOwnerName:username,worldVersion:WORLD_COORDINATE_VERSION});

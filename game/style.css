@@ -1414,3 +1414,18 @@ dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header
 .staff-tool-symbol .ico{width:1.5em;height:1.5em}
 .map-legend i .ico{width:1em;height:1em;vertical-align:-.15em}
 .top-actions .ico,.destination-map-button .ico{width:1.4em;height:1.4em;vertical-align:-.25em}
+
+/* Barra rápida no celular: alvos de 44px com rolagem horizontal (feat/ui-menus-visual). */
+@media(max-width:720px){
+  .shell.is-authenticated .quickbar{overflow-x:auto;overflow-y:hidden;justify-content:flex-start;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scroll-snap-type:x proximity;max-width:calc(100vw - 16px);padding:4px}
+  .shell.is-authenticated .quickbar::-webkit-scrollbar{display:none}
+  .shell.is-authenticated .quickbar .inventory-slot{width:44px;height:44px;flex:0 0 44px;scroll-snap-align:start}
+  .shell.is-authenticated .quickbar .inventory-slot-icon{width:28px;height:28px}
+}
+
+/* Pendências de ícones e textos (feat/ui-menus-visual): dica da Aparência sem cortar e ícones do mapa legíveis. */
+#appearance-form label small{grid-column:1/-1;font-size:11px;line-height:1.35;color:#d8c9a6}
+.map-legend i .ico{width:15px;height:15px;vertical-align:-.2em}
+#appearance-dialog[open],#lodging-dialog[open]{box-shadow:0 0 0 2px var(--iron),0 0 0 4px var(--brass),0 0 0 6px var(--iron),0 26px 64px #000c}
+.top-actions .ico,.destination-map-button .ico{width:1.25em;height:1.25em}
+.top-actions .icon-button{white-space:nowrap}

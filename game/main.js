@@ -52,6 +52,8 @@ import { discoverWorldMapCells, mergeWorldMapExploration, isWorldMapCellKnown, w
 import { createPlacePanel } from './place-panel.mjs';
 import { attachDialogDrag } from './dialog-drag.mjs';
 attachDialogDrag(document);
+const SVG_NS='http://www.w3.org/2000/svg';
+function svgIcon(id){const svg=document.createElementNS(SVG_NS,'svg');svg.setAttribute('class','ico');svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');const use=document.createElementNS(SVG_NS,'use');use.setAttribute('href',`#${id}`);svg.append(use);return svg;}
 import { isCabin } from './cabin-access.mjs';
 import { AXE_TOOL_IDS, AXE_TOOL_SPECS, PICKAXE_TOOL_IDS, PICKAXE_TOOL_SPECS, axeToolFor, pickaxeToolFor } from './tool-progression.mjs';
 import { createDraggableHud } from './draggable-hud.mjs';
@@ -8285,8 +8287,8 @@ function advanceFrame(now) {
     const weather=worldLocation==='clearing'
       ? (({dark:'uma fogueira no breu',sky:'vento das alturas',inferno:'calor profundo',magic:'brisa encantada',energy:'correntes de energia',giants:'vento das montanhas'})[dimensionTheme]||windDescriptionAt(localPosition.x,localPosition.y))
       : '';
-    const skySymbol=gameDay.hasMoon&&gameDay.moonOpacity>.15?'☾ ✦':gameDay.daylight>.02&&gameDay.sunPosition?'☀':'✦';
-    ui.weatherText.textContent=`${skySymbol} ${gameDay.period}${gameDay.label?` · ${gameDay.label}`:''}${weather?` · ${weather}`:''}`;
+    const skyIcon=gameDay.hasMoon&&gameDay.moonOpacity>.15?'i-moon':gameDay.daylight>.02&&gameDay.sunPosition?'i-sun':'i-star';
+    ui.weatherText.replaceChildren(svgIcon(skyIcon),document.createTextNode(` ${gameDay.period}${gameDay.label?` · ${gameDay.label}`:''}${weather?` · ${weather}`:''}`));
   }
   sendInputIfChanged(now);
   const drawStartedAt=performance.now();

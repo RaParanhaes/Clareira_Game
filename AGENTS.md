@@ -1,65 +1,89 @@
 # Regras do agente da Clareira
 
-Repositório canônico: `/opt/game-agent` (Git local, sem remoto). Integração em `master`, sem Pull Request. O dono do jogo é o único que autoriza integrações.
+## 1. Fonte da verdade e deploy
 
-## Git por categorias
+- **GitHub é a fonte da verdade.** Repositório: `RaParanhaes/Clareira_Game`.
+- A **VPS atualiza sozinha** a partir da `main` do GitHub (cerca de 10 minutos depois de cada integração).
+- **Ninguém edita direto na VPS.** O agente trabalha localmente, em branch, e envia pelo GitHub.
+- A checagem no jogo da VPS depois da integração é feita pelo dono, não pelo agente.
 
-Cada mudança pertence a uma única categoria, com branch e commit próprios. Não misture categorias.
+## 2. Branches
 
-| Categoria | Branch | Cobre |
-|---|---|---|
-| Personagem e animação | `feat/character-*` | avatar, poses, locomoção |
-| Mundo e conteúdo | `feat/world-*` | mapas, objetos, construções, assets |
-| Física e servidor | `feat/server-*` | movimento, sincronização, regras |
-| Interface | `feat/ui-*` | HUD, painéis, login |
-| Dados | `feat/db-*` | migrações, PostgreSQL |
-| Infraestrutura | `chore/infra-*` | serviços, Caddy, scripts |
-| Correção | `fix/*` | bugs de qualquer área |
+- Nunca editar direto na `main`.
+- **Regra única:** toda mudança nova começa em uma branch nova, criada a partir da `main` atualizada (`git fetch` antes).
+- **Reaproveitar uma branch só quando o dono pedir** para continuar nela. Não há reaproveitamento automático.
+- Nome da branch: `<tipo>/<area>-<tema>`, por exemplo `feat/world-sol-verao` ou `fix/server-chat`.
+  - Tipos: `feat`, `fix`, `chore`.
+  - Áreas: `character`, `world`, `server`, `ui`, `db`, `infra`.
+- Uma branch = um tema. Assunto novo gera branch nova.
+- **Nunca apagar branch** sem pedido explícito do dono. Branch integrada fica como histórico.
 
-Commits: `categoria: resumo curto`.
+## 3. Commits
 
-## Regras centrais
+- Só se commita depois da aprovação do dono da prova de imagem (seção 4).
+- Mensagem: `categoria: resumo curto em português`, com `Co-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>` no fim.
+- Um commit por mudança aprovada. Não misturar categorias no mesmo commit.
+- Antes de commitar, `git status`: arquivos fora da mudança (inclusive `.claude/`) ficam de fora.
+- Nunca `reset --hard`, `push --force` ou reescrever histórico. Para desfazer, `git revert`.
 
-1. Nunca edite direto em `master`. Trabalhe em um branch da categoria.
-2. Antes de começar, rode `git status`. Preserve alterações existentes do dono; separe-as por categoria e peça aprovação antes de commitá-las.
-3. Proibido: `reset --hard`, `push --force`, reescrever ou apagar histórico.
-4. Segredos, contas, saves, `.local/` e `node_modules/` nunca entram no Git.
-5. Não instale dependências sem autorização do dono.
-6. PostgreSQL é a fonte de dados persistentes; Redis é só cache/presença.
+## 4. Fluxo de cada entrega
 
-## Processos e recursos
+1. **Planejar:** uma frase com o que muda e em qual área.
+2. **Implementar** na branch nova.
+3. **Validar no jogo real** (teste de unidade não basta):
+   - rodar o jogo a partir do código da branch, em sandbox separado, com data e horário fixados;
+   - capturar **antes** (estado atual da `main`) e **depois** (branch), em **desktop e celular**;
+   - rodar os testes focados da área.
+4. **Enviar ao dono:** imagens antes e depois (aqui no chat), data e horário usados, resultado dos testes e o que mudou. Nenhuma entrega chega sem imagem.
+5. **Aguardar a decisão do dono:**
+   - **Aprovado:** commit na branch, `push` e abertura de **PR detalhada**.
+   - **Reprovado:** diagnosticar o que não deu certo (o que o dono viu, o que era esperado, qual valor ou regra causou o efeito), corrigir na mesma branch e repetir a partir do passo 3, com imagens novas.
+6. **Integrar** só com autorização explícita do dono, pela PR.
 
-Nenhum processo de teste pode ficar vivo depois do trabalho. Isso vale para navegador (Chromium/Playwright), servidores temporários e proxies.
+## 5. Pull request
 
-1. **Todo teste tem limite de tempo.** Rode com `timeout <segundos>` (por exemplo `timeout 300 node scripts/...`). Nenhum teste roda sem prazo.
-2. **Todo script de navegador fecha o navegador sempre**, inclusive em erro ou timeout (`try/finally` com `browser.close()`). Nunca deixe um navegador aberto esperando.
-3. **Servidores e proxies temporários** usam portas fora do preview real (8099 e 8100) e são encerrados no fim, mesmo se o teste falhar (`trap` no shell).
-4. **Ao terminar cada tarefa, confira que não sobrou nada:** liste processos de `chrome`, `playwright` e `node scripts/` que você iniciou, e as portas temporárias em uso. Se sobrou, encerre.
-5. **Encerre sempre por PID exato** (`kill <PID>`), de processos que você mesmo iniciou. Nunca use `pkill`/`killall` nem mate processos por nome, porque isso pode derrubar o preview real ou a própria sessão.
-6. **Não toque em processos que você não iniciou** sem investigar o pai e o propósito. Se estiverem presos (muito tempo de vida e sem uso), informe o dono e então encerre por PID.
-7. **Não execute testes em paralelo que abram navegador:** um por vez, e termine o anterior antes de iniciar o próximo.
-8. **Nunca reinicie ou pare** `clareira-dev-preview-room` nem `clareira-dev-preview-page` fora da etapa de validação do jogo integrado.
+- Toda integração é feita por PR.
+- **Título:** curto, em português.
+- **Tags:** etiquetas da PR, sempre em inglês (ex.: `feature`, `bugfix`, `enhancement`, `fixture`, `docs`, `infra`, `refactor`). Os nomes são exemplos: o agente escolhe a etiqueta que melhor descreve cada PR. Quando a etiqueta ainda não existe no repositório, o agente pede ao dono antes de criá-la; enquanto isso, usa a padrão mais próxima.
+- **Descrição** com estas seções, nesta ordem:
+  1. **Tags**
+  2. **Resumo:** o que muda e por quê, em 2 a 4 frases.
+  3. **O que mudou:** lista de arquivos e comportamento.
+  4. **Como testar:** passos para o dono reproduzir no jogo.
+  5. **Testes:** comandos e resultado.
+  6. **Evidências:** pasta local e nomes das imagens (sempre o caminho completo).
+  7. **Registro:** link para o `MODIFICACOES.md`.
+- A PR só é integrada depois da aprovação do dono.
 
-## Fluxo de cada entrega
+## 6. Registro de modificações (`MODIFICACOES.md`)
 
-1. **Planejar:** declare em uma frase o que muda e a categoria.
-2. **Implementar** no branch.
-3. **Validar:** testes focados e navegador, com capturas novas em desktop e celular. HTTP 200 e ausência de erro JS não provam qualidade.
-4. **Relatório de atualização ao dono:** resumo curto com categoria, o que mudou, arquivos afetados, como experimentar, resultado dos testes e as imagens de evidência. Use o mesmo formato em toda entrega.
-5. **Aguardar autorização explícita.** Sem ela, não há commit nem integração.
-6. **Checar conflitos antes de integrar:** simule a mesclagem com `git merge-tree --write-tree <master> <branch>`, que não altera a árvore de trabalho (o checkout canônico pode ter alterações do dono; não use `merge --no-commit` nele). Liste os arquivos em conflito. Para cada um, compare as duas versões, decida entre manter, mesclar ou reescrever, e explique o motivo. Rode os testes de novo após resolver.
-7. **Integrar e commitar** em `master`, e atualize o registro de últimas modificações (seção abaixo) no mesmo commit.
-8. **Validar no jogo integrado:** reinicie só o serviço de preview afetado (`clareira-dev-preview-room.service`; `clareira-dev-preview-page.service` quando necessário), teste e anexe novas evidências.
-9. **Se falhar**, desfaça com `git revert` e avise o dono.
-10. **Limpeza final:** confirme que nenhum processo de teste ficou vivo (seção Processos e recursos) e inclua essa confirmação no relatório.
+- Fica na raiz do repositório, com uma linha por área (formato de tabela: data, área, hash, resumo, evidências).
+- Cada integração atualiza **somente a linha da área afetada**, no mesmo commit.
+- **Resumo** em uma frase e **link** para a pasta de evidências (imagens e textos) no computador do dono: `~/clareira-evidencias/<data>-<area>-<tema>/`.
+- Nunca apagar linhas antigas: o histórico continua no Git.
 
-## Registro de últimas modificações
+## 7. Evidências
 
-Mantenha `MODIFICACOES.md` na raiz, com uma linha por área (categoria e, quando útil, subárea como avatar, HUD, mapa, servidor, banco): data, hash do commit, resumo de uma frase e pasta das evidências. Ao integrar uma entrega, atualize apenas a linha da área afetada, para saber de relance quando cada parte mudou pela última vez. Nunca apague o histórico: ele continua no Git.
+- Imagens e relatórios ficam no computador do dono, em `~/clareira-evidencias/<data>-<area>-<tema>/`.
+- Nunca reutilizar capturas antigas. Cada prova é refeita com o estado atual.
+- A imagem deve mostrar o efeito pedido. HTTP 200 e ausência de erro no console não provam qualidade.
 
-## Evidências
+## 8. Sandbox e processos
 
-- As imagens e relatórios de validação devem ficar **no computador local do dono**, onde ele acompanha o trabalho, e não apenas na VPS. Se o agente roda na VPS ou em outra máquina, ele copia os arquivos (por exemplo com `scp`) para o computador local antes de apresentar o relatório, e informa o caminho local no relatório.
-- Pasta local: `~/clareira-evidencias/<data>-<categoria>-<tema>/`, contendo capturas de desktop e celular, resultado dos testes e o relatório.
-- Na VPS, mantenha apenas uma cópia em `logs/<data>-<categoria>-<tema>/`, com o hash do commit.
-- Nunca reutilize capturas antigas. Nada é declarado concluído sem evidência que o dono consiga abrir.
+- Todo teste tem limite de tempo (`timeout`).
+- Todo script de navegador fecha o navegador no `finally`, mesmo com erro.
+- Servidores temporários usam as portas 8099 e 8100 quando estiverem livres. Se estiverem ocupadas por outra sessão, usar outra porta e registrar no relatório.
+- Encerrar só processos que o próprio agente iniciou, pelo PID exato. Nunca `pkill` nem `killall`.
+- Processos de outra sessão não são encerrados: são informados ao dono.
+- Testes que abrem navegador rodam um de cada vez.
+- Ao terminar, conferir processos e portas deixados pelo próprio agente.
+
+## 9. Dados e segurança
+
+- Segredos, contas, saves, `.local/` e `node_modules/` nunca entram no Git.
+- Nenhuma dependência é instalada sem autorização do dono.
+- PostgreSQL é a fonte de dados persistentes. Redis é só cache e presença.
+
+## Histórico desta versão
+
+- Sol de verão: PR #11, integrada em `main` pelo merge `c5aac3b`, com `MODIFICACOES.md` atualizado.

@@ -1,6 +1,8 @@
 import { GAME_RENTAL_DAYS, gameDaysToMs } from '../game/game-calendar.mjs';
 import { lodgingStorageKey } from '../game/lodging-catalog.mjs';
 import { INVENTORY_ACTIONS, applyInventoryCommand } from '../game/inventory-prediction.mjs';
+import { applyRoomChestMove } from './room-chest-actions.mjs';
+import { roomChestId } from '../database/room-chest-store.mjs';
 import { cleanMovementDiagnosticEvent, MAX_MOVEMENT_DIAGNOSTIC_MESSAGE_BYTES } from '../game/movement-diagnostics.mjs';
 import { cleanPerformanceReport } from '../game/performance-telemetry.mjs';
 import { ATTRIBUTE_KEYS, MAX_PLAYER_LEVEL, PLAYER_ABILITIES, XP_POTIONS, XP_POTION_RECIPES, attributeAttackBonus, attributeSpellDamageBonus, awardPotionXp, learnPlayerAbility, mapDiscoveryRadiusForAbilities, storagePageCountForLevel } from '../game/progression.mjs';
@@ -2162,7 +2164,7 @@ export function createPrototypeServer({
         notice(socket,'A fagulha deixou um galho e uma folha para você. O Bosque das Brasas espera.','chime',{arrivalReady:true});
         broadcast(false);return;
       }
-      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew'].includes(message.name)) return;
+      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'chestMove', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew'].includes(message.name)) return;
       if (message.name === 'allocateAttribute') {
         const key = typeof message.attribute === 'string' ? message.attribute : '';
         if (!ATTRIBUTE_KEYS.includes(key)) { notice(socket, 'Esse atributo não existe.'); return; }
@@ -2861,6 +2863,37 @@ export function createPrototypeServer({
         return;
       }
 
+      if (message.name === 'chestMove') {
+        const chestNotice = text => notice(socket, text, 'soft', { action: 'roomChest', requestId: message.requestId, result: 'rejected' });
+        if (player.location !== 'room') return;
+        const chest = player.roomFurniture.find(item => item.kind === 'chest' && roomChestId(player.roomKey, item.id) === message.chestId);
+        if (!chest) { chestNotice('Este baú não está neste cômodo.'); return; }
+        let outcome;
+        try {
+          outcome = await applyRoomChestMove({
+            player, message, store: storage.roomChests,
+            persistPlayer: candidate => persistPlayer(candidate),
+            canUseChest: candidate => canEditCurrentRoom(candidate),
+            inReach: candidate => Math.hypot(candidate.position.x - chest.x, candidate.position.y - chest.y) <= 1.5,
+          });
+        } catch { chestNotice('Não consegui acessar o baú agora.'); return; }
+        if (!outcome.ok) {
+          const text = {
+            'sem-permissao': 'Só a pessoa dona deste cômodo pode usar o baú.',
+            'longe-demais': 'Chegue mais perto do baú.',
+            'bau-cheio': 'O baú está cheio.',
+            'inventario-sem-quantidade': 'Você não tem essa quantidade no inventário.',
+            'inventario-cheio': 'O inventário está cheio.',
+            'nao-salvou': 'Não consegui salvar a mudança do baú. Tente de novo.',
+            'acao-repetida': 'Esta ação já foi feita.',
+          }[outcome.reason] || 'Não foi possível mover o item.';
+          chestNotice(text);
+          return;
+        }
+        notice(socket, 'Baú atualizado.', 'soft', { action: 'roomChest', requestId: message.requestId, result: 'accepted' });
+        broadcast(false);
+        return;
+      }
       if (['removeFurniture','rotateFurniture','moveFurniture','useFurniture'].includes(message.name)) {
         const furnitureNotice=(text,sound='soft',result='rejected')=>notice(socket,text,sound,{action:'roomFurniture',requestId:message.requestId,result});
         if(player.location!=='room')return;

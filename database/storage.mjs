@@ -10,6 +10,7 @@ import { loadAccountRoom, saveAccountRoom } from '../scripts/room-store.mjs';
 import { createDatabasePool } from './pool.mjs';
 import { createPostgresStore } from './store.mjs';
 import { createStaffManagementStore } from './staff-management.mjs';
+import { createRoomChestStore } from './room-chest-store.mjs';
 import { createJsonCampfireStore, createJsonWorldStore } from '../scripts/world-store.mjs';
 import { createJsonPlayerLocationStore } from '../scripts/player-location-store.mjs';
 import { createJsonDimensionStore } from '../scripts/dimension-store.mjs';
@@ -74,6 +75,7 @@ export function createStorageAdapter({
     ...createHousingMarketStore(pool),
     ...createPropertyMarketStatisticsStore(pool),
     staffManagement: createStaffManagementStore(pool),
+    roomChests: createRoomChestStore(pool),
     ready: async () => {
       const { rows } = await pool.query('SELECT max(version) AS version FROM schema_migrations');
       if (Number(rows[0]?.version) < 36) throw new Error('Aplique todas as migrações PostgreSQL antes de iniciar o jogo.');

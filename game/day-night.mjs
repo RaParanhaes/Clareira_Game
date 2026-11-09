@@ -1,4 +1,5 @@
-export const GAME_DAY_DURATION_MS = 24 * 60 * 1000;
+import { GAME_DAY_DURATION_MS, gameSeasonAt, GAME_LUNAR_MONTH_DAYS, GAME_EPOCH_MS } from './game-time.mjs';
+export { GAME_DAY_DURATION_MS };
 
 const TAU = Math.PI * 2;
 const clamp01 = value => Math.max(0, Math.min(1, value));
@@ -22,6 +23,26 @@ const CELESTIAL_PROFILES = Object.freeze({
   energy: Object.freeze({ sun: true, moon: true }),
   dark: Object.freeze({ sun: false, moon: false }),
 });
+
+// Sunrise and sunset move with the season: summer days are longer, winter days shorter.
+// The shift is in game hours and keeps the whole day at 24 hours.
+const SEASON_DAYLIGHT_SHIFT = Object.freeze({
+  primavera: Object.freeze({ dawn: -0.5, dusk: 0.5 }),
+  verao: Object.freeze({ dawn: -1, dusk: 1 }),
+  outono: Object.freeze({ dawn: 0.5, dusk: -0.5 }),
+  inverno: Object.freeze({ dawn: 1, dusk: -1 }),
+});
+export function seasonalDaylightShift(season) {
+  return SEASON_DAYLIGHT_SHIFT[season] || { dawn: 0, dusk: 0 };
+}
+function seasonalCycle(cycle, shift) {
+  return Object.freeze({
+    dawnStart: cycle.dawnStart + shift.dawn,
+    dawnEnd: cycle.dawnEnd + shift.dawn,
+    dayEnd: cycle.dayEnd + shift.dusk,
+    nightStart: cycle.nightStart + shift.dusk,
+  });
+}
 
 function smoothstep(value) {
   const amount = clamp01(value);
@@ -49,7 +70,7 @@ export function getGameDayState(timestampMs = Date.now(), { theme = 'forest', di
   const elapsed = modulo(timestampMs, GAME_DAY_DURATION_MS);
   const hours = elapsed / GAME_DAY_DURATION_MS * 24;
   const starsRotation = elapsed / GAME_DAY_DURATION_MS;
-  const lunarPhase = modulo(timestampMs / (GAME_DAY_DURATION_MS * 8), 1);
+  const lunarPhase = modulo((Number(timestampMs) - GAME_EPOCH_MS) / (GAME_DAY_DURATION_MS * GAME_LUNAR_MONTH_DAYS), 1);
   const moonIllumination = (1 - Math.cos(lunarPhase * TAU)) / 2;
   const eternalNight = dimensionId === 'breu' || theme === 'dark';
   const celestialProfile = CELESTIAL_PROFILES[theme] || CELESTIAL_PROFILES.forest;
@@ -78,7 +99,7 @@ export function getGameDayState(timestampMs = Date.now(), { theme = 'forest', di
     };
   }
 
-  const cycle = CYCLES[theme] || CYCLES.forest;
+  const cycle = seasonalCycle(CYCLES[theme] || CYCLES.forest, seasonalDaylightShift(gameSeasonAt(timestampMs).season));
   let daylight = 0;
   if (hours >= cycle.dawnStart && hours < cycle.dawnEnd) {
     daylight = smoothstep((hours - cycle.dawnStart) / (cycle.dawnEnd - cycle.dawnStart));

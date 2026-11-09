@@ -21,7 +21,8 @@ test('the village roster is small, stable, and spaced across open village cleari
 });
 
 test('at night four villagers sit around the village hearth while the others remain spread out',()=>{
-  const night=villageActorsFor({now:GAME_DAY_DURATION_MS*20/24});
+  // Late night is night in every season (sunset shifts by season), so use 23:00.
+  const night=villageActorsFor({now:GAME_DAY_DURATION_MS*23/24});
   const seated=night.filter(npc=>npc.sitting);
   assert.equal(seated.length,VILLAGE_NPC_NIGHT_GATHERING);
   assert.ok(seated.every(npc=>npc.emote==='sit'));

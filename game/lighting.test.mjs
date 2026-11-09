@@ -34,3 +34,22 @@ test('fire light falls off with distance and another fire illuminates a dark pla
 });
 
 test('flame variation stays gentle and freezes for reduced motion',async()=>{const {flameEnvelope}=await import('./lighting.mjs');const samples=Array.from({length:120},(_,i)=>flameEnvelope(i/10,{x:8,y:11}));assert.ok(Math.max(...samples)-Math.min(...samples)>.05);assert.ok(samples.every(n=>n>.93&&n<1.07));assert.equal(flameEnvelope(50,{x:1,y:2},true),1);});
+
+import {celestialLightState,createShadowDirectionResolver,buildingLocalFill,nightVeilColor} from './lighting.mjs';
+test('central lighting: veil colour per theme with a warm-slate fallback', () => {
+ assert.equal(nightVeilColor('dark'), '#000000');
+ assert.equal(nightVeilColor('unknown-theme'), '#0c1a2a');
+});
+test('central lighting: no celestial light means no global light', () => {
+ assert.equal(celestialLightState({sunlightStrength:0,moonlightStrength:0,daylight:0}), null);
+});
+test('central lighting: with no lights the shadow resolver falls back to ambient', () => {
+ const resolve = createShadowDirectionResolver({globalLight:null,localLights:[],obstacles:[],point:(x,y)=>({x,y}),surfaceHeight:()=>0,getCamera:()=>({x:0,y:0})});
+ const d = resolve(1,1);
+ assert.equal(d.source.kind, 'ambient');
+ assert.equal(d.strength, 0);
+});
+test('central lighting: a building with no neighbouring light has no local fill', () => {
+ const building = {id:'cabin', bounds:{left:0,right:2,top:0,bottom:2}};
+ assert.equal(buildingLocalFill(building, {source:{}}, [], [], () => 0), 0);
+});

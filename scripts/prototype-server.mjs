@@ -29,6 +29,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
+import { activeOverrides, createOverride } from '../game/world-overrides.mjs';
+import { createSkyOverrideCache, skyOverridesFileIn } from '../game/sky-overrides-store.mjs';
 import { pathToFileURL } from 'node:url';
 import WebSocket, { WebSocketServer } from 'ws';
 import { EMPTY_INVENTORY, parseCookies } from './account-store.mjs';
@@ -398,6 +400,8 @@ export function createPrototypeServer({
 } = {}) {
   const storage = createStorageAdapter({ directory: stateDirectory, databaseUrl });
   const staffAuthorization = staffAuthorizationOverride || storage.staffManagement?.authorization || null;
+  // Owner-set sky overrides (hour, weather, sun, moon, darkness). Persisted in the state folder.
+  const skyOverridesStore = createSkyOverrideCache(skyOverridesFileIn(stateDirectory, path));
   const marketGovernmentId = 'surface:arrival';
   let marketQuotes = Object.fromEntries(Object.entries(TRADE_PRICES).map(([itemId, price]) => [itemId, { buyPrice:price, sellPrice:price }]));
   let propertyListings = [], propertyRentalListings = [];
@@ -1140,6 +1144,7 @@ export function createPrototypeServer({
       animals: viewer.location==='clearing'?(includeWildlife?[...wildlifeFor(dimensionId).values()]
         .filter(animal=>isInsideAoi(animal,area)||isInsideAoi({x:animal.shelterX,y:animal.shelterY},area)).map(serializeWildlifeForNetwork):undefined):[],
       serverWallTimeMs,
+      skyOverrides: activeOverrides(skyOverridesStore.current(), serverWallTimeMs).map(({ key, value, scope }) => ({ key, value, scope })),
       players,
       ...(dimensionTransits.length ? { dimensionTransits } : {}),
       objectCatalogRevision:sceneObjectCatalog?.revision??-1,
@@ -2164,7 +2169,7 @@ export function createPrototypeServer({
         notice(socket,'A fagulha deixou um galho e uma folha para você. O Bosque das Brasas espera.','chime',{arrivalReady:true});
         broadcast(false);return;
       }
-      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'chestMove', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew'].includes(message.name)) return;
+      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'chestMove', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew', 'setSkyOverride', 'clearSkyOverrides'].includes(message.name)) return;
       if (message.name === 'allocateAttribute') {
         const key = typeof message.attribute === 'string' ? message.attribute : '';
         if (!ATTRIBUTE_KEYS.includes(key)) { notice(socket, 'Esse atributo não existe.'); return; }
@@ -2741,6 +2746,22 @@ export function createPrototypeServer({
         return;
       }
 
+      if (message.name === 'setSkyOverride' || message.name === 'clearSkyOverrides') {
+        let isOwner = false;
+        try { isOwner = !!player.accountId && !!staffAuthorization?.hasPermission
+          && await staffAuthorization.hasPermission(player.accountId, '*', { scopeKey: 'global' }); }
+        catch { notice(socket, 'Não consegui validar a autoridade do Proprietário agora.'); return; }
+        if (!isOwner) { notice(socket, 'Essa ação é exclusiva do Proprietário.'); return; }
+        const nextOverrides = message.name === 'clearSkyOverrides' ? [] : skyOverridesStore.current().slice();
+        try {
+          if (message.name !== 'clearSkyOverrides') nextOverrides.push(createOverride(message.override, Date.now()));
+        } catch (error) { notice(socket, error.message); return; }
+        const now = Date.now();
+        skyOverridesStore.write(nextOverrides.filter(override => override.endsAt > now));
+        broadcast();
+        notice(socket, message.name === 'clearSkyOverrides' ? 'Ajustes do céu removidos.' : 'Ajuste do céu aplicado.');
+        return;
+      }
       if (message.name === 'ownerVisitRoom') {
         let isOwner = false;
         try { isOwner = !!player.accountId && !!staffAuthorization?.hasPermission

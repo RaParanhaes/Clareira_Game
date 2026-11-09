@@ -1,4 +1,6 @@
 import { loadBackendConfig } from '../database/runtime-config.mjs';
+import { createSkyOverrideCache, skyOverridesFileIn } from '../game/sky-overrides-store.mjs';
+import { createOverride } from '../game/world-overrides.mjs';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import http from 'node:http';
@@ -58,6 +60,8 @@ const HOUSEKEEPING_CAPABILITIES = Object.freeze({
   warnPlayers: 'players.warn', mutePlayers: 'players.mute', kickPlayers: 'players.kick',
   suspendPlayers: 'players.suspend', banPlayers: 'players.ban.permanent', revokeSanctions: 'players.sanction.revoke',
   adjustEconomy: 'economy.adjust', inspectPlayers: 'players.state.repair', operateWorld: 'world.operate',
+  // Only the owner holds the '*' permission, so only the owner sees the sky tools.
+  setSky: '*',
 });
 
 async function resolveHousekeepingCapabilities(staff, accountId) {
@@ -162,6 +166,7 @@ export function createPreviewServer({
 } = {}) {
   const gameRoot = path.resolve(gameDirectory);
   const stateRoot = path.resolve(stateDirectory);
+  const skyOverrideStore = createSkyOverrideCache(skyOverridesFileIn(stateDirectory, path));
   let canonicalGameRoot = null;
   const storage = storageAdapter || createStorageAdapter({ directory: stateRoot, databaseUrl });
   let appliedTreeWorldKey = "";
@@ -390,6 +395,15 @@ export function createPreviewServer({
           if (!consumeLimit(request, 'staff', 60, 60 * 1000)) return sendJson(response, 429, { error: 'Muitas ações administrativas seguidas. Tente mais tarde.' });
         }
 
+        if (request.method === 'POST' && url.pathname === '/staff/sky') {
+          await requirePermission('*');
+          const payload = await readJson(request);
+          const now = Date.now();
+          const next = payload.clear === true ? [] : skyOverrideStore.current().slice();
+          if (payload.clear !== true) next.push(createOverride(payload.override, now));
+          skyOverrideStore.write(next.filter(override => override.endsAt > now));
+          return sendJson(response, 200, { ok: true, active: next.filter(override => override.endsAt > now).length });
+        }
         if (request.method === 'GET' && url.pathname === '/staff/economy-overview') {
           await requirePermission('economy.adjust');
           return sendJson(response, 200, await staff.getEconomyOverview());

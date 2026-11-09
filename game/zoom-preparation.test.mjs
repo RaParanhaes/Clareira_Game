@@ -20,7 +20,7 @@ test('destination readiness is acknowledged only after a complete drawn frame',(
  const callbacks=[],events=[],timers=[];let draws=0,lightingReady=false;
  const context={authenticated:true,snapshotReady:true,assetsReady:true,predictionReady:true,sceneReady:false,loadingGeneration:1,dimensionArrivalStartedAt:0,
   teleportEffects:{prepare:()=>Promise.resolve(true),finishLocalScene:()=> 'test-transit'},dimensionList:[],worldDimensionId:'surface',arrivalTravelPending:false,
-  performance:{now:()=>0},lightingRevealStartedAt:null,gameDay:{},getGameDayState:()=>({}),gameDayTimestampMs:()=>0,dimensionTheme:'forest',lightingRevealScheduled:false,
+  performance:{now:()=>0},lightingRevealStartedAt:null,gameDay:{},getGameDayState:()=>({}),gameDayTimestampMs:()=>0,applySkyToDay:day=>day,currentSky:()=>({}),dimensionTheme:'forest',lightingRevealScheduled:false,
   paintSceneLightmaps:()=>lightingReady,processLightmapQueue:()=>{lightingReady=true;},
   updateLoadingDesign(){},updateDimensionTravel(){},resizeCanvas(){},draw(){return ++draws>=3;},
   setTimeout:(callback,delay)=>timers.push({callback,delay}),
@@ -43,7 +43,7 @@ test('optional lighting cannot deadlock entry while the authoritative scene stil
  const callbacks=[],events=[];let now=0,frameReady=false;
  const context={authenticated:true,snapshotReady:true,assetsReady:true,predictionReady:true,sceneReady:false,loadingGeneration:1,
   dimensionArrivalStartedAt:0,teleportEffects:{prepare:()=>Promise.resolve(true),finishLocalScene:()=>null},
-  dimensionList:[],worldDimensionId:'surface',arrivalTravelPending:false,gameDay:{},getGameDayState:()=>({}),
+  dimensionList:[],worldDimensionId:'surface',arrivalTravelPending:false,gameDay:{},getGameDayState:()=>({}),applySkyToDay:day=>day,currentSky:()=>({}),
   gameDayTimestampMs:()=>0,dimensionTheme:'forest',lightingRevealScheduled:false,lightingRevealStartedAt:null,performance:{now:()=>now},
   paintSceneLightmaps:()=>false,processLightmapQueue(){},updateLoadingDesign(){},updateDimensionTravel(){},resizeCanvas(){},
   draw:()=>frameReady,setTimeout(){},requestAnimationFrame:callback=>callbacks.push(callback),

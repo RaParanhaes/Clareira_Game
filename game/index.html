@@ -429,10 +429,27 @@ html:not(.clareira-styles-ready) .shell{visibility:hidden}
           <button id="staff-moderation-open" class="staff-tool-choice" type="button" hidden><span class="staff-tool-symbol" aria-hidden="true">⚑</span><span><strong>Jogadores e denúncias</strong><small>Consultar histórico, advertir e moderar.</small></span><span class="staff-tool-arrow" aria-hidden="true">→</span></button>
           <button id="staff-audit-open" class="staff-tool-choice" type="button" hidden><span class="staff-tool-symbol" aria-hidden="true">≡</span><span><strong>Histórico de ações</strong><small>Conferir alterações e responsáveis.</small></span><span class="staff-tool-arrow" aria-hidden="true">→</span></button>
         </div>
+        <button id="staff-sky-open" class="staff-tool-choice" type="button" hidden><span class="staff-tool-symbol" aria-hidden="true">☼</span><span><strong>Céu e tempo</strong><small>Hora, clima, sol e lua. Só o Proprietário.</small></span><span class="staff-tool-arrow" aria-hidden="true">→</span></button>
         <a class="staff-panel-link" href="/dev/staff" target="_blank" rel="noopener"><span><strong>Painel completo</strong><small>Cargos e moderação · abre em outra aba</small></span><span aria-hidden="true">↗</span></a>
       </section>
       <section id="staff-tools-player" hidden><button id="staff-player-back" class="staff-back" type="button">← Voltar</button><h3 tabindex="-1">Ficha de jogador</h3><form id="staff-player-form" class="staff-wallet-form"><label>Conta<input name="username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="off"></label><button class="settings-action" type="submit">Consultar</button></form><div id="staff-player-result" class="staff-feedback" role="status" aria-live="polite"></div></section>
       <section id="staff-tools-market" hidden><button id="staff-market-back" class="staff-back" type="button">← Voltar</button><h3 tabindex="-1">Mercado e juros</h3><p>Preços em bronze e estoque disponível no mercado.</p><button id="staff-market-refresh" class="staff-secondary-action" type="button">Atualizar</button><div id="staff-market-result" class="staff-feedback" role="status" aria-live="polite"></div></section>
+      <section id="staff-tools-sky" hidden>
+        <button id="staff-sky-back" class="staff-back" type="button">← Voltar</button>
+        <h3 tabindex="-1">Céu e tempo</h3>
+        <p>Ajustes só do Proprietário. Valem para todos os jogadores e podem ser temporários ou permanentes.</p>
+        <form id="staff-sky-form" class="staff-wallet-form">
+          <label>Controle<select id="staff-sky-control"><option value="hour">Hora do dia</option><option value="weather">Clima</option><option value="sunIntensity">Intensidade do sol</option><option value="moonIntensity">Intensidade da lua</option><option value="moonColor">Cor da lua</option><option value="darkness">Escuridão da noite</option></select></label>
+          <div id="staff-sky-field-hour"><label>Hora (0 a 23,9)<input type="number" min="0" max="23.9" step="0.1" value="20"></label></div>
+          <div id="staff-sky-field-weather"><label>Clima<select><option value="clear">Céu limpo</option><option value="rain">Chuva</option><option value="snowing">Neve</option><option value="storm">Tempestade</option></select></label><label>Intensidade<input type="range" min="0" max="1" step="0.05" value="0.6"></label><label><input type="checkbox" name="extremeSun"> Sol escaldante</label></div>
+          <div id="staff-sky-field-level"><label><span>Valor</span><input type="range" min="0" max="2" step="0.05" value="1"></label></div>
+          <div id="staff-sky-field-color"><label>Cor da lua<input type="color" value="#d9573a"></label></div>
+          <fieldset><legend>Duração</legend><label><input type="radio" name="scope" value="cycle" checked> Até o fim do ciclo</label><label><input type="radio" name="scope" value="season"> Até o fim da estação</label><label><input type="radio" name="scope" value="permanent"> Permanente</label></fieldset>
+          <button class="settings-action" type="submit">Aplicar</button>
+        </form>
+        <button id="staff-sky-clear" class="staff-secondary-action" type="button">Remover todos os ajustes</button>
+        <p id="staff-sky-status" class="staff-feedback" role="status" aria-live="polite"></p>
+      </section>
       <section id="staff-tools-moderation" hidden>
         <button id="staff-moderation-back" class="staff-back" type="button">← Voltar</button>
         <h3 tabindex="-1">Jogadores e denúncias</h3>

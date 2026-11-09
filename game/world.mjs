@@ -78,7 +78,7 @@ const ROOM_PALETTES = Object.freeze({
     wall: '#866f56', sideWall: '#6d5b4a', trim: '#c19968', rug: '#865348', rugEdge: '#d7b982' }),
   pine: Object.freeze({ floor: Object.freeze(['#776747', '#8c774e', '#6e6044', '#83724b']),
     wall: '#79694e', sideWall: '#5d5a45', trim: '#b49460', rug: '#486b5c', rugEdge: '#c7b27b' }),
-  hotel: Object.freeze({ floor: Object.freeze(['#8b6c4d', '#987654', '#816448', '#927351']),
+  hotel: Object.freeze({ floor: Object.freeze(['#a57a52', '#b68a5f', '#96693f', '#ad8457']),
     wall: '#756d5e', sideWall: '#5f5b52', trim: '#d1b17d', rug: '#684f69', rugEdge: '#dfc38d' }),
   vista: Object.freeze({ floor: Object.freeze(['#77705d', '#8d8064', '#706752', '#83765f']),
     wall: '#6e6a70', sideWall: '#53515c', trim: '#b7a17f', rug: '#5b6078', rugEdge: '#d6c4a2' }),

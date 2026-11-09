@@ -1023,7 +1023,7 @@ async function initializePanel() {
     const access = {
       moderation: state.capabilities.readReports || state.capabilities.readPlayers,
       roles: state.capabilities.manageRoles, assignments: state.capabilities.manageRoles, audit: state.capabilities.readAudit,
-      economy: state.capabilities.adjustEconomy, players: state.capabilities.inspectPlayers,
+      economy: state.capabilities.adjustEconomy, players: state.capabilities.inspectPlayers, sky: state.capabilities.setSky,
       realms: state.capabilities.auditTreasury || state.capabilities.manageGovernance,
       map: state.capabilities.manageRealms || state.capabilities.operateWorld,
     };
@@ -1050,7 +1050,7 @@ async function initializePanel() {
     }
     for (const item of document.querySelectorAll('.nav-item')) item.hidden = !access[item.dataset.view];
     for (const view of document.querySelectorAll('.view')) view.hidden = true;
-    const first = ['players', 'moderation', 'roles', 'assignments', 'audit', 'economy', 'realms', 'map'].find(view => access[view]);
+    const first = ['players', 'moderation', 'roles', 'assignments', 'audit', 'economy', 'sky', 'realms', 'map'].find(view => access[view]);
     if (!first) throw Object.assign(new Error('Seu cargo não tem ferramentas disponíveis.'), { status: 403 });
     setView(first);
   } catch (error) {
@@ -1058,4 +1058,38 @@ async function initializePanel() {
     for (const view of document.querySelectorAll('.view')) view.hidden = true;
   }
 }
+// Owner sky controls: only the owner's account can reach these calls (the server checks the '*' permission).
+const skyLevels = { sunIntensity: [0, 2, 1, 'Intensidade do sol'], moonIntensity: [0, 1, 0.5, 'Intensidade da lua'], darkness: [0, 1, 0.6, 'Escuridão da noite'] };
+function syncSkyFields() {
+  const key = byId('sky-control').value;
+  const shown = key === 'hour' ? 'hour' : key === 'weather' ? 'weather' : key === 'moonColor' ? 'color' : 'level';
+  for (const element of document.querySelectorAll('[data-sky-field]')) element.hidden = element.dataset.skyField !== shown;
+  if (skyLevels[key]) {
+    const [min, max, value, name] = skyLevels[key];
+    const input = byId('sky-level');
+    input.min = String(min); input.max = String(max); input.value = String(value);
+    byId('sky-level-name').textContent = name;
+  }
+}
+byId('sky-control').addEventListener('change', syncSkyFields);
+byId('sky-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const key = byId('sky-control').value;
+  const scope = document.querySelector('input[name="sky-scope"]:checked').value;
+  const value = key === 'hour' ? Number(byId('sky-hour').value)
+    : key === 'weather' ? { kind: byId('sky-weather').value, intensity: Number(byId('sky-intensity').value), extremeSun: byId('sky-extreme').checked }
+      : key === 'moonColor' ? byId('sky-color').value
+        : Number(byId('sky-level').value);
+  try {
+    await api('/staff/sky', { method: 'POST', body: JSON.stringify({ override: { key, value, scope } }) });
+    byId('sky-status').textContent = 'Ajuste aplicado. Os jogadores veem a mudança em instantes.';
+  } catch (error) { byId('sky-status').textContent = error.message; }
+});
+byId('sky-clear').addEventListener('click', async () => {
+  try {
+    await api('/staff/sky', { method: 'POST', body: JSON.stringify({ clear: true }) });
+    byId('sky-status').textContent = 'Ajustes removidos.';
+  } catch (error) { byId('sky-status').textContent = error.message; }
+});
+syncSkyFields();
 initializePanel();

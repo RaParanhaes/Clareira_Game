@@ -20,6 +20,7 @@
         <button class="nav-item" data-view="audit" hidden><span aria-hidden="true">◷</span>Auditoria</button>
         <button class="nav-item" data-view="players" hidden><span aria-hidden="true">♙</span>Ficha de jogador</button>
         <button class="nav-item" data-view="economy" hidden><span aria-hidden="true">¤</span>Economia</button>
+        <button class="nav-item" data-view="sky" hidden><span aria-hidden="true">☼</span>Céu e tempo</button>
         <button class="nav-item" data-view="realms" hidden><span aria-hidden="true">♜</span>Reinos e cofres</button>
         <button class="nav-item" data-view="map" hidden><span aria-hidden="true">▦</span>Mapa e territórios</button>
       </nav>
@@ -186,6 +187,21 @@
         </div>
       </section>
 
+      <section class="view" id="view-sky" aria-labelledby="sky-heading" hidden>
+        <div class="page-heading"><div><span class="eyebrow">OPERAÇÃO DO PROPRIETÁRIO</span><h2 id="sky-heading">Céu e tempo</h2><p>Hora, clima, sol, lua e escuridão. Valem para todos os jogadores. Só o Proprietário pode alterar.</p></div></div>
+        <div class="panel"><form id="sky-form" class="stack-form">
+          <label>Controle<select id="sky-control"><option value="hour">Hora do dia</option><option value="weather">Clima</option><option value="sunIntensity">Intensidade do sol</option><option value="moonIntensity">Intensidade da lua</option><option value="moonColor">Cor da lua</option><option value="darkness">Escuridão da noite</option></select></label>
+          <label data-sky-field="hour">Hora (0 a 23,9)<input id="sky-hour" type="number" min="0" max="23.9" step="0.1" value="20"></label>
+          <label data-sky-field="weather">Clima<select id="sky-weather"><option value="clear">Céu limpo</option><option value="rain">Chuva</option><option value="snowing">Neve</option><option value="storm">Tempestade</option></select></label>
+          <label data-sky-field="weather">Intensidade<input id="sky-intensity" type="range" min="0" max="1" step="0.05" value="0.6"></label>
+          <label data-sky-field="weather"><input id="sky-extreme" type="checkbox"> Sol escaldante</label>
+          <label data-sky-field="level"><span id="sky-level-name">Valor</span><input id="sky-level" type="range" min="0" max="2" step="0.05" value="1"></label>
+          <label data-sky-field="color">Cor da lua<input id="sky-color" type="color" value="#d9573a"></label>
+          <fieldset><legend>Duração</legend><label><input type="radio" name="sky-scope" value="cycle" checked> Até o fim do ciclo</label><label><input type="radio" name="sky-scope" value="season"> Até o fim da estação</label><label><input type="radio" name="sky-scope" value="permanent"> Permanente</label></fieldset>
+          <button class="button" type="submit">Aplicar</button>
+        </form>
+        <button id="sky-clear" class="button button-secondary" type="button">Remover todos os ajustes</button>
+        <p id="sky-status" role="status" aria-live="polite"></p></div></section>
       <section class="view" id="view-economy" aria-labelledby="economy-heading" hidden>
         <div class="page-heading"><div><span class="eyebrow">OPERAÇÃO DO PROPRIETÁRIO</span><h2 id="economy-heading">Economia</h2><p>Ajuste o saldo de uma conta. Toda alteração exige motivo e entra na auditoria.</p></div></div>
         <div class="panel"><div class="panel-heading"><div><h3>Mercado e bancos</h3><p>Estoque disponível e vendas para o mercado nos últimos sete dias. Valores em bronze.</p></div><button class="button button-secondary" id="economy-refresh" type="button">Atualizar</button></div>

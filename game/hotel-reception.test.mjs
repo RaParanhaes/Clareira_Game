@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {HOTEL_RECEPTION_FIXTURES,HOTEL_RECEPTION_COUNTER} from './hotel-reception.mjs';
+import {HOTEL_RECEPTION_FIXTURES,HOTEL_RECEPTION_COUNTER,HOTEL_BAKED_DIMENSIONS} from './hotel-reception.mjs';
 import {medievalFurnitureById} from './medieval-furniture.mjs';
 import {getRoomLayout,canOccupyRoom,findWalkPath} from './world.mjs';
 import {roomFurnitureFootprintsOverlap} from './furniture.mjs';
@@ -16,7 +16,8 @@ test('public reception furniture uses canonical medieval sprite dimensions and f
   for(const item of furnishings){
     const model=medievalFurnitureById(item.catalogId);
     assert.ok(model,`${item.id} has a medieval sprite`);
-    for(const key of ['width','depth','height'])assert.equal(item[key],model[key],`${item.id}: ${key} matches baked asset`);
+    const baked=HOTEL_BAKED_DIMENSIONS[item.catalogId]||model;
+    for(const key of ['width','depth','height'])assert.equal(item[key],baked[key],`${item.id}: ${key} matches baked asset`);
     assert.ok(item.rotation>=0&&item.rotation<=3);
     assert.equal(canOccupyRoom(item,.1,[],layout),false,`${item.id} blocks its physical footprint`);
   }

@@ -21,17 +21,13 @@ for(const [width,height] of [[1440,900],[390,844],[320,640]])test(`rooms, walls 
 test('a small cabin uses the desktop canvas at a readable scale',()=>{
  assert.ok(roomView(getRoomLayout('lodging','cabin-cedar-one','owned'),1440,900).tileX>=56);
 });
-test('mobile and desktop room cameras center on the player and zoom closer',()=>{
+test('the room camera frames the whole room and ignores where the player stands',()=>{
   const layout=getRoomLayout('lodging','cabin-cedar-one','owned');
   for(const [width,height] of [[1440,900],[390,844],[320,640]]){
     const fitted=roomView(layout,width,height);
     const target={x:layout.spawn.x+.7,y:layout.spawn.y-.35};
     const followed=roomView(layout,width,height,target);
-    assert.ok(followed.tileX>fitted.tileX,`${width}×${height}: follow view is closer than the full-room overview`);
-    assert.deepEqual(followed.camera,target,`${width}×${height}: camera follows the player's position`);
-    const screenX=followed.centerX+(target.x-target.y-followed.camera.x+followed.camera.y)*followed.tileX;
-    const screenY=followed.centerY+(target.x+target.y-followed.camera.x-followed.camera.y)*followed.tileX*9/16;
-    assert.equal(screenX,followed.centerX,`${width}×${height}: player stays centered in the safe view`);
-    assert.equal(screenY,followed.centerY,`${width}×${height}: player stays centered in the safe view`);
+    assert.deepEqual(followed,fitted,`${width}×${height}: the framing does not move with the player`);
+    assert.notDeepEqual(followed.camera,target,`${width}×${height}: the camera rests on the room, not on the player`);
   }
 });

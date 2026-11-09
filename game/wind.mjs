@@ -1,9 +1,16 @@
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 
-// A broad, slow field with a low ceiling: sheltered forest breeze, never storm gusts.
+// The sky's wind (set once per second from the climate). 1 is the usual forest breeze;
+// storms raise it, calm weather lowers it. Every tree, flame and water edge reads it.
+let weatherWind = 1;
+export function setWeatherWind(level) {
+  weatherWind = clamp(Number(level) || 1, 0.5, 3.5);
+}
+
+// A broad, slow field: sheltered forest breeze, stronger in storms.
 export function windStrengthAt(x, y) {
   const field = .37 + Math.sin(x * .027 + y * .019) * .12 + Math.sin(x * .013 - y * .031) * .09;
-  return clamp(field, .16, .58);
+  return clamp(field * weatherWind, .16, .58 * Math.max(1, weatherWind));
 }
 
 export function windSwayAt(x, y, time) {

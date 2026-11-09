@@ -1,3 +1,4 @@
+import { isPresetFurnitureKind, presetFurnitureItem } from './room-presets.mjs';
 import {interiorPartitions} from './interior-architecture.mjs';
 import {fixtureBounds} from './building-standard.mjs';
 import {copyData,resolveObjectCatalog} from './object-catalog.mjs';
@@ -37,7 +38,11 @@ export function applyObjectCatalog(value,{validateOnly=false}={}){
  for(const o of active.filter(o=>o.kind==='room')){
   const layout={...copyData(o.properties),objectId:o.id},parts=children.get(o.id)||[],parent=nextBuildings.get(graph.objects.get(o.parentId)?.properties.id);
   if(o.parentId&&!parent)continue;
-  const fixtures=parts.filter(p=>p.kind==='fixture'&&p.properties.kind!=='counter').map(p=>({...copyData(p.properties),id:p.id,objectId:p.id}));
+  const allFixtures=parts.filter(p=>p.kind==='fixture'&&p.properties.kind!=='counter').map(p=>({...copyData(p.properties),id:p.id,objectId:p.id}));
+  // Private rooms (legacy home and lodgings) hand their movable pieces to the room as predefined furniture.
+  const privateRoom=layout.roomKind==='lodging'||layout.roomKind==='legacy';
+  const fixtures=privateRoom?allFixtures.filter(item=>!isPresetFurnitureKind(item.kind)):allFixtures;
+  layout.presets=privateRoom?Object.freeze(allFixtures.filter(item=>isPresetFurnitureKind(item.kind)).map((item,index)=>presetFurnitureItem(item,index))):Object.freeze([]);
   const counter=parts.find(p=>p.kind==='fixture'&&p.properties.kind==='counter');
   layout.fixtures=fixtures;layout.partitions=interiorPartitions(layout);layout.obstacles=[...fixtures.map(fixtureBounds),...layout.partitions];
   layout.counter=counter?{left:counter.properties.x-counter.properties.width/2,right:counter.properties.x+counter.properties.width/2,

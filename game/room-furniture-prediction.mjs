@@ -13,6 +13,7 @@ function apply(items, command) {
   if (index < 0) return null;
   const item = next[index];
   if (item.supportId || next.some(other => other.supportId === item.id)) return null;
+  if (command.name === 'removeFurniture' && item.preset) return null;
   if (command.name === 'moveFurniture') { item.x = command.x; item.y = command.y; }
   else if (command.name === 'rotateFurniture') item.rotation = ((item.rotation || 0) + 1) % 4;
   else if (command.name === 'removeFurniture') next.splice(index, 1);

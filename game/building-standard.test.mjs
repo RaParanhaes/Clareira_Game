@@ -100,7 +100,8 @@ test('asymmetric front wings make varied silhouettes inside the existing collisi
 
 test('furniture render geometry uses its physical base and each type has readable human scale',()=>{
   const seen=new Set();
-  for(const l of layouts)for(const item of l.fixtures){
+  // Predefined room furniture is drawn by the furniture pipeline, so it joins the same geometry checks.
+  for(const l of layouts)for(const item of [...l.fixtures,...(l.presets||[])]){
     const vertices=[];paintRoomFixture(item,(x,y,z)=>{vertices.push({x,y,z});return {x,y};},()=>{});
     const bounds=fixtureBounds(item);
     assert.ok(vertices.length>0,item.kind);

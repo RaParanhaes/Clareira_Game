@@ -12,6 +12,8 @@ export const GAME_WEEK_DAYS = 7;
 export const GAME_MONTH_DAYS = 30;
 export const GAME_MONTHS_PER_YEAR = 12;
 export const GAME_YEAR_DAYS = GAME_MONTH_DAYS * GAME_MONTHS_PER_YEAR;
+// Each season is three months long.
+export const GAME_SEASON_DAYS = GAME_MONTH_DAYS * 3;
 // The moon completes a lunar month every four game weeks.
 export const GAME_LUNAR_MONTH_DAYS = GAME_WEEK_DAYS * 4;
 

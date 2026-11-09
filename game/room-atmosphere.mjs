@@ -13,7 +13,7 @@ const ATMOSPHERES = Object.freeze({
   }),
   hotel: Object.freeze({
     wall: '#d8cdb3', sideWall: '#aaa08c', trim: '#d9bd80',
-    panel: '#c6b79b', panelEdge: '#8c7e6a', wallpaperStripe: '#fff0d63a',
+    panel: '#b5a283', panelEdge: '#7d6e58', wallpaperStripe: '#fff0d63a',
     curtain: '#7b8b80', curtainShade: '#50635c', curtainLight: '#b4c09d', curtainRod: '#645340',
     art: Object.freeze({ sky: '#ead5a1', far: '#8d8b68', near: '#65745d', sun: '#f5e3b0' }),
   }),
@@ -28,7 +28,7 @@ const ATMOSPHERES = Object.freeze({
 const BUILTIN_PALETTES = Object.freeze({
   cedar: Object.freeze({ floor: '#846449', wall: '#866f56' }),
   pine: Object.freeze({ floor: '#776747', wall: '#79694e' }),
-  hotel: Object.freeze({ floor: '#8b6c4d', wall: '#756d5e' }),
+  hotel: Object.freeze({ floor: '#a57a52', wall: '#756d5e' }),
   vista: Object.freeze({ floor: '#77705d', wall: '#6e6a70' }),
 });
 

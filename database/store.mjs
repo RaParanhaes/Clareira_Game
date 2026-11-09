@@ -921,7 +921,19 @@ export function createPostgresStore(pool) {
         const furniture = furnitureByKind(kindId);
         if (!furniture) throw new Error('Unknown saved furniture id');
         const stored=row.properties&&typeof row.properties==='object'?row.properties:{};
-        const {roomSupport,...properties}=stored;
+        const {roomSupport,preset,...properties}=stored;
+        if (preset===true) return {
+          id: row.object_id,
+          kind: furniture.kind,
+          x: Number(row.x),
+          y: Number(row.y),
+          rotation: Number(row.rotation),
+          preset: true,
+          ...(Number.isFinite(stored.width)?{width:stored.width}:{}),
+          ...(Number.isFinite(stored.depth)?{depth:stored.depth}:{}),
+          ...(Number.isFinite(stored.height)?{height:stored.height}:{}),
+          ...(typeof stored.palette==='string'?{palette:stored.palette}:{}),
+        };
         return {
           id: row.object_id,
           kind: furniture.kind,
@@ -954,7 +966,7 @@ export function createPostgresStore(pool) {
           await client.query(
             'INSERT INTO room_objects (room_id, object_id, furniture_id, x, y, rotation, enabled, properties) ' +
             'VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)',
-            [roomId, item.id, furnitureId, item.x, item.y, item.rotation, item.enabled!==false,JSON.stringify({...(item.properties||{}),...(item.supportId?{roomSupport:{supportId:item.supportId,supportSurface:item.supportSurface,supportOffsetX:item.supportOffsetX,supportOffsetY:item.supportOffsetY,baseZ:item.baseZ}}:{})})],
+            [roomId, item.id, furnitureId, item.x, item.y, item.rotation, item.enabled!==false,JSON.stringify({...(item.preset===true?{preset:true,width:item.width,depth:item.depth,height:item.height,palette:item.palette}:{...(item.properties||{})}),...(item.supportId?{roomSupport:{supportId:item.supportId,supportSurface:item.supportSurface,supportOffsetX:item.supportOffsetX,supportOffsetY:item.supportOffsetY,baseZ:item.baseZ}}:{})})],
           );
         }
       });

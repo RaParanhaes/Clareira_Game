@@ -1,5 +1,6 @@
 import {HOTEL_RECEPTION_FIXTURES,HOTEL_RECEPTION_COUNTER} from './hotel-reception.mjs';
 import { interiorPartitions, interiorFloorShape } from './interior-architecture.mjs';
+import { isPresetFurnitureKind, presetFurnitureItem } from './room-presets.mjs';
 import { WORLD_NATURE_ORIGIN, WORLD_CENTER } from './world-scale.mjs';
 import {furnitureVisual,roomFurnitureDistance,roomFurnitureFootprintsOverlap,roomFurnitureOverlapsPlayer,roomFurnitureFootprintOverlapsRect,roomFurnitureFootprintBounds,roomFurnitureRadius} from './furniture.mjs';
 import {objectRoomLayout,subscribeObjectCatalog} from './object-state.mjs';
@@ -88,9 +89,18 @@ function roomFixture(kind, x, y, width, depth, palette = 'cedar', height = 1.1) 
   return Object.freeze({ kind, x, y, width, depth, height: FIXTURE_HEIGHTS[kind] ?? height, palette });
 }
 
+// Quartos privados (`predefined: true`) entregam suas peças móveis como
+// predefinidos do quarto: o dono pode mover e girar, mas não retirar. Peças
+// fixas, como a lareira, continuam no layout.
 function roomLayout({ id, left, right, top, bottom, doorY, spawnY, elevation = 'flat', counter = null,
-  fixtures = [], rug = null, palette = 'cedar', paletteOverrides = {}, wallDecorObjects = null }) {
+  fixtures: authoredFixtures = [], rug = null, palette = 'cedar', paletteOverrides = {}, wallDecorObjects = null,
+  predefined = false }) {
   const bounds = Object.freeze({ left, right, top, bottom });
+  const fixtures = predefined ? authoredFixtures.filter(item => !isPresetFurnitureKind(item.kind)) : authoredFixtures;
+  const presets = predefined
+    ? Object.freeze(authoredFixtures.filter(item => isPresetFurnitureKind(item.kind))
+      .map((item, index) => presetFurnitureItem(item, index)))
+    : Object.freeze([]);
   // Flat rooms open toward the viewer. Put the arrival tile just outside the
   // floor so walking inward crosses a real threshold instead of spawning in
   // the middle of the room. Raised legacy rooms keep their existing ramp.
@@ -106,7 +116,7 @@ function roomLayout({ id, left, right, top, bottom, doorY, spawnY, elevation = '
   return Object.freeze({ id, bounds, door, spawn, elevation, partitions: Object.freeze(partitions),
     wallHeight:BUILDING_STANDARD.interiorWallHeight, wallThickness:BUILDING_STANDARD.wallThickness,
     counter: counter ? Object.freeze({ ...counter }) : null,
-    fixtures: Object.freeze(fixtures), obstacles: Object.freeze(obstacles), waitingSeats: Object.freeze([]),
+    fixtures: Object.freeze(fixtures), presets, obstacles: Object.freeze(obstacles), waitingSeats: Object.freeze([]),
     rug: rug ? Object.freeze({ ...rug }) : null,
     ...(wallDecorObjects ? { wallDecorObjects: Object.freeze({ ...wallDecorObjects,
       window: wallDecorObjects.window ? Object.freeze({ ...wallDecorObjects.window }) : null }) } : {}),
@@ -115,13 +125,13 @@ function roomLayout({ id, left, right, top, bottom, doorY, spawnY, elevation = '
 }
 
 const STANDARD_ROOM_LAYOUT = roomLayout({ id: 'standard', left: 4.5, right: 11.5, top: 4.5, bottom: 11.5,
-  doorY: 10.8, spawnY: 9.8, elevation: 'raised', palette: 'cedar',
+  doorY: 10.8, spawnY: 9.8, elevation: 'raised', palette: 'cedar', predefined: true,
   rug: { left: 5.0, right: 6.8, top: 8.7, bottom: 9.7 },
   fixtures: [
     roomFixture('bed', 5.8, 5.8, 1.9, 1.25, 'cedar', .55),
     roomFixture('nightstand', 7.25, 5.5, .7, .65, 'cedar', .6),
     roomFixture('bookshelf', 10.25, 5.7, 1.15, .65, 'cedar', 1.65),
-    roomFixture('plant', 5.3, 8.3, .55, .55, 'pine', 1.15),
+    roomFixture('plant', 5.0, 8.0, .55, .55, 'pine', 1.15),
   ],
 });
 
@@ -158,21 +168,21 @@ const GUESTHOUSE_LOBBY_LAYOUT = roomLayout({ id: 'rill-guesthouse-lobby', left: 
 });
 
 const GUESTHOUSE_ROOM_LAYOUT = roomLayout({ id: 'guesthouse-single', left: 5, right: 11, top: 5.5, bottom: 10.5,
-  doorY: 9.8, spawnY: 8.8, palette: 'pine', rug: { left: 6.7, right: 9.3, top: 7.8, bottom: 8.8 },
+  doorY: 9.8, spawnY: 8.8, palette: 'pine', predefined: true, rug: { left: 6.7, right: 9.3, top: 7.8, bottom: 8.8 },
   fixtures: [roomFixture('bed', 6.2, 6.4, 1.8, 1.2, 'pine', .55), roomFixture('nightstand', 7.6, 6.0, .65, .6, 'pine', .55),
     roomFixture('wardrobe', 9.8, 6.25, .95, .7, 'pine', 1.6), roomFixture('plant', 9.8, 8.4, .55, .55, 'pine', 1.15),
     roomFixture('chair', 6.0, 8.8, .65, .6, 'pine')],
 });
 
 const INN_ROOM_LAYOUT = roomLayout({ id: 'pine-inn-double', left: 4.5, right: 11.5, top: 5, bottom: 11,
-  doorY: 10.3, spawnY: 9.3, palette: 'cedar', rug: { left: 7.0, right: 9.5, top: 7.8, bottom: 8.8 },
+  doorY: 10.3, spawnY: 9.3, palette: 'cedar', predefined: true, rug: { left: 7.0, right: 9.5, top: 7.8, bottom: 8.8 },
   fixtures: [roomFixture('bed', 6.0, 6.3, 2.0, 1.35, 'cedar', .6), roomFixture('nightstand', 7.7, 5.9, .7, .65, 'cedar', .62),
     roomFixture('bookshelf', 10.25, 6.0, 1.05, .65, 'cedar', 1.55), roomFixture('desk', 10.1, 8.3, 1.0, .65, 'cedar', .85),
     roomFixture('chair', 5.3, 8.4, .7, .65, 'pine')],
 });
 
 const HOTEL_ROOM_LAYOUT = roomLayout({ id: 'hotel-room', left: 4, right: 12, top: 4.5, bottom: 11.2,
-  doorY: 10.5, spawnY: 9.5, palette: 'hotel', rug: { left: 6.9, right: 9.8, top: 7.8, bottom: 9.0 },
+  doorY: 10.5, spawnY: 9.5, palette: 'hotel', predefined: true, rug: { left: 6.9, right: 9.8, top: 7.8, bottom: 9.0 },
   fixtures: [roomFixture('bed', 5.7, 6.0, 2.15, 1.45, 'hotel', .62), roomFixture('nightstand', 7.55, 5.55, .72, .65, 'hotel', .62),
     roomFixture('wardrobe', 10.6, 5.9, 1.05, .75, 'hotel', 1.75), roomFixture('desk', 10.3, 8.25, 1.2, .75, 'hotel', .9),
     roomFixture('chair', 9.2, 8.35, .7, .65, 'hotel'), roomFixture('plant', 5.1, 8.8, .6, .6, 'pine', 1.4),
@@ -180,16 +190,16 @@ const HOTEL_ROOM_LAYOUT = roomLayout({ id: 'hotel-room', left: 4, right: 12, top
 });
 
 export const HOTEL_APARTMENT_LAYOUT = roomLayout({ id: 'hotel-apartment', left: 3, right: 13, top: 3.5, bottom: 11.5,
-  doorY: 10.8, spawnY: 9.8, palette: 'hotel', rug: { left: 6.8, right: 10.2, top: 7.5, bottom: 8.9 },
-  fixtures: [roomFixture('bed', 5.25, 5.3, 2.3, 1.55, 'hotel', .65), roomFixture('nightstand', 7.2, 4.9, .75, .7, 'hotel', .62),
+  doorY: 10.8, spawnY: 9.8, palette: 'hotel', predefined: true, rug: { left: 6.8, right: 10.2, top: 7.5, bottom: 8.9 },
+  fixtures: [roomFixture('bed', 5.0, 5.5, 2.3, 1.55, 'hotel', .65), roomFixture('nightstand', 7.2, 4.9, .75, .7, 'hotel', .62),
     roomFixture('wardrobe', 11.25, 5.1, 1.15, .8, 'hotel', 1.8), roomFixture('sofa', 5.2, 8.0, 1.55, .8, 'hotel', .9),
-    roomFixture('table', 7.2, 8.35, 1.0, .8, 'hotel', .65), roomFixture('desk', 10.5, 8.0, 1.15, .75, 'hotel', .9),
+    roomFixture('table', 7.2, 8.35, 1.0, .8, 'hotel', .65), roomFixture('desk', 10.0, 8.0, 1.15, .75, 'hotel', .9),
     roomFixture('chair', 11.55, 8.7, .7, .65, 'hotel'), roomFixture('plant', 3.8, 8.9, .6, .6, 'pine', 1.5)],
 });
 
 const CABIN_ROOMS = Object.freeze({
   'cabin-cedar-one': roomLayout({ id: 'cedar-cabin', left: 5, right: 11, top: 5.5, bottom: 10.5,
-    doorY: 9.8, spawnY: 8.8, palette: 'cedar', rug: { left: 6.7, right: 9.3, top: 7.6, bottom: 8.6 },
+    doorY: 9.8, spawnY: 8.8, palette: 'cedar', predefined: true, rug: { left: 6.7, right: 9.3, top: 7.6, bottom: 8.6 },
     wallDecorObjects: { window: { id: 'cabin-cedar-one/window-bedroom', roomId: 'cedar-main',
       x: 7.45, width: 1.2, bottom: 1.05, top: 2.85 }, artX: 6.5, artWidth: 1.1 },
     fixtures: [roomFixture('bed', 6.1, 6.75, 1.8, 1.2, 'cedar', .55), roomFixture('fireplace', 9.9, 6.0, .9, .65, 'cedar', 1.4),
@@ -197,13 +207,13 @@ const CABIN_ROOMS = Object.freeze({
       roomFixture('chair', 10.0, 9.2, .65, .6, 'cedar')],
   }),
   'cabin-cedar-two': roomLayout({ id: 'fern-cabin', left: 4.75, right: 11.25, top: 5, bottom: 11,
-    doorY: 10.3, spawnY: 9.3, palette: 'pine', rug: { left: 6.8, right: 9.4, top: 7.5, bottom: 8.6 },
+    doorY: 10.3, spawnY: 9.3, palette: 'pine', predefined: true, rug: { left: 6.8, right: 9.4, top: 7.5, bottom: 8.6 },
     fixtures: [roomFixture('bed', 5.8, 6.0, 1.9, 1.3, 'pine', .58), roomFixture('table', 9.3, 7.2, 1.0, .8, 'pine', .68),
       roomFixture('chair', 10.3, 8.0, .65, .6, 'pine'), roomFixture('bookshelf', 10.3, 5.75, 1.0, .65, 'cedar', 1.45),
-      roomFixture('plant', 5.2, 8.6, .55, .55, 'pine', 1.25)],
+      roomFixture('plant', 5.5, 8.5, .55, .55, 'pine', 1.25)],
   }),
   'cabin-cedar-three': roomLayout({ id: 'lookout-cabin', left: 4.5, right: 11.5, top: 4.75, bottom: 11.25,
-    doorY: 10.55, spawnY: 9.55, palette: 'vista', rug: { left: 6.9, right: 9.7, top: 7.4, bottom: 8.6 },
+    doorY: 10.55, spawnY: 9.55, palette: 'vista', predefined: true, rug: { left: 6.9, right: 9.7, top: 7.4, bottom: 8.6 },
     fixtures: [roomFixture('bed', 5.7, 5.8, 2.0, 1.35, 'vista', .62), roomFixture('desk', 9.9, 5.9, 1.1, .7, 'vista', .85),
       roomFixture('chair', 10.6, 6.9, .65, .6, 'vista'), roomFixture('wardrobe', 10.4, 9.0, 1.0, .7, 'vista', 1.6),
       roomFixture('plant', 5.1, 8.7, .55, .55, 'pine', 1.3),

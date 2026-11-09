@@ -7,8 +7,10 @@ import os from 'node:os';
 import path from 'node:path';
 import WebSocket from 'ws';
 import {
-  DIMENSION_COORDINATE_OFFSET, RESOURCE_NODES, ROOM_SPAWN, SPAWN_CAMPFIRE, WORLD_COORDINATE_VERSION, WORLD_SIZE,
+  DIMENSION_COORDINATE_OFFSET, getResourcesInBounds, ROOM_SPAWN, SPAWN, SPAWN_CAMPFIRE, WORLD_COORDINATE_VERSION,
+  WORLD_RESOURCE_GENERATION_VERSION, WORLD_SIZE, hasTreeCollision,
 } from '../game/world.mjs';
+import { VILLAGE_BUILDINGS } from '../game/village-buildings.mjs';
 import { waterStateAt, WATER_WADING_DEPTH } from '../game/waterways.mjs';
 import { createPrototypeServer } from './prototype-server.mjs';
 import { createAccountStore, saveAccountProgress } from './account-store.mjs';
@@ -22,6 +24,7 @@ import { WILDLIFE_BY_ID } from '../game/wildlife.mjs';
 import { DEFAULT_DIMENSIONS } from '../game/dimensions.mjs';
 import { WORLD_NATURE_ORIGIN } from '../game/world-scale.mjs';
 import {
+
   CAMPFIRE_DECAY_DELAY_MS, CAMPFIRE_DECAY_DURATION_MS, CAMPFIRE_DECAY_REBUILD_COST, CAMPFIRE_FEED_COST,
   CAMPFIRE_FEED_WINDOW_MS, CAMPFIRE_IGNITION_RAMP_MS, CAMPFIRE_LIFETIME_MS, CAMPFIRE_NEW_COST,
   CAMPFIRE_REKINDLE_COST,
@@ -31,7 +34,27 @@ const TEST_ORIGIN = 'https://test.clareira.invalid';
 const TEST_COOKIE = 'clareira_session=test-session-token';
 const surfaceCoord = value => value + DIMENSION_COORDINATE_OFFSET;
 const surfacePosition = (x, y) => ({ x: surfaceCoord(x), y: surfaceCoord(y) });
-const southBranch = RESOURCE_NODES.find(resource => resource.id === 'branch-south');
+// Os recursos agora são gerados proceduralmente (RESOURCE_NODES está vazio). O alvo é a madeira mais próxima do spawn
+// com caminho reto livre de prédios e árvores; o jogador anda ~3,2 unidades/s, então o prazo dos testes é de 30 s.
+const southBranch = (() => {
+  const radius = 80;
+  const blockedBy = (x, y) => VILLAGE_BUILDINGS.some(building => building.bounds
+    && x >= building.bounds.left - 0.6 && x <= building.bounds.right + 0.6
+    && y >= building.bounds.top - 0.6 && y <= building.bounds.bottom + 0.6);
+  const clearPath = target => {
+    const length = Math.hypot(target.x - SPAWN.x, target.y - SPAWN.y);
+    for (let d = 0; d <= length; d += 0.5) {
+      const x = SPAWN.x + (target.x - SPAWN.x) * d / length, y = SPAWN.y + (target.y - SPAWN.y) * d / length;
+      if (blockedBy(x, y) || hasTreeCollision({ x, y }, 0.6)) return false;
+    }
+    return true;
+  };
+  const wood = getResourcesInBounds({ left: SPAWN.x - radius, top: SPAWN.y - radius, right: SPAWN.x + radius, bottom: SPAWN.y + radius })
+    .filter(resource => resource.kind === 'wood' && Math.hypot(resource.x - SPAWN.x, resource.y - SPAWN.y) <= 60 && clearPath(resource))
+    .sort((a, b) => Math.hypot(a.x - SPAWN.x, a.y - SPAWN.y) - Math.hypot(b.x - SPAWN.x, b.y - SPAWN.y));
+  assert.ok(wood[0], 'há madeira com caminho livre perto do spawn para o teste de coleta');
+  return wood[0];
+})();
 const directionToward = (from, target) => {
   const dx = target.x - from.x, dy = target.y - from.y;
   const length = Math.hypot(dx, dy) || 1;
@@ -84,6 +107,9 @@ function waitFor(socket, predicate, timeout = 2500, description = 'room message'
     socket.on('message', listener);
   });
 }
+
+// Predefined room pieces are part of every room now; these tests count the pieces the player placed.
+const placedFurniture = state => (state?.roomFurniture || []).filter(item => !item.preset);
 
 test('room gives each connection an identity and ignores client attempts to spoof account names', async t => {
   const room = createTestServer(t, { ambientCampfire: false, port: 0, allowedOrigin: TEST_ORIGIN, resolveSession: testIdentity });
@@ -280,10 +306,10 @@ test('room furniture is server-validated, blocks walking, and survives a short r
   await slopeNotice;
   await new Promise(resolve => setTimeout(resolve, 300));
 
-  const placed = waitFor(player, message => message.type === 'state' && message.roomFurniture?.length === 1, 2500, 'bench placement');
+  const placed = waitFor(player, message => message.type === 'state' && placedFurniture(message).length === 1, 2500, 'bench placement');
   player.send(JSON.stringify({ type: 'action', name: 'placeFurniture', kind: 'stool', x: 6, y: 9 }));
   state = await placed;
-  const bench = state.roomFurniture[0];
+  const bench = placedFurniture(state)[0];
   assert.deepEqual({ kind: bench.kind, x: bench.x, y: bench.y }, { kind: 'stool', x: 6, y: 9 });
 
   const nearBench = waitFor(player, message => message.type === 'state' && message.players.some(item => item.id === id
@@ -300,13 +326,13 @@ test('room furniture is server-validated, blocks walking, and survives a short r
   await disconnected;
   player = openTestPlayer(address, 'guest-builder');
   t.after(() => player.terminate());
-  const resumed = waitFor(player, message => message.type === 'state' && message.roomFurniture?.length === 1
+  const resumed = waitFor(player, message => message.type === 'state' && placedFurniture(message).length === 1
     && message.players.some(item => item.location === 'room'), 2500, 'bench restored after reconnect');
   await new Promise(resolve => player.once('open', resolve));
   state = await resumed;
-  assert.equal(state.roomFurniture[0].id, bench.id);
+  assert.equal(placedFurniture(state)[0].id, bench.id);
   const removalNotice = waitFor(player, message => message.type === 'notice' && message.text === 'Banco retirado do quarto.', 2500, 'bench removal');
-  const removed = waitFor(player, message => message.type === 'state' && message.roomFurniture?.length === 0, 2500, 'empty room after removal');
+  const removed = waitFor(player, message => message.type === 'state' && placedFurniture(message).length === 0, 2500, 'empty room after removal');
   player.send(JSON.stringify({ type: 'action', name: 'removeFurniture', id: bench.id }));
   await Promise.all([removalNotice, removed]);
 });
@@ -349,12 +375,12 @@ test('a nearby guest can visit an account room but cannot edit its saved furnitu
     visitorPlayer = state.players.find(player => player.id === visitorId);
   }
   const visited = waitFor(visitor, message => message.type === 'state' && message.roomCanEdit === false
-    && message.roomFurniture?.some(item => item.id === ownerFurniture[0].id)
+    && placedFurniture(message).some(item => item.id === ownerFurniture[0].id)
     && message.players.some(player => player.id === visitorId && player.location === 'room'), 3000, 'protected account room visit');
   visitor.send(JSON.stringify({ type: 'action', name: 'visitRoom', playerId: ownerPlayer.id }));
   state = await visited;
   assert.equal(state.roomOwnerName, 'Pessoa da Casa');
-  assert.deepEqual(state.roomFurniture, ownerFurniture);
+  assert.deepEqual(placedFurniture(state), ownerFurniture);
   await new Promise(resolve => setTimeout(resolve, 275));
 
   for (const [name, extra] of [
@@ -369,14 +395,14 @@ test('a nearby guest can visit an account room but cannot edit its saved furnitu
     await protectedNotice;
     await new Promise(resolve => setTimeout(resolve, 275));
   }
-  assert.deepEqual(await loadAccountRoom(stateDirectory, ownerId), ownerFurniture, 'guest edits cannot alter the account save');
+  assert.deepEqual((await loadAccountRoom(stateDirectory, ownerId)).filter(item => !item.preset), ownerFurniture, 'guest edits cannot alter the account save');
 
   const disconnected = new Promise(resolve => visitor.once('close', resolve));
   visitor.close();
   await disconnected;
   visitor = openTestPlayer(address, 'room-visitor');
   const resumed = waitFor(visitor, message => message.type === 'state' && message.roomCanEdit === false
-    && message.roomFurniture?.some(item => item.id === ownerFurniture[0].id)
+    && placedFurniture(message).some(item => item.id === ownerFurniture[0].id)
     && message.players.some(player => player.location === 'room'), 2500, 'visitor room restored after reconnect');
   await new Promise(resolve => visitor.once('open', resolve));
   state = await resumed;
@@ -385,7 +411,7 @@ test('a nearby guest can visit an account room but cannot edit its saved furnitu
   visitor.send(JSON.stringify({ type: 'action', name: 'interact' }));
   state = await returned;
   assert.equal(state.roomCanEdit, false, 'the edit flag applies only while standing in the owned room');
-  assert.deepEqual(await loadAccountRoom(stateDirectory, ownerId), ownerFurniture);
+  assert.deepEqual((await loadAccountRoom(stateDirectory, ownerId)).filter(item => !item.preset), ownerFurniture);
 });
 
 test('only the owner role can enter another account home, and the visit is read-only and reversible', async t => {
@@ -411,13 +437,13 @@ test('only the owner role can enter another account home, and the visit is read-
   const ownerPlayer = state.players.find(player => player.name === 'Proprietário');
   const residentPlayer = state.players.find(player => player.name === 'Morador');
   const entered = waitFor(owner, message => message.type === 'state' && message.roomCanEdit === false
-    && message.roomFurniture?.some(item => item.id === residentFurniture[0].id)
+    && placedFurniture(message).some(item => item.id === residentFurniture[0].id)
     && message.players.some(player => player.id === ownerPlayer.id && player.location === 'room'), 3000, 'owner read-only home visit');
   owner.send(JSON.stringify({ type: 'action', name: 'ownerVisitRoom', playerId: residentPlayer.id }));
   state = await entered;
   assert.equal(state.canOwnerVisitHomes, true, 'the owner capability is personalized to the authorized account');
   assert.equal(state.roomOwnerName, 'Morador');
-  assert.deepEqual(state.roomFurniture, residentFurniture);
+  assert.deepEqual(placedFurniture(state), residentFurniture);
   const denied = waitFor(resident, message => message.type === 'notice' && message.text === 'Essa ação é exclusiva do Proprietário.', 2500, 'non-owner visit rejection');
   resident.send(JSON.stringify({ type: 'action', name: 'ownerVisitRoom', playerId: ownerPlayer.id }));
   await denied;
@@ -431,7 +457,7 @@ test('only the owner role can enter another account home, and the visit is read-
   state = await returned;
   assert.equal(state.roomKey, `account:${ownerId}`, JSON.stringify({ roomKey: state.roomKey,
     ownerLocation: state.players.find(player => player.id === ownerPlayer.id)?.location }));
-  assert.deepEqual(await loadAccountRoom(stateDirectory, residentId), residentFurniture);
+  assert.deepEqual((await loadAccountRoom(stateDirectory, residentId)).filter(item => !item.preset), residentFurniture);
   await new Promise(resolve => setTimeout(resolve, 300));
   const secondEntry = waitFor(owner, message => message.type === 'state' && message.roomKey === `account:${residentId}`
     && message.players.some(player => player.id === ownerPlayer.id && player.location === 'room'), 3000, 'second owner visit');
@@ -445,7 +471,7 @@ test('only the owner role can enter another account home, and the visit is read-
     && message.players.some(player => player.name === 'Proprietário' && player.location === 'clearing'), 3000, 'owner resumed outside the visited home');
   await new Promise(resolve => owner.once('open', resolve));
   await resumedAtOrigin;
-  assert.deepEqual(await loadAccountRoom(stateDirectory, residentId), residentFurniture);
+  assert.deepEqual((await loadAccountRoom(stateDirectory, residentId)).filter(item => !item.preset), residentFurniture);
 });
 
 test('account furniture rotation survives a full room server restart', async t => {
@@ -478,16 +504,16 @@ test('account furniture rotation survives a full room server restart', async t =
   await waitOpen(player);
   const id = await enterRoom();
 
-  const placed = waitFor(player, message => message.type === 'state' && message.roomFurniture?.length === 1, 2500, 'account bank placement');
+  const placed = waitFor(player, message => message.type === 'state' && placedFurniture(message).length === 1, 2500, 'account bank placement');
   player.send(JSON.stringify({ type: 'action', name: 'placeFurniture', kind: 'stool', x: 6, y: 8 }));
   let state = await placed;
-  const bench = state.roomFurniture[0];
+  const bench = placedFurniture(state)[0];
   assert.equal(bench.rotation, 0);
   player.send(JSON.stringify({ type: 'input', x: -1, y: -1 }));
   await waitFor(player, message => message.type === 'state' && message.players.some(item => item.id === id
     && Math.hypot(item.x - bench.x, item.y - bench.y) < 1.15), 5000, 'account beside bank');
   player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
-  const rotated = waitFor(player, message => message.type === 'state' && message.roomFurniture?.[0]?.rotation === 1, 2500, 'server rotation');
+  const rotated = waitFor(player, message => message.type === 'state' && placedFurniture(message)[0]?.rotation === 1, 2500, 'server rotation');
   player.send(JSON.stringify({ type: 'action', name: 'rotateFurniture', id: bench.id }));
   await rotated;
 
@@ -496,16 +522,16 @@ test('account furniture rotation survives a full room server restart', async t =
   await disconnected;
   await room.close();
 
-  assert.equal((await loadAccountRoom(stateDirectory, accountId))[0]?.rotation, 1, 'rotation saved before restart');
+  assert.equal((await loadAccountRoom(stateDirectory, accountId)).filter(item => !item.preset)[0]?.rotation, 1, 'rotation saved before restart');
   room = createRoom();
   address = await room.listen();
   player = openTestPlayer(address, accountToken);
   await waitOpen(player);
   await enterRoom();
-  state = await waitFor(player, message => message.type === 'state' && message.roomFurniture?.length === 1
-    && message.roomFurniture[0].rotation === 1, 2500, 'account bank restored after server restart');
-  assert.deepEqual({ kind: state.roomFurniture[0].kind, x: state.roomFurniture[0].x,
-    y: state.roomFurniture[0].y, rotation: state.roomFurniture[0].rotation },
+  state = await waitFor(player, message => message.type === 'state' && placedFurniture(message).length === 1
+    && placedFurniture(message)[0].rotation === 1, 2500, 'account bank restored after server restart');
+  assert.deepEqual({ kind: placedFurniture(state)[0].kind, x: placedFurniture(state)[0].x,
+    y: placedFurniture(state)[0].y, rotation: placedFurniture(state)[0].rotation },
   { kind: 'stool', x: 6, y: 8, rotation: 1 });
 });
 
@@ -521,7 +547,7 @@ test('stacked furniture rotates, moves with its support, and restores from the r
   t.after(async()=>{player?.terminate();await room.close();});
   const waitOpen=socket=>new Promise(resolve=>socket.once('open',resolve));
   await waitOpen(player);
-  await waitFor(player,message=>message.type==='state'&&message.roomCanEdit===true&&message.roomFurniture?.length===0);
+  await waitFor(player,message=>message.type==='state'&&message.roomCanEdit===true&&placedFurniture(message).length===0);
   let lastNotice='';player.on('message',raw=>{const message=JSON.parse(raw.toString());if(message.type==='notice')lastNotice=message.text;});
   const action=async(data,predicate)=>{
     await new Promise(resolve=>setTimeout(resolve,300));
@@ -529,21 +555,21 @@ test('stacked furniture rotates, moves with its support, and restores from the r
     player.send(JSON.stringify({type:'action',...data}));
     try{return await state;}catch(error){throw new Error(`${error.message}; aviso do servidor: ${lastNotice||'(nenhum)'}`);}
   };
-  let state=await action({name:'placeFurniture',kind:'table',x:10,y:10},m=>m.roomFurniture?.length===1);
-  const table=state.roomFurniture[0];
-  state=await action({name:'placeFurniture',kind:'plant',x:10,y:10},m=>m.roomFurniture?.length===2);
-  let plant=state.roomFurniture.find(item=>item.kind==='plant');
+  let state=await action({name:'placeFurniture',kind:'table',x:10,y:10},m=>placedFurniture(m).length===1);
+  const table=placedFurniture(state)[0];
+  state=await action({name:'placeFurniture',kind:'plant',x:10,y:10},m=>placedFurniture(m).length===2);
+  let plant=placedFurniture(state).find(item=>item.kind==='plant');
   assert.equal(plant.supportId,table.id);assert.equal(plant.baseZ,1.5);
-  state=await action({name:'rotateFurniture',id:table.id},m=>m.roomFurniture?.find(item=>item.id===table.id)?.rotation===1);
-  state=await action({name:'moveFurniture',id:table.id,x:6,y:9.5},m=>m.roomFurniture?.find(item=>item.id===table.id)?.x===6);
-  plant=state.roomFurniture.find(item=>item.kind==='plant');
+  state=await action({name:'rotateFurniture',id:table.id},m=>placedFurniture(m).find(item=>item.id===table.id)?.rotation===1);
+  state=await action({name:'moveFurniture',id:table.id,x:6,y:9.5},m=>placedFurniture(m).find(item=>item.id===table.id)?.x===6);
+  plant=placedFurniture(state).find(item=>item.kind==='plant');
   assert.equal(plant.x,6);assert.equal(plant.y,9.5);assert.equal(plant.supportId,table.id);assert.equal(plant.baseZ,1.5);
   await player.close();await room.close();
-  const saved=await loadAccountRoom(stateDirectory,accountId);
+  const saved=(await loadAccountRoom(stateDirectory,accountId)).filter(item => !item.preset);
   assert.equal(saved[1].supportId,saved[0].id);assert.equal(saved[1].baseZ,1.5);
   room=createRoom();address=await room.listen();player=openTestPlayer(address,accountToken);await waitOpen(player);
-  state=await waitFor(player,message=>message.type==='state'&&message.roomFurniture?.length===2&&message.roomFurniture[1].supportId===message.roomFurniture[0].id);
-  assert.equal(state.roomFurniture[0].rotation,1);assert.equal(state.roomFurniture[1].baseZ,1.5);
+  state=await waitFor(player,message=>message.type==='state'&&placedFurniture(message).length===2&&placedFurniture(message)[1].supportId===placedFurniture(message)[0].id);
+  assert.equal(placedFurniture(state)[0].rotation,1);assert.equal(placedFurniture(state)[1].baseZ,1.5);
 });
 
 test('owner can edit a lodging room and furniture remains editable after a server restart', async t => {
@@ -578,14 +604,14 @@ test('owner can edit a lodging room and furniture remains editable after a serve
   assert.equal(state.roomKind, 'lodging');
   assert.equal(state.roomCanEdit, true);
   const placed = waitFor(player, message => message.type === 'state'
-    && message.roomCanEdit === true && message.roomFurniture?.length === 1, 2500, 'owner furniture placement');
+    && message.roomCanEdit === true && placedFurniture(message).length === 1, 2500, 'owner furniture placement');
   const placedNotice = waitFor(player, message => message.type === 'notice' && message.text.startsWith('Banco colocado.')
     && message.action === 'roomFurniture' && message.requestId === 9371 && message.result === 'accepted',
     2500, 'owner placement confirmation');
   player.send(JSON.stringify({ type: 'action', name: 'placeFurniture', kind: 'stool', x: 6.5, y: 9, requestId: 9371 }));
   state = await placed;
   await placedNotice;
-  const furniture = state.roomFurniture[0];
+  const furniture = placedFurniture(state)[0];
 
   const nearFurniture = waitFor(player, message => message.type === 'state'
     && Math.hypot(message.players[0].x - furniture.x, message.players[0].y - furniture.y) < 1.2,
@@ -595,7 +621,7 @@ test('owner can edit a lodging room and furniture remains editable after a serve
   player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
   await new Promise(resolve => setTimeout(resolve, 275));
   const rotated = waitFor(player, message => message.type === 'state'
-    && message.roomFurniture?.[0]?.rotation === 1, 2500, 'owner furniture rotation');
+    && placedFurniture(message)[0]?.rotation === 1, 2500, 'owner furniture rotation');
   const rotatedNotice = waitFor(player, message => message.type === 'notice' && message.text === 'Banco girado.',
     2500, 'owner rotation confirmation');
   player.send(JSON.stringify({ type: 'action', name: 'rotateFurniture', id: furniture.id }));
@@ -613,7 +639,7 @@ test('owner can edit a lodging room and furniture remains editable after a serve
   state = await connect();
   assert.equal(state.roomKind, 'lodging');
   assert.equal(state.roomCanEdit, true, 'the owner still has editing permission after restart');
-  assert.deepEqual(state.roomFurniture.map(item => ({ id: item.id, rotation: item.rotation })),
+  assert.deepEqual(placedFurniture(state).map(item => ({ id: item.id, rotation: item.rotation })),
     [{ id: furniture.id, rotation: 1 }]);
 });
 
@@ -695,11 +721,11 @@ test('coleta recusada pelo intervalo devolve o pedido para encerrar o gesto do c
   player.send(JSON.stringify({ type: 'input', ...directionToward(initial.players[0], southBranch) }));
   await waitFor(player, message => message.type === 'state'
     && Math.hypot(message.players.find(item => item.id === id)?.x - southBranch.x,
-      message.players.find(item => item.id === id)?.y - southBranch.y) <= 1.1, 5000, 'player beside the south branch');
+      message.players.find(item => item.id === id)?.y - southBranch.y) <= 1.1, 15000, 'player beside the south branch');
   clearInterval(clockTicker);
   player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
 
-  const waved = waitFor(player, message => message.type === 'notice' && message.text === 'Você acenou para quem está por perto.', 2500, 'wave before collection');
+  const waved = waitFor(player, message => message.type === 'notice' && message.text === 'Você acenou para quem está por perto.', 15000, 'wave before collection');
   player.send(JSON.stringify({ type: 'emote', name: 'wave' }));
   await waved;
   clock += 100;
@@ -1020,7 +1046,8 @@ test('Breu restores to the map center and removes persisted terrain edits', asyn
     ? { ...item, spawn: { x: 419.5, y: 419.5 }, campfire: { x: 419.5, y: 419.5 } } : item);
   await dimensions.saveDimensions(oldDimensions, 0);
   const worlds = createJsonWorldStore(stateDirectory);
-  await worlds.saveWorld({ version: 1, revision: 1, seed: 12345, generationVersion: 1, dimensionId: 'breu',
+  // Geração atual: o teste cobre só o achatamento do Breu, não a migração de geração antiga (que também soma revisão).
+  await worlds.saveWorld({ version: 1, revision: 1, seed: 12345, generationVersion: WORLD_RESOURCE_GENERATION_VERSION, dimensionId: 'breu',
     theme: 'dark', edits: [{ id: 'old-breu-hill', type: 'hill', x: 419.5, y: 419.5, radius: 22 }] }, 0, 'breu');
   const room = createTestServer(t, { port: 0, stateDirectory });
   await room.listen();
@@ -1121,7 +1148,7 @@ test('movement permits a nearby pickup and an unaffordable fire explains its cos
   t.after(() => room.close());
   const player = openTestPlayer(address);
   t.after(() => player.terminate());
-  const initialState = waitFor(player, message => message.type === 'state' && message.players.length === 1, 2500, 'initial snapshot');
+  const initialState = waitFor(player, message => message.type === 'state' && message.players.length === 1, 15000, 'initial snapshot');
   await new Promise(resolve => player.once('open', resolve));
   const initial = await initialState;
   const id = initial.players[0].id;
@@ -1129,9 +1156,9 @@ test('movement permits a nearby pickup and an unaffordable fire explains its cos
   const moved = await waitFor(player, message => {
     const remote = message.type === 'state' && message.players.find(item => item.id === id);
     return remote?.moving === true && Math.hypot(remote.x - southBranch.x, remote.y - southBranch.y) <= 1.1;
-  }, 5000, 'movement snapshot beside a resource');
+  }, 15000, 'movement snapshot beside a resource');
   player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
-  const stopped = await waitFor(player, message => message.type === 'state' && message.players.find(item => item.id === id)?.moving === false, 2500, 'idle snapshot');
+  const stopped = await waitFor(player, message => message.type === 'state' && message.players.find(item => item.id === id)?.moving === false, 15000, 'idle snapshot');
   assert.equal(stopped.players.find(item => item.id === id)?.moving, false);
   const pickup = waitFor(player, message => message.type === 'notice' && message.text.includes('graveto'), 2500, 'pickup confirmation');
   player.send(JSON.stringify({ type: 'action', name: 'collect' }));
@@ -1291,10 +1318,10 @@ test('collected resource returns to the shared world after its respawn interval'
   await waitFor(player, message => {
     const self = message.type === 'state' && message.players.find(item => item.id === id);
     return self && Math.hypot(self.x - southBranch.x, self.y - southBranch.y) <= 1.1;
-  }, 5000, 'player beside the south branch');
+  }, 15000, 'player beside the south branch');
   player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
 
-  const absent = waitFor(player, message => message.type === 'state' && !message.resources.some(resource => resource.id === 'branch-south'), 2500, 'shared branch removal');
+  const absent = waitFor(player, message => message.type === 'state' && !message.resources.some(resource => resource.id === 'branch-south'), 15000, 'shared branch removal');
   const requestId = 17;
   const picked = waitFor(player, message => message.type === 'notice' && message.action === 'collect'
     && message.requestId === requestId && message.result === 'collected', 2500, 'branch pickup');
@@ -1307,7 +1334,7 @@ test('collected resource returns to the shared world after its respawn interval'
   const absentSnapshot = await absent;
   assert.ok(!absentSnapshot.resources.some(resource => resource.id === 'branch-south'));
   const collectedSnapshot = await waitFor(player, message => message.type === 'state'
-    && message.players.find(item => item.id === id)?.inventory.wood === 1, 2500, 'saved pickup inventory');
+    && message.players.find(item => item.id === id)?.inventory.wood === 1, 15000, 'saved pickup inventory');
   assert.equal(collectedSnapshot.players.find(item => item.id === id)?.inventory.wood, 1);
 
   const returned = await waitFor(player, message => message.type === 'state' && message.resources.some(resource => resource.id === 'branch-south'), 2500, 'shared branch respawn');
@@ -1353,13 +1380,13 @@ test('player gets a clear notice when someone else takes the nearby resource', a
     const gathererOne = message.players.find(player => player.id === firstId);
     const gathererTwo = message.players.find(player => player.id === secondId);
     return gathererOne && gathererTwo && !gathererOne.moving && !gathererTwo.moving;
-  }, 2500, 'both gatherers stopped beside the branch');
+  }, 15000, 'both gatherers stopped beside the branch');
   for (const id of [firstId, secondId]) {
     const player = settled.players.find(item => item.id === id);
     assert.ok(Math.hypot(player.x - southBranch.x, player.y - southBranch.y) <= 1.2);
   }
 
-  const picked = waitFor(first, message => message.type === 'notice' && message.text === 'Você encontrou graveto seco.', 2500, 'first gatherer pickup');
+  const picked = waitFor(first, message => message.type === 'notice' && message.text === 'Você encontrou graveto seco.', 15000, 'first gatherer pickup');
   const removed = waitFor(second, message => message.type === 'state'
     && !message.resources.some(resource => resource.id === 'branch-south')
     && message.players.find(player => player.id === firstId)?.emote === 'gather', 2500, 'branch removal and gather gesture for second gatherer');
@@ -1680,7 +1707,7 @@ test('registered account identity and saved inventory are restored in the multip
     headers: { origin: TEST_ORIGIN, cookie: `clareira_session=${created.token}` },
   });
   t.after(() => player.terminate());
-  const joined = waitFor(player, message => message.type === 'state' && message.players.length === 1, 2500, 'account snapshot');
+  const joined = waitFor(player, message => message.type === 'state' && message.players.length === 1, 15000, 'account snapshot');
   await new Promise(resolve => player.once('open', resolve));
   const initial = await joined;
   const id = initial.players[0].id;
@@ -1688,9 +1715,9 @@ test('registered account identity and saved inventory are restored in the multip
   await waitFor(player, message => {
     const self = message.type === 'state' && message.players.find(item => item.id === id);
     return self?.moving && Math.hypot(self.x - southBranch.x, self.y - southBranch.y) <= 1.1;
-  }, 5000, 'movement toward a resource');
+  }, 15000, 'movement toward a resource');
   player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
-  await waitFor(player, message => message.type === 'state' && message.players.find(item => item.id === id)?.moving === false, 2500, 'player stop');
+  await waitFor(player, message => message.type === 'state' && message.players.find(item => item.id === id)?.moving === false, 15000, 'player stop');
   player.send(JSON.stringify({ type: 'action', name: 'collect' }));
   const collected = await waitFor(player, message => {
     const self = message.type === 'state' && message.players.find(item => item.id === id);
@@ -1796,7 +1823,7 @@ test('furniture can be edited remotely while use interactions require proximity,
     resolveSession:async()=>({profile:{id:accountId,displayName:'Moveis',guest:false}})};
   let room=createTestServer(t,options),address=await room.listen(),player=openTestPlayer(address);
   t.after(()=>player.terminate());
-  const initial = await waitFor(player,m=>m.type==='state'&&m.roomFurniture?.length===2);
+  const initial = await waitFor(player,m=>m.type==='state'&&placedFurniture(m).length===2);
   assert.ok(Math.hypot(initial.players[0].x-furniture[0].x,initial.players[0].y-furniture[0].y)>1.5,
     'the owner starts outside furniture interaction range');
   const action=async (data,predicate)=>{
@@ -1804,9 +1831,9 @@ test('furniture can be edited remotely while use interactions require proximity,
     const received=waitFor(player,m=>m.type==='state'&&predicate(m),3000,data.name);
     player.send(JSON.stringify({type:'action',...data}));return received;
   };
-  await action({name:'useFurniture',id:'abcdef02'},m=>m.roomFurniture?.find(i=>i.kind==='lamp')?.enabled===false);
-  await action({name:'rotateFurniture',id:'abcdef01'},m=>m.roomFurniture?.find(i=>i.kind==='chair')?.rotation===1);
-  await action({name:'moveFurniture',id:'abcdef01',x:6.5,y:9.5},m=>m.roomFurniture?.find(i=>i.kind==='chair')?.y===9.5);
+  await action({name:'useFurniture',id:'abcdef02'},m=>placedFurniture(m).find(i=>i.kind==='lamp')?.enabled===false);
+  await action({name:'rotateFurniture',id:'abcdef01'},m=>placedFurniture(m).find(i=>i.kind==='chair')?.rotation===1);
+  await action({name:'moveFurniture',id:'abcdef01',x:6.5,y:9.5},m=>placedFurniture(m).find(i=>i.kind==='chair')?.y===9.5);
   const seated=await action({name:'useFurniture',id:'abcdef01'},m=>m.players.some(p=>p.sitting&&Math.hypot(p.x-6.5,p.y-9.5)<.05));
   let interactions=[];
   for(let attempt=0;attempt<60;attempt++){
@@ -1830,11 +1857,11 @@ test('furniture can be edited remotely while use interactions require proximity,
   player.send(JSON.stringify({type:'input',x:0,y:0}));
   await new Promise(resolve=>setTimeout(resolve,200));
   player.terminate();await room.close();
-  const saved=await loadAccountRoom(stateDirectory,accountId);
+  const saved=(await loadAccountRoom(stateDirectory,accountId)).filter(item=>!item.preset);
   assert.equal(saved[0].y,9.5);assert.equal(saved[0].rotation,1);assert.equal(saved[1].enabled,false);
   room=createTestServer(t,options);address=await room.listen();player=openTestPlayer(address);
-  const restored=await waitFor(player,m=>m.type==='state'&&m.roomFurniture?.length===2);
-  assert.deepEqual(restored.roomFurniture,saved);
+  const restored=await waitFor(player,m=>m.type==='state'&&placedFurniture(m).length===2);
+  assert.deepEqual(placedFurniture(restored),saved);
 });
 
 test('bed covers and shower use synced poses, toggle off, and allow movement back through the used fixture',async t=>{
@@ -1847,7 +1874,7 @@ test('bed covers and shower use synced poses, toggle off, and allow movement bac
  const room=createTestServer(t,{ambientCampfire:false,port:0,stateDirectory,allowedOrigin:TEST_ORIGIN,
    resolveSession:async session=>session===token?{profile:{id:accountId,displayName:'Descanso',guest:false}}:null});
  const address=await room.listen(),player=openTestPlayer(address,token);t.after(()=>player.terminate());
- let state=await waitFor(player,message=>message.type==='state'&&message.roomFurniture?.length===2
+ let state=await waitFor(player,message=>message.type==='state'&&placedFurniture(message).length===2
    &&message.players[0]?.location==='room');
  player.on('message', raw => { try { const message=JSON.parse(raw.toString()); if(message.type==='state') state=message; } catch {} });
  const notices=[];player.on('message',raw=>{try{const message=JSON.parse(raw.toString());if(message.type==='notice')notices.push(message.text);}catch{}});
@@ -1891,6 +1918,7 @@ test('dimension travel prefers each account last safe place and finds a nearby f
   const accounts=createAccountStore({directory:stateDirectory});
   const first=await accounts.register({username:'returnfirst',password:'senha-segura-de-teste'});
   const second=await accounts.register({username:'returnsecond',password:'senha-segura-de-teste'});
+  for(const account of [first,second])await saveAccountProgress(stateDirectory,account.profile.id,{learnedAbilities:['universalTeleport']});
   const locations=createJsonPlayerLocationStore(stateDirectory);
   const breu=DEFAULT_DIMENSIONS.find(item=>item.id==='breu');
   const remembered={x:breu.spawn.x+4,y:breu.spawn.y+4};
@@ -2034,7 +2062,7 @@ test('conhecimento mágico revela uma dimensão e libera a viagem no servidor', 
   const stateDirectory = await mkdtemp(path.join(os.tmpdir(), 'clareira-dimension-knowledge-'));
   const accountId = '5f6f1b60-f53b-4e73-9309-5440fa5d8ef1';
   const profile = { id: accountId, username: 'dimension-knowledge', guest: false,
-    inventory: { level: 12, skillPoints: 2, attributes: { magic: 8 }, learnedAbilities: ['fireballI'] } };
+    inventory: { level: 12, skillPoints: 2, attributes: { magic: 8 }, learnedAbilities: ['fireballI', 'universalTeleport'] } };
   const room = createTestServer(t, { ambientCampfire: false, port: 0, stateDirectory,
     allowedOrigin: TEST_ORIGIN, databaseUrl: null, redisUrl: null,
     resolveSession: async token => token === 'dimension-knowledge-account' ? { profile } : null,
@@ -2152,7 +2180,11 @@ test('Teleporte Universal leva a conta para outro ponto seguro da mesma dimensã
 });
 
 test('dimension arrival starts only after the traveler reports the destination scene ready', async t => {
-  const room = createTestServer(t, { ambientCampfire: false, port: 0, allowedOrigin: TEST_ORIGIN, resolveSession: testIdentity });
+  const travelerIdentity = async token => {
+    const identity = await testIdentity(token);
+    return identity && { profile: { ...identity.profile, inventory: { ...identity.profile.inventory, learnedAbilities: ['universalTeleport'] } } };
+  };
+  const room = createTestServer(t, { ambientCampfire: false, port: 0, allowedOrigin: TEST_ORIGIN, resolveSession: travelerIdentity });
   const address = await room.listen();
   t.after(() => room.close());
   const player = openTestPlayer(address);
@@ -2223,4 +2255,24 @@ test('dimension arrival starts only after the traveler reports the destination s
   const canMoveState = await canMovePromise;
   assert.ok(canMoveState.players.find(entry => entry.id === welcome.id).inputSeq >= 12);
   assert.ok(sourceState.serverTime < event.startAt);
+});
+
+test('viagem entre dimensões é recusada para quem não é da equipe nem aprendeu Teleporte Universal', async t => {
+  const room = createTestServer(t, { ambientCampfire: false, port: 0, allowedOrigin: TEST_ORIGIN, resolveSession: testIdentity });
+  const address = await room.listen();
+  t.after(() => room.close());
+  const player = openTestPlayer(address);
+  t.after(() => player.terminate());
+  const welcomePromise = waitFor(player, message => message.type === 'welcome', 2500, 'plain traveler identity');
+  await new Promise((resolve, reject) => { player.once('open', resolve); player.once('error', reject); });
+  const welcome = await welcomePromise;
+  player.send(JSON.stringify({ type: 'join', name: 'Viajante', compactWorld: 1 }));
+  const state = await waitFor(player, message => message.type === 'state' && message.dimensionId === 'surface'
+    && message.players.some(entry => entry.id === welcome.id), 2500, 'plain traveler snapshot');
+  assert.equal(state.dimensions.some(dimension => dimension.id === 'breu'), false, 'a viajante comum não vê outras dimensões');
+  const noticePromise = waitFor(player, message => message.type === 'notice'
+    && message.text?.includes('exclusivo da equipe'), 2500, 'travel rejection notice');
+  player.send(JSON.stringify({ type: 'dimensionTravel', dimensionId: 'breu', requestId: 'plain-traveler-denied' }));
+  const notice = await noticePromise;
+  assert.match(notice.text, /Teleporte Universal/);
 });

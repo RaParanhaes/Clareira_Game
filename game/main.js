@@ -8,6 +8,7 @@ import { createRoomTransition } from './room-transition.mjs';
 import { createTeleportEffects } from './teleport-effect.mjs';
 import { createInventoryPrediction } from './inventory-prediction.mjs';
 import { createRoomFurniturePrediction } from './room-furniture-prediction.mjs';
+import { PRESET_REMOVE_MESSAGE, isPresetFurniture, placedFurnitureCount } from './room-presets.mjs';
 import { createMovementDiagnostics } from './movement-diagnostics.mjs';
 import { createRenderAudit } from './render-audit.mjs';
 import { createRuntimePerformance } from './runtime-performance.mjs';
@@ -51,6 +52,10 @@ import { nearestPlaceService, placeServicePoints, placeServiceAllowsAction, CABI
 import { createPanelController } from './panel-controller.mjs';
 import { discoverWorldMapCells, mergeWorldMapExploration, isWorldMapCellKnown, worldMapCellIndex, worldMapExplorationLabel, zoomWorldMapAround, preloadWorldMapCaches } from './world-map.mjs';
 import { createPlacePanel } from './place-panel.mjs';
+import { attachDialogDrag } from './dialog-drag.mjs';
+attachDialogDrag(document);
+const SVG_NS='http://www.w3.org/2000/svg';
+function svgIcon(id){const svg=document.createElementNS(SVG_NS,'svg');svg.setAttribute('class','ico');svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');const use=document.createElementNS(SVG_NS,'use');use.setAttribute('href',`#${id}`);svg.append(use);return svg;}
 import { isCabin } from './cabin-access.mjs';
 import { AXE_TOOL_IDS, AXE_TOOL_SPECS, PICKAXE_TOOL_IDS, PICKAXE_TOOL_SPECS, axeToolFor, pickaxeToolFor } from './tool-progression.mjs';
 import { createDraggableHud } from './draggable-hud.mjs';
@@ -101,7 +106,7 @@ import {
   RESOURCE_NODES, SPAWN, SHELTER_BOUNDS, SHELTER_WALL_CLEARANCE, SPAWN_CAMPFIRE, isPathTile,
   SOLID_TREES, SOLID_WATER, WORLD_CHUNK_SIZE, getFallenTreesInBounds, getSolidTreesInBounds, getTreeGrowthInBounds, getResourcesInBounds, getRocksInBounds, getLakesInBounds,
   stepPlayer, stepRoomPlayer, WORLD_SIZE, applyWorldDefinition, getWorldDefinition, getRoomLayout,
-  DIMENSION_COORDINATE_OFFSET,
+  DIMENSION_COORDINATE_OFFSET, ROOM_FURNITURE_LIMIT,
   WORLD_TILE_X as BASE_TILE_X, WORLD_TILE_Y as BASE_TILE_Y, createWorldMapOverview, worldGeometryCacheKey,
 } from './world.mjs';
 import { advanceFacingDirection, getAvatarFacing, getAvatarPose, getFacingFromMotion, getFacingIntent, getLocalAvatarView } from './avatar.mjs';
@@ -203,6 +208,7 @@ const lastAnnouncedChats = new Map();
 const resources = new Map(RESOURCE_NODES.map(resource => [resource.id, { ...resource }]));
 const fires = new Map();
 const roomFurniture = new Map();
+const roomPlacedCount = () => placedFurnitureCount([...roomFurniture.values()]);
 const roomFurnitureMotion = new Map();
 const wildlife = new Map();
 const wildlifePositions = new Map();
@@ -2827,6 +2833,12 @@ function roomFurnitureActionLabel(use,item,active,pending){
   return 'Usar';
 }
 
+// Every writer of the card text goes through here, so the predefined-piece note is never lost.
+function setRoomObjectDescription(item,text){
+  ui.roomObjectDescription.textContent=roomCanEdit&&isPresetFurniture(item)
+    ?`${text} Peça do quarto: pode mudar de lugar e girar, mas não pode ser retirada.`:text;
+}
+
 function updateRoomObjectCard(item){
   if(!ui.roomObjectCard||!item){if(ui.roomObjectCard)ui.roomObjectCard.hidden=true;return;}
   if(roomBuildMode!==null){ui.roomObjectCard.hidden=true;return;}
@@ -2836,7 +2848,7 @@ function updateRoomObjectCard(item){
   ui.roomObjectName.textContent=definition?.label||selectedOption?.textContent||item.kind;
   ui.roomObjectType.textContent=definition?.categoryLabel||({bed:'CAMA',chair:'ASSENTO',stool:'ASSENTO',sofa:'ASSENTO',lamp:'ILUMINAÇÃO',shower:'BANHO'}[item.kind]||'MÓVEL');
   const currentUse=livePlayers.get(selfId)?.furnitureUse?.id===item.id;
-  ui.roomObjectDescription.textContent=currentUse?furnitureUse(item)==='lie'?'Você está deitado sob as cobertas.':'Você está usando este móvel.':describeRoomFurnitureUse(furnitureUse(item),item);
+  setRoomObjectDescription(item,currentUse?furnitureUse(item)==='lie'?'Você está deitado sob as cobertas.':'Você está usando este móvel.':describeRoomFurnitureUse(furnitureUse(item),item));
   const context=ui.roomObjectPreview.getContext('2d');
   context.clearRect(0,0,ui.roomObjectPreview.width,ui.roomObjectPreview.height);
   drawRoomFixtureAsset(context,item,{x:80,y:136},{tileX:32,tileY:16,heightPixels:17,scale:1});
@@ -2851,7 +2863,7 @@ function updateRoomObjectCard(item){
       roomBuildMode='move';roomMovingId=item.id;roomSelectedId=item.id;roomPlacementPreview=null;ui.roomBuildOptions.hidden=false;ui.roomBuildToggle.setAttribute('aria-expanded','true');updateRoomBuildButtons();ui.roomObjectCard.hidden=true;announce('Escolha o novo lugar do móvel.');
     });
     addAction('Girar','',()=>sendPlayerCommand({type:'action',name:'rotateFurniture',id:item.id}));
-    addAction('Retirar','danger',()=>sendPlayerCommand({type:'action',name:'removeFurniture',id:item.id}));
+    if(!isPresetFurniture(item))addAction('Retirar','danger',()=>sendPlayerCommand({type:'action',name:'removeFurniture',id:item.id}));
   }
   ui.roomObjectActions.replaceChildren(...actions);
 }
@@ -2860,7 +2872,7 @@ function refreshRoomObjectCardUseState(){
   if(!roomSelectedId||ui.roomObjectCard.hidden)return;
   const item=roomFurniture.get(roomSelectedId);if(!item)return;
   const use=furnitureUse(item),active=livePlayers.get(selfId)?.furnitureUse?.id===item.id;
-  ui.roomObjectDescription.textContent=active?use==='lie'?'Você está deitado sob as cobertas.':'Você está usando este móvel.':describeRoomFurnitureUse(use,item);
+  setRoomObjectDescription(item,active?use==='lie'?'Você está deitado sob as cobertas.':'Você está usando este móvel.':describeRoomFurnitureUse(use,item));
   const button=ui.roomObjectActions.querySelector('.primary');
   if(button)button.textContent=roomFurnitureActionLabel(use,item,active,pendingRoomFurnitureUse?.id===item.id);
 }
@@ -2910,6 +2922,7 @@ function applyRoomFurnitureSnapshot(items,{predicted=false}={}){
   }
   for(const id of roomFurnitureMotion.keys())if(!incomingIds.has(id))roomFurnitureMotion.delete(id);
   applyCollectionSnapshot(roomFurniture,incoming,item=>item.id);
+  updateRoomBuildCount();
 }
 
 function getPathfindingWorker() {
@@ -2956,6 +2969,7 @@ function setWalkDestination(event) {
     const item=roomFurnitureAtPointer(event);
     if(!item){announce('Toque em um móvel próximo.');return;}
     roomSelectedId=item.id;updateRoomObjectCard(item);
+    if(roomBuildMode==='remove'&&isPresetFurniture(item)){announce(PRESET_REMOVE_MESSAGE);return;}
     if(roomBuildMode==='move'){
       roomMovingId=item.id;roomSelectedId=item.id;announce('Móvel selecionado. Agora escolha o novo lugar no piso.');return;
     }
@@ -2984,7 +2998,7 @@ function setWalkDestination(event) {
     const furniture=[...roomFurniture.values()].filter(item=>item.id!==roomMovingId);
     const selected=MEDIEVAL_FURNITURE.find(item=>item.id===ui.roomKind.value),source=roomBuildMode==='move'?roomFurniture.get(roomMovingId):selected?{...selected,kind:selected.renderKind,properties:selected}: {kind:ui.roomKind.value};
     const candidate=roomFurnitureCandidate(source||{kind:ui.roomKind.value},position,furniture,currentRoomLayout());
-    if((roomBuildMode==='place'&&roomFurniture.size>=12)||!canPlaceRoomFurniture(candidate,furniture,occupied,currentRoomLayout())){announce('Escolha um piso livre, longe da porta.');return;}
+    if((roomBuildMode==='place'&&roomPlacedCount()>=ROOM_FURNITURE_LIMIT)||!canPlaceRoomFurniture(candidate,furniture,occupied,currentRoomLayout())){announce('Escolha um piso livre, longe da porta.');return;}
     const movedId=roomMovingId;
     const wasMove=roomBuildMode==='move';
     sendPlayerCommand({type:'action',name:roomBuildMode==='move'?'moveFurniture':'placeFurniture',
@@ -3006,6 +3020,14 @@ function requestWalkPath(target,{useFurnitureId=null}={}) {
     start:{...localPosition},target:{x:Number(target.x),y:Number(target.y)},occupied,location:worldLocation,
     furniture:[...roomFurniture.values()].filter(item=>item.id!==usedFurnitureId),fires:[...fires.values()],roomLayout:currentRoomLayout(),animals:currentWildlifeCollisionBodies()});
   return true;
+}
+
+// Quantos móveis o jogador ainda pode colocar. Os predefinidos do quarto não contam.
+function updateRoomBuildCount() {
+  const element=document.querySelector('#room-build-count');
+  if(!element)return;
+  const placed=roomPlacedCount();
+  element.textContent=`Móveis extras: ${placed} de ${ROOM_FURNITURE_LIMIT}. Peças do quarto podem ser movidas e giradas.`;
 }
 
 function updateRoomBuildButtons() {
@@ -7042,7 +7064,7 @@ function drawScene() {
   things.push(selfThing);
   if(worldLocation==='room'&&['place','move'].includes(roomBuildMode)&&roomPlacementPreview){
     const furniture=[...roomFurniture.values()].filter(item=>item.id!==roomMovingId),otherPlayers=[...livePlayers.values()];
-    const valid=(roomBuildMode==='move'||roomFurniture.size<12)&&canPlaceRoomFurniture(roomPlacementPreview,furniture,otherPlayers,currentRoomLayout());
+    const valid=(roomBuildMode==='move'||roomPlacedCount()<ROOM_FURNITURE_LIMIT)&&canPlaceRoomFurniture(roomPlacementPreview,furniture,otherPlayers,currentRoomLayout());
     things.push({type:'furniture-preview',x:roomPlacementPreview.x,y:roomPlacementPreview.y,
       ...roomFurnitureDepthAnchor(roomPlacementPreview),item:roomPlacementPreview,
       valid});
@@ -8171,13 +8193,13 @@ function advanceFrame(now) {
     const weather=worldLocation==='clearing'
       ? (({dark:'uma fogueira no breu',sky:'vento das alturas',inferno:'calor profundo',magic:'brisa encantada',energy:'correntes de energia',giants:'vento das montanhas'})[dimensionTheme]||windDescriptionAt(localPosition.x,localPosition.y))
       : '';
-    const skySymbol=gameDay.hasMoon&&gameDay.moonOpacity>.15?'☾ ✦':gameDay.daylight>.02&&gameDay.sunPosition?'☀':'✦';
+    const skyIcon=gameDay.hasMoon&&gameDay.moonOpacity>.15?'i-moon':gameDay.daylight>.02&&gameDay.sunPosition?'i-sun':'i-star';
     const skyTime=gameDayTimestampMs(),sky=effectiveWeatherAt(skyTime,currentSky());
     const windNow=windLevelAt(skyTime);
     setWeatherWind(windNow);
     const moon=gameDay.hasMoon&&gameDay.night>.5?moonAt(skyTime):null;
     const moonText=moon?` · ${moon.phaseName}${moon.redMoon?' (lua vermelha)':''}`:'';
-    ui.weatherText.textContent=`${skySymbol} ${gameDateTimeLabel(skyTime)} · ${gameDay.period} · ${weatherLabel(sky)} · ${windLabel(windNow)}${moonText}`;
+    ui.weatherText.replaceChildren(svgIcon(skyIcon),document.createTextNode(` ${gameDateTimeLabel(skyTime)} · ${gameDay.period} · ${weatherLabel(sky)} · ${windLabel(windNow)}${moonText}`));
   }
   sendInputIfChanged(now);
   const drawStartedAt=performance.now();
@@ -9200,7 +9222,7 @@ export function inspectMovement(atTime = performance.now()) {
   });
   const roomPreview=roomPlacementPreview?(()=>{
     const furniture=[...roomFurniture.values()].filter(item=>item.id!==roomMovingId);
-    return {item:{...roomPlacementPreview},valid:(roomBuildMode==='move'||roomFurniture.size<12)
+    return {item:{...roomPlacementPreview},valid:(roomBuildMode==='move'||roomPlacedCount()<ROOM_FURNITURE_LIMIT)
       &&canPlaceRoomFurniture(roomPlacementPreview,furniture,[...livePlayers.values()],currentRoomLayout())};
   })():null;
   const litFires=[...fires.values()].filter(fire=>campfireFuelRatio(fire,inspectionNow)>0);

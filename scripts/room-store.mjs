@@ -5,6 +5,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { canPlaceRoomFurniture, roomFurnitureSupport, getRoomLayout, ROOM_FURNITURE_LIMIT } from '../game/world.mjs';
+import { MAX_ROOM_PRESETS, placedFurnitureCount } from '../game/room-presets.mjs';
 
 const ROOM_SCHEMA_VERSION = 1;
 const ACCOUNT_ID = /^[a-z0-9_-]{1,128}$/i;
@@ -16,16 +17,24 @@ function roomFile(directory, accountId) {
 }
 
 export function validateFurniture(value) {
-  if (!Array.isArray(value) || value.length > ROOM_FURNITURE_LIMIT) throw new Error('Invalid room furniture');
+  // Predefinidos do quarto não contam para o limite de móveis colocados pelo jogador.
+  if (!Array.isArray(value) || placedFurnitureCount(value) > ROOM_FURNITURE_LIMIT || value.length > ROOM_FURNITURE_LIMIT + MAX_ROOM_PRESETS) throw new Error('Invalid room furniture');
   const result = [];
   for (const item of value) {
     const furniture = {
-      id: typeof item?.id === 'string' && /^[a-f0-9-]{8,36}$/i.test(item.id) ? item.id : '',
+      id: typeof item?.id === 'string' && (/^[a-f0-9-]{8,36}$/i.test(item.id) || (item?.preset === true && /^preset-\d{1,2}$/.test(item.id))) ? item.id : '',
       kind: item?.kind,
       x: item?.x,
       y: item?.y,
       rotation: Number.isInteger(item?.rotation) ? item.rotation : 0,
     };
+    if (item?.preset === true) {
+      // Predefined pieces keep the footprint their room layout gives them, so the saved
+      // room is checked with the same size the server places them with.
+      furniture.preset = true;
+      for (const key of ['width', 'depth', 'height']) if (Number.isFinite(item[key]) && item[key] > 0 && item[key] <= 10) furniture[key] = item[key];
+      if (typeof item.palette === 'string' && item.palette.length <= 24) furniture.palette = item.palette;
+    }
     if(item.supportId!==undefined){
       if(typeof item.supportId!=='string'||!result.some(other=>other.id===item.supportId)
         &&!value.some(other=>other?.id===item.supportId))throw new Error('Apoio do móvel inválido.');
@@ -45,7 +54,8 @@ export function validateFurniture(value) {
     result.push(furniture);
   }
   const layouts=[getRoomLayout(), ...VILLAGE_BUILDINGS.map(b=>b.id).flatMap(id=>['owned','rent'].map(mode=>getRoomLayout('lodging',id,mode)))];
-  if(!layouts.some(layout=>result.every(item=>{
+  // Predefined pieces were placed by their layout or by a checked move, so only the player's own pieces are re-checked here.
+  if(!layouts.some(layout=>result.filter(item=>item.preset!==true).every(item=>{
     const others=result.filter(other=>other.id!==item.id),support=roomFurnitureSupport(item,others,layout);
     if(item.supportId){if(!support||support.supportId!==item.supportId||item.supportSurface!==support.supportSurface
       ||Math.abs(item.baseZ-support.baseZ)>.001||Math.abs(item.supportOffsetX-support.supportOffsetX)>.001

@@ -139,6 +139,8 @@ import { WATER_BANK_WIDTH, WATER_WADING_DEPTH, waterBankDepthAt, waterStateAt, w
 import { getGameDayState } from './day-night.mjs';
 import { gameDateTimeLabel } from './game-calendar.mjs';
 import { dailyWeatherAt, moonAt, weatherLabel, windLevelAt, windLabel } from './game-weather.mjs';
+import { applySkyToDay, effectiveWeatherAt, skyTimestamp } from './world-overrides.mjs';
+import { createStaffSky } from './staff-sky-ui.mjs';
 import { drawWeatherSky } from './weather-renderer.mjs';
 
 const canvas = document.querySelector('#world');
@@ -348,6 +350,8 @@ let governmentTaxPanel = null;
 let serverClockOffsetMs = null;
 let serverClockRoundTripMs = null;
 let gameDayAnchor = null;
+// Staff sky overrides sent by the server (owner-only). Empty when nothing is set.
+let skyOverrideList = [];
 let clockProbeSequence = 0;
 let clockProbeTimer = null;
 const clockProbeTimes = new Map();
@@ -884,7 +888,14 @@ function resetServerClockSync() {
   gameDayAnchor = null;
 }
 
+// The sky values the owner set, as a key -> value map.
+function currentSky() {
+  return Object.fromEntries(skyOverrideList.map(override => [override.key, override.value]));
+}
 function gameDayTimestampMs() {
+  return skyTimestamp(rawGameDayTimestampMs(), currentSky());
+}
+function rawGameDayTimestampMs() {
   if (!gameDayAnchor || serverClockOffsetMs === null) return Date.now();
   const serverNow = performance.now() - serverClockOffsetMs;
   return gameDayAnchor.serverWallTimeMs + serverNow - gameDayAnchor.serverTime;
@@ -1718,7 +1729,7 @@ function hideSceneLoading({ worldReady = true } = {}) {
 let lightingRevealScheduled=false, lightingRevealStartedAt=null;
 function revealLoadedScene() {
   if (!authenticated || !snapshotReady || !assetsReady || !predictionReady || sceneReady) return;
-  gameDay = getGameDayState(gameDayTimestampMs(), { theme: dimensionTheme, dimensionId: worldDimensionId });
+  gameDay = applySkyToDay(getGameDayState(gameDayTimestampMs(), { theme: dimensionTheme, dimensionId: worldDimensionId }), currentSky());
   resizeCanvas();
   const lightingReady=paintSceneLightmaps(null,0);
   if(lightingRevealStartedAt===null)lightingRevealStartedAt=performance.now();
@@ -2317,6 +2328,7 @@ function connect() {
     if (Number.isFinite(message.serverTime) && Number.isFinite(message.serverWallTimeMs)) {
       gameDayAnchor = { serverTime: message.serverTime, serverWallTimeMs: message.serverWallTimeMs };
     }
+    if (Array.isArray(message.skyOverrides)) skyOverrideList = message.skyOverrides;
     const snapshotTime = Number.isFinite(message.serverTime) && serverClockOffsetMs !== null
       ? message.serverTime + serverClockOffsetMs
       : receivedAt;
@@ -3541,6 +3553,7 @@ const staffTools = {
 let staffCapabilities = null, staffSessionGeneration = 0, staffWalletDraft = null, staffWalletPending = false;
 let staffAuditRequest = 0, staffAuditBefore = null, staffOverviewRequest = 0;
 const staffModeration = createStaffModeration({ dialog: staffTools.dialog, panels, capabilities: () => staffCapabilities, generation: () => staffSessionGeneration });
+const staffSky = createStaffSky({ dialog: staffTools.dialog, panels, sendCommand: sendPlayerCommand, capabilities: () => staffCapabilities, generation: () => staffSessionGeneration });
 function clearStaffTools() {
   staffSessionGeneration++; staffOverviewRequest++; staffModeration.reset();
   document.querySelector('#staff-player-form').reset(); document.querySelector('#staff-player-result').replaceChildren(); document.querySelector('#staff-market-result').replaceChildren();
@@ -3561,7 +3574,7 @@ async function refreshStaffCapabilities() {
     staffTools.walletOpen.hidden = !staffCapabilities?.adjustEconomy;
     document.querySelector('#staff-player-open').hidden = !staffCapabilities?.inspectPlayers;
     document.querySelector('#staff-market-open').hidden = !staffCapabilities?.adjustEconomy;
-    staffTools.auditOpen.hidden = !staffCapabilities?.readAudit; staffModeration.sync(panels.route);
+    staffTools.auditOpen.hidden = !staffCapabilities?.readAudit; staffModeration.sync(panels.route); staffSky.sync(panels.route);
     if (!staffCapabilities && panels.current === 'staff-tools') panels.close();
     return Boolean(staffCapabilities);
   } catch {
@@ -3579,6 +3592,7 @@ panels.register('staff-tools', staffTools.dialog, {
     document.querySelector('#staff-tools-player').hidden = route !== 'player';
     document.querySelector('#staff-tools-market').hidden = route !== 'market';
     staffModeration.sync(route);
+    staffSky.sync(route);
     for (const heading of staffTools.dialog.querySelectorAll('h3')) heading.toggleAttribute('data-panel-heading', !heading.closest('section').hidden);
   },
   onClose() { staffModeration.reset(); staffWalletDraft = null; staffOverviewRequest++; document.querySelector('#staff-player-form').reset(); document.querySelector('#staff-player-result').replaceChildren(); document.querySelector('#staff-market-result').replaceChildren(); staffAuditRequest++; staffAuditBefore = null; staffTools.auditList.replaceChildren(); staffTools.auditStatus.textContent = ''; staffTools.auditMore.hidden = true; },
@@ -6787,7 +6801,7 @@ function drawScene() {
     const at=performance.now();renderAudit.mark(phase,at);performanceTelemetry.observeRenderPhase(phase,at-renderPhaseStartedAt,sampleRender);renderPhaseStartedAt=at;
   };
   syncArrivalCinematic();
-  gameDay = getGameDayState(gameDayTimestampMs(), { theme: dimensionTheme, dimensionId: worldDimensionId });
+  gameDay = applySkyToDay(getGameDayState(gameDayTimestampMs(), { theme: dimensionTheme, dimensionId: worldDimensionId }), currentSky());
   renderProfiler?.begin(performance.now());
   renderProfiler?.sample('simulation',lastSimulationMs);
   renderProfiler?.sample('terrainQueue',lastTerrainQueueWorkMs);
@@ -7193,7 +7207,7 @@ function drawDaylightAtmosphere() {
   if (worldLocation === 'clearing' && worldDimensionId === 'surface') {
     const skyTime = gameDayTimestampMs();
     drawWeatherSky(ctx, viewWidth, viewHeight, {
-      weather: dailyWeatherAt(skyTime),
+      weather: effectiveWeatherAt(skyTime, currentSky()),
       moon: gameDay.night > .5 ? moonAt(skyTime) : null,
       night: gameDay.night,
       seconds: worldClock,
@@ -8121,7 +8135,7 @@ function advanceFrame(now) {
       ? (({dark:'uma fogueira no breu',sky:'vento das alturas',inferno:'calor profundo',magic:'brisa encantada',energy:'correntes de energia',giants:'vento das montanhas'})[dimensionTheme]||windDescriptionAt(localPosition.x,localPosition.y))
       : '';
     const skySymbol=gameDay.hasMoon&&gameDay.moonOpacity>.15?'☾ ✦':gameDay.daylight>.02&&gameDay.sunPosition?'☀':'✦';
-    const skyTime=gameDayTimestampMs(),sky=dailyWeatherAt(skyTime);
+    const skyTime=gameDayTimestampMs(),sky=effectiveWeatherAt(skyTime,currentSky());
     const windNow=windLevelAt(skyTime);
     setWeatherWind(windNow);
     const moon=gameDay.hasMoon&&gameDay.night>.5?moonAt(skyTime):null;

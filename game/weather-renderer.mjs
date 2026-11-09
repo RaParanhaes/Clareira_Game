@@ -92,12 +92,12 @@ function drawSeasonVeil(ctx, width, height, season) {
   ctx.fillRect(0, 0, width, height);
 }
 
-// A warm glare from the top of the frame, harsher and whiter than a normal day.
+// A warm glare from the top of the frame: hot and bright, but amber rather than white.
 function drawExtremeSun(ctx, width, height, strength) {
   const glare = ctx.createRadialGradient(width * 0.18, -height * 0.05, 0, width * 0.18, -height * 0.05, width * 0.7);
-  glare.addColorStop(0, `rgba(255,246,214,${0.55 * strength})`);
-  glare.addColorStop(0.5, `rgba(255,220,150,${0.22 * strength})`);
-  glare.addColorStop(1, 'rgba(255,200,120,0)');
+  glare.addColorStop(0, `rgba(255,232,178,${0.55 * strength})`);
+  glare.addColorStop(0.5, `rgba(255,198,118,${0.2 * strength})`);
+  glare.addColorStop(1, 'rgba(255,170,90,0)');
   ctx.globalCompositeOperation = 'screen';
   ctx.fillStyle = glare;
   ctx.fillRect(0, 0, width, height);
@@ -124,7 +124,7 @@ export function drawWeatherSky(ctx, width, height, options) {
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
   if (weather) drawSeasonVeil(ctx, width, height, weather.season);
-  if (weather?.extremeSun) drawExtremeSun(ctx, width, height, 1.5);
+  if (weather?.extremeSun) drawExtremeSun(ctx, width, height, 0.6);
   if (kind === 'storm') {
     ctx.fillStyle = 'rgba(20,28,38,0.16)';
     ctx.fillRect(0, 0, width, height);

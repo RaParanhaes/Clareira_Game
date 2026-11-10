@@ -124,7 +124,9 @@ export function drawWeatherSky(ctx, width, height, options) {
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
   if (weather) drawSeasonVeil(ctx, width, height, weather.season);
-  if (weather?.extremeSun) drawExtremeSun(ctx, width, height, 0.6);
+  // The glare is sunlight: it fades with the day and is gone at night.
+  const daylight = Math.max(0, 1 - Math.min(1, night));
+  if (weather?.extremeSun && daylight > 0.01) drawExtremeSun(ctx, width, height, 0.6 * daylight);
   if (kind === 'storm') {
     ctx.fillStyle = 'rgba(20,28,38,0.16)';
     ctx.fillRect(0, 0, width, height);

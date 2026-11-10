@@ -9,3 +9,4 @@ Uma linha por área. Atualizado a cada integração. O histórico completo está
 | 2026-11-09 | Interface: construção do quarto | este commit | Aviso de peça do quarto, contador "Móveis extras" e verificação de navegador | idem |
 | 2026-11-09 | Mundo: sol e clima (verão) | 2540108 | Sol escaldante de verão mais quente e menos branco: força do brilho de 1,5 para 0,6, com tom âmbar | `~/clareira-evidencias/2026-11-09-sol-verao/` |
 | 2026-11-09 | Mundo: véu de inverno | 34f3965 | Véu azul de inverno mais suave: opacidade de 0,24 para 0,12 | `~/clareira-evidencias/2026-11-09-inverno-suave/` |
+| 2026-11-09 | Mundo: noite com sol escaldante | 8eb3879 | Brilho do sol escaldante não aparece mais à noite (antes clareava a cena) | `~/clareira-evidencias/2026-11-09-noite-sol/` |

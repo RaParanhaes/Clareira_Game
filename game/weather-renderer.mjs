@@ -83,7 +83,7 @@ const SEASON_VEIL = Object.freeze({
   primavera: 'rgba(170,220,150,0.07)',
   verao: null,
   outono: 'rgba(210,120,40,0.11)',
-  inverno: 'rgba(150,178,210,0.24)',
+  inverno: 'rgba(160,182,206,0.12)',
 });
 function drawSeasonVeil(ctx, width, height, season) {
   const veil = SEASON_VEIL[season];

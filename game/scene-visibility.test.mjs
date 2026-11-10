@@ -26,7 +26,7 @@ test('twilight paints exterior lightmaps while full daylight skips them',()=>{
   for(const [night,expected] of [[0,0],[.15,1],[.5,0]]){
     let calls=0;
     runInNewContext(`${groundLighting};drawGroundLighting();`,{
-      gameDay:{night},dimensionTheme:'forest',paintSceneLightmaps:()=>calls++,ctx:{},fires:new Map(),
+      gameDay:{night},dimensionTheme:'forest',paintSceneLightmaps:()=>calls++,prewarmNearbyLightmaps:()=>{},currentSceneLights:()=>({lights:[]}),ctx:{},fires:new Map(),
     });
     assert.equal(calls,expected,`night factor ${night}`);
   }

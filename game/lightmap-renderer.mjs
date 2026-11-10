@@ -1,6 +1,7 @@
 import { lightAmount } from './scene-lights.mjs';
 
 const TX=16,TY=9,HZ=12,STEP=.22;
+export const LIGHTMAP_FADE_MS=900;
 // Requests never rasterize in draw(). One bounded queue owns both in-progress
 // and completed surfaces; each cell preserves the original ray/height math.
 export function createLightmapRenderer({documentRef=()=>globalThis.document,now=()=>performance.now(),
@@ -59,7 +60,7 @@ export function createLightmapRenderer({documentRef=()=>globalThis.document,now=
         job.withContext(()=>{
           do{
             const result=job.builder.next();work++;
-            if(result.done){pending.delete(key);cache.set(key,result.value);previousBySource.set(job.sourceKey,result.value);revision++;completed++;break;}
+            if(result.done){result.value.readyAt=now();pending.delete(key);cache.set(key,result.value);previousBySource.set(job.sourceKey,result.value);revision++;completed++;break;}
           }while(work<maxCells&&now()-started<budgetMs);
         });
       }
@@ -75,6 +76,9 @@ export const lightmapStats=()=>renderer.stats();
 export function paintLightmap(ctx,patch,origin,scale,alpha=1){
   if(!patch)return;
   const rasterScale=patch.rasterScale||1;
-  ctx.save();ctx.globalAlpha=alpha*(patch.intensityScale??1);ctx.imageSmoothingEnabled=true;
+  // A finished patch fades in instead of popping on: the ground glow grows
+  // over LIGHTMAP_FADE_MS, the way a window's light visibly spreads.
+  const fadeIn=patch.readyAt===undefined?1:Math.min(1,Math.max(0,(performance.now()-patch.readyAt)/LIGHTMAP_FADE_MS));
+  ctx.save();ctx.globalAlpha=alpha*(patch.intensityScale??1)*fadeIn;ctx.imageSmoothingEnabled=true;
   ctx.drawImage(patch.image,Math.round(origin.x-patch.left*scale),Math.round(origin.y-patch.top*scale),patch.image.width*scale/rasterScale,patch.image.height*scale/rasterScale);ctx.restore();
 }

@@ -5068,6 +5068,18 @@ function currentSceneLights(){
     }};
   return sceneLightState;
 }
+// Lightmaps are built lazily, and the painter only asks for lights on screen.
+// Request the lights near the player even when they are off screen, so a window's
+// ground glow is already built when the player walks up to it.
+const LIGHTMAP_PREWARM_TILES=16;
+function prewarmNearbyLightmaps(scene){
+  for(const light of scene.lights){
+    if(!(light.strength>0))continue;
+    if(Math.hypot(light.x-localPosition.x,light.y-localPosition.y)>LIGHTMAP_PREWARM_TILES)continue;
+    lightmapFor(light,scene.obstacles,scene.bounds,scene.surface,scene.geometryKey||scene.key,{withContext:scene.withContext});
+  }
+}
+
 function paintSceneLightmaps(context,alpha){
   const scene=currentSceneLights();
   let ready=true;
@@ -5124,6 +5136,7 @@ function addSphericalFalloffStops(gradient,opacity,palette,edgePower=1.35){
 
 function drawGroundLighting() {
   if(dimensionTheme==='dark')return;
+  prewarmNearbyLightmaps(currentSceneLights());
   // The night mask already clears darkness around nearby windows and porches.
   // Keep the warm floor tint for twilight, then avoid compositing the same
   // large lightmaps again over the full-resolution scene at deeper night.

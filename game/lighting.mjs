@@ -84,6 +84,10 @@ export function createShadowDirectionResolver({globalLight,localLights,obstacles
       // A building cannot cast a shadow from its own windows or porch lantern,
       // but neighboring buildings' lights still illuminate its roof and walls.
       if(ignoreOwner&&light.owner===ignoreOwner)continue;
+      // Windows and porch lanterns are building light, not a sky: letting them set
+      // the shadow direction made houses cast shadows as if a moon were overhead,
+      // even on moonless nights. Fires and carried lanterns still cast shadows.
+      if(light.kind==='window'||light.owner)continue;
       const distance=Math.hypot(x-light.x,y-light.y);
       if(distance>=light.reach)continue;
       const strength=lightAmount(light,{x,y,height:surfaceHeight(x,y,'clearing')+.3},obstacles);

@@ -18,8 +18,26 @@ export const CAMPFIRE_LOOP_FRAME_DURATION_MS = 110;
 export const CAMPFIRE_LOOP_DISPLAY_WIDTH = 40;
 
 // Janelas de quadros (índices da folha = número do quadro do zip - 1).
-// Fogo alto: quadros 7, 8 e 9 do zip (índices 6, 7, 8), em laço.
-export const CAMPFIRE_LOOP_SUSTAIN_WINDOW = Object.freeze([6, 7, 8]);
+// Fogo alto: quadros 6 a 10 do zip (índices 5 a 9), variando ao acaso, mas só para o quadro vizinho.
+// A sequência é fixa (mesma para todos os jogadores) e dá a volta a cada 64 passos.
+export const CAMPFIRE_LOOP_SUSTAIN_POOL = Object.freeze([5, 6, 7, 8, 9]);
+function seededRandomWalk(length, seed) {
+  let state = seed >>> 0;
+  const next = () => { state = (state + 0x6D2B79F5) >>> 0; let t = state; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const lo = CAMPFIRE_LOOP_SUSTAIN_POOL[0], hi = CAMPFIRE_LOOP_SUSTAIN_POOL[CAMPFIRE_LOOP_SUSTAIN_POOL.length - 1];
+  const walk = [];
+  let position = 7;                       // começa no fogo máximo (quadro 8)
+  for (let i = 0; i < length; i++) {
+    walk.push(position);
+    const step = next() < 0.5 ? -1 : 1;
+    position = Math.max(lo, Math.min(hi, position + step));
+  }
+  // Fecha o ciclo: o último passo também fica vizinho do primeiro, então a volta não pula.
+  const last = walk.length - 1;
+  walk[last] = walk[last - 1] + Math.sign(walk[0] - walk[last - 1]);
+  return walk;
+}
+export const CAMPFIRE_LOOP_SUSTAIN_WALK = Object.freeze(seededRandomWalk(64, 20251110));
 // Apagar: a janela anda para frente e encolhe até a fogueira apagada (quadro 15).
 export const CAMPFIRE_LOOP_DECAY_WINDOWS = Object.freeze([
   [6, 7, 8], [7, 8, 9], [8, 9], [9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14], [14],
@@ -33,8 +51,10 @@ function frameInWindow(windowFrames, msInto) {
 
 // Fogo aceso em laço: quadros 7, 8 e 9.
 export function campfireLoopFrameIndex(timeSeconds, reducedMotion = false) {
-  if (reducedMotion || !Number.isFinite(timeSeconds)) return CAMPFIRE_LOOP_SUSTAIN_WINDOW[0];
-  return frameInWindow(CAMPFIRE_LOOP_SUSTAIN_WINDOW, timeSeconds * 1000);
+  if (reducedMotion || !Number.isFinite(timeSeconds)) return 7;
+  const n = Math.floor(timeSeconds * 1000 / CAMPFIRE_LOOP_FRAME_DURATION_MS);
+  const walk = CAMPFIRE_LOOP_SUSTAIN_WALK;
+  return walk[((n % walk.length) + walk.length) % walk.length];
 }
 
 // Retângulo de origem na folha para um quadro.

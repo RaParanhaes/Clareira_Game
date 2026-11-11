@@ -2,15 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { campfireLoopFrameIndex, campfireLoopPhaseFrame, campfireLoopSourceRect, CAMPFIRE_LOOP_FRAME_COUNT, CAMPFIRE_LOOP_SHEET_HEIGHT, CAMPFIRE_LOOP_SHEET_WIDTH, CAMPFIRE_LOOP_FLAME_FIRST, CAMPFIRE_LOOP_FLAME_LAST, CAMPFIRE_LOOP_OFF_FRAME, CAMPFIRE_LOOP_IGNITE_MS, CAMPFIRE_LOOP_SUSTAIN_MS, CAMPFIRE_LOOP_DECAY_MS } from './campfire-loop.mjs';
 
-test('the lit loop uses only the flame frames and cycles through them', () => {
-  const seen = new Set();
-  for (let t = 0; t < 10; t += 0.01) seen.add(campfireLoopFrameIndex(t));
-  assert.equal(seen.size, CAMPFIRE_LOOP_FLAME_LAST - CAMPFIRE_LOOP_FLAME_FIRST + 1);
-  for (const i of seen) assert.ok(i >= CAMPFIRE_LOOP_FLAME_FIRST && i <= CAMPFIRE_LOOP_FLAME_LAST);
+test('the lit loop uses only the flame frames and never jumps more than one frame', () => {
+  let prev = campfireLoopFrameIndex(0);
+  for (let n = 1; n < 200; n++) {
+    const cur = campfireLoopFrameIndex(n * 0.11);
+    assert.ok(cur >= 5 && cur <= 9, 'quadros 6 a 10');
+    assert.ok(Math.abs(cur - prev) <= 1, 'só passa para o quadro vizinho');
+    prev = cur;
+  }
 });
 
-test('reduced motion holds a flame frame', () => {
-  assert.equal(campfireLoopFrameIndex(3.3, true), CAMPFIRE_LOOP_FLAME_FIRST);
+test('reduced motion holds the maximum flame frame', () => {
+  assert.equal(campfireLoopFrameIndex(3.3, true), 7);
 });
 
 test('every frame rect stays inside the sheet', () => {
@@ -29,7 +32,8 @@ test('sustain loops for three minutes, then decays through frame 14 to the extin
   const sustainStart = CAMPFIRE_LOOP_IGNITE_MS;
   const seen = new Set();
   for (let t = sustainStart; t < sustainStart + CAMPFIRE_LOOP_SUSTAIN_MS; t += 500) seen.add(campfireLoopPhaseFrame(t, t / 1000));
-  assert.deepEqual([...seen].sort(), [6, 7, 8], 'o laço aceso usa só os quadros 7, 8 e 9');
+  assert.ok([...seen].every(i => i >= 5 && i <= 9), 'o laço aceso usa só os quadros 6 a 10');
+  assert.ok(seen.size >= 3, 'o fogo varia');
   const decayStart = sustainStart + CAMPFIRE_LOOP_SUSTAIN_MS;
   const decaying = new Set();
   for (let t = decayStart; t < decayStart + CAMPFIRE_LOOP_DECAY_MS; t += 250) decaying.add(campfireLoopPhaseFrame(t));

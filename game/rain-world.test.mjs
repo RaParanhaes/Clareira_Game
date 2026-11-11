@@ -75,3 +75,9 @@ test('rain is fixed to the world: the same drops stay in place when the camera m
   const shared = a.filter(k => b.includes(k)).length;
   assert.ok(shared > 0.5 * a.length, 'a maior parte das gotas deve ser a mesma quando a câmera anda');
 });
+
+test('rain covers the whole radius, not only the area near the camera', () => {
+  const frame = rainFrame({ center: { x: 0, y: 0 }, count: 200, seconds: 2, radius: 22 });
+  const far = frame.drops.filter(d => Math.hypot(d.x, d.y) > 14).length;
+  assert.ok(far > 0, 'deve haver gotas longe do centro, dentro do raio de cobertura');
+});

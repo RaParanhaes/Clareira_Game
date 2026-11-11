@@ -4332,7 +4332,7 @@ function emote(name) {
 
 // Chuva no mundo: gotas que batem em telhados e copas, escorrem e respingam no chão.
 // Usa só os telhados e as árvores perto da câmera, para não pesar.
-const WORLD_RAIN_HALF_SPAN = 11;
+const WORLD_RAIN_HALF_SPAN = 22; // cobre a tela inteira, não só a área ao redor do personagem
 function drawWorldRain(weather, reducedMotion) {
   const intensity = weather.kind === 'storm' ? 1 : Math.max(0, Math.min(1, weather.intensity || 0));
   const style = rainStyleFor(weather.kind, intensity);
@@ -4346,7 +4346,8 @@ function drawWorldRain(weather, reducedMotion) {
     .map(tree => ({ x: tree.x, y: tree.y, r: tree.r || 0.6 }));
   const frame = rainFrame({
     center: { x: cx, y: cy },
-    count: rainDropCount(intensity),
+    count: rainDropCount(intensity, 0.55), // densidade por área, menos gotas para não pesar
+    radius: h,
     seconds: reducedMotion ? 0 : worldClock,
     fall: 0.8 - 0.3 * intensity,
     roofs,

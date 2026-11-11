@@ -64,9 +64,9 @@ function dropsInCell(cx, cy, perCell) {
   return out;
 }
 
-export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], trees = [] }) {
+export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], trees = [], radius = SPAN / 2 }) {
   const drops = [], splashes = [], runoffs = [];
-  const half = SPAN / 2;
+  const half = radius;
   // Densidade: `count` gotas numa área de SPAN x SPAN; cada célula tem a mesma densidade.
   const perCell = Math.max(1, Math.round(count * (CELL * CELL) / (SPAN * SPAN)));
   const x0 = Math.floor((center.x - half) / CELL), x1 = Math.floor((center.x + half) / CELL);
@@ -78,10 +78,14 @@ export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], tree
     const z = Z0 * (1 - phase);
     // Obstáculo mais alto sob a gota: o primeiro que ela atinge ao cair.
     let hitZ = 0, hitKind = 'ground';
+    let covered = false;
     for (const roof of roofs) {
       const h = roofHeightAt(roof, x, y);
+      if (h !== null) covered = true;
       if (h !== null && h > hitZ && h < Z0) { hitZ = h; hitKind = 'roof'; }
     }
+    // Sobre o telhado a gota cai normalmente e some ao tocar, sem bolinha de respingo.
+    void covered;
     for (const tree of trees) {
       const dx = x - tree.x, dy = y - tree.y;
       if (dx * dx + dy * dy < (tree.r || 0.6) * (tree.r || 0.6) * 0.81 && TREE_TOP > hitZ && TREE_TOP < Z0) {
@@ -190,10 +194,8 @@ export function drawRainWorld(ctx, frame, project, style, slant = 0.1) {
       ctx.fill();
     }
   }
-  // Filetes do telhado: mais grossos e claros, para aparecer sobre a madeira escura.
-  ctx.lineWidth = style.width * 2;
-  ctx.strokeStyle = 'rgba(214,232,248,0.9)';
-  for (const r of runoffs) {
+  // Filetes sobre o telhado não são mais desenhados (ficavam feios). As pingadas da beirada continuam.
+  for (const r of []) {
     const a = project(r.x0, r.y0, r.z), b = project(r.x1, r.y1, r.z);
     ctx.globalAlpha = r.alpha;
     ctx.beginPath();

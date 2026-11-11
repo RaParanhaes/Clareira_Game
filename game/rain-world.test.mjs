@@ -17,9 +17,9 @@ function scan(make, seconds = 4, step = 0.02) {
   return out;
 }
 
-test('drops that meet a roof splash on it and never splash on the ground beneath', () => {
+test('drops that meet a roof vanish on it: no circular splash on the roof, none on the ground beneath', () => {
   const frames = scan(s => rainFrame({ center: { x: 5, y: 3 }, count: 400, seconds: s, roofs: [roof] }));
-  assert.ok(frames.some(f => f.splashes.some(p => p.kind === 'roof')), 'deve haver respingo no telhado');
+  assert.equal(frames.some(f => f.splashes.some(p => p.kind === 'roof')), false, 'sem respingo circular no telhado');
   // Dentro do telhado, nenhuma gota atinge o chão: todo respingo de chão fica fora da área coberta.
   const groundInsideRoof = frames.some(f => f.splashes.some(p => p.kind === 'ground' && roofHeightAt(roof, p.x, p.y) !== null));
   assert.equal(groundInsideRoof, false);
@@ -66,4 +66,12 @@ test('runoff reaches the real eave of the roof', () => {
 test('roofs drip from their eaves', () => {
   const frames = scan(s => rainFrame({ center: { x: 5, y: 3 }, count: 40, seconds: s, roofs: [roof] }));
   assert.ok(frames.some(f => f.drops.some(d => d.eave)), 'deve haver pingadas da beirada');
+});
+
+test('rain is fixed to the world: the same drops stay in place when the camera moves', () => {
+  const at = (cx) => rainFrame({ center: { x: cx, y: 0 }, count: 200, seconds: 3.1 }).drops
+    .map(d => `${d.x.toFixed(3)},${d.y.toFixed(3)}`).sort();
+  const a = at(0), b = at(4);
+  const shared = a.filter(k => b.includes(k)).length;
+  assert.ok(shared > 0.5 * a.length, 'a maior parte das gotas deve ser a mesma quando a câmera anda');
 });

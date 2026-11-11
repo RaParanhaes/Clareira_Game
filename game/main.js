@@ -152,7 +152,8 @@ import { gameDateTimeLabel } from './game-calendar.mjs';
 import { dailyWeatherAt, moonAt, weatherLabel, windLevelAt, windLabel } from './game-weather.mjs';
 import { applySkyToDay, effectiveWeatherAt, skyTimestamp } from './world-overrides.mjs';
 import { createStaffSky } from './staff-sky-ui.mjs';
-import { drawWeatherSky } from './weather-renderer.mjs';
+import { drawWeatherSky, rainStyleFor } from './weather-renderer.mjs';
+import { rainFrame, rainDropCount, drawRainWorld } from './rain-world.mjs';
 
 const canvas = document.querySelector('#world');
 let ctx = canvas.getContext('2d', { alpha: false });
@@ -4324,6 +4325,33 @@ function emote(name) {
   sendPlayerCommand({ type: 'emote', name });
 }
 
+// Chuva no mundo: gotas que batem em telhados e copas, escorrem e respingam no chão.
+// Usa só os telhados e as árvores perto da câmera, para não pesar.
+const WORLD_RAIN_HALF_SPAN = 11;
+function drawWorldRain(weather, reducedMotion) {
+  const intensity = weather.kind === 'storm' ? 1 : Math.max(0, Math.min(1, weather.intensity || 0));
+  const style = rainStyleFor(weather.kind, intensity);
+  const cx = camera.x, cy = camera.y, h = WORLD_RAIN_HALF_SPAN;
+  const roofs = [RECEPTION_BUILDING, ...VILLAGE_BUILDINGS].map(building => {
+    const b = building.bounds, e = building.roofEave ?? BUILDING_STANDARD.eave;
+    return { x1: b.left - e, x2: b.right + e, y1: b.top - e, y2: b.bottom + e,
+      axis: building.roofAxis || 'y', base: building.height, ridge: building.height + (building.roofRise || 0) };
+  }).filter(r => r.x2 > cx - h && r.x1 < cx + h && r.y2 > cy - h && r.y1 < cy + h);
+  const trees = getSolidTreesInBounds({ left: cx - h, right: cx + h, top: cy - h, bottom: cy + h })
+    .map(tree => ({ x: tree.x, y: tree.y, r: tree.r || 0.6 }));
+  const frame = rainFrame({
+    center: { x: cx, y: cy },
+    count: rainDropCount(intensity),
+    seconds: reducedMotion ? 0 : worldClock,
+    fall: 0.8 - 0.3 * intensity,
+    roofs,
+    trees,
+  });
+  drawRainWorld(ctx, frame, (x, y, z) => point(x, y, camera, z),
+    { width: style.width, color: style.color, len: 0.45 + 0.25 * intensity }, rainSlantFor(intensity));
+}
+function rainSlantFor(intensity) { return 0.08 + 0.12 * intensity; }
+
 function point(x, y, target = camera, height = surfaceHeight(x,y,worldLocation,currentRoomLayout())) {
   if (projectionOverride) {
     const {anchor,left,top} = projectionOverride;
@@ -7304,14 +7332,18 @@ function drawDaylightAtmosphere() {
   drawDaylightAtmosphere();
   if (worldLocation === 'clearing' && worldDimensionId === 'surface') {
     const skyTime = gameDayTimestampMs();
+    const weatherNow = effectiveWeatherAt(skyTime, currentSky());
+    const worldRain = weatherNow?.kind === 'rain' || weatherNow?.kind === 'storm';
     drawWeatherSky(ctx, viewWidth, viewHeight, {
-      weather: effectiveWeatherAt(skyTime, currentSky()),
+      weather: weatherNow,
       moon: gameDay.night > .5 ? moonAt(skyTime) : null,
       night: gameDay.night,
       seconds: worldClock,
       reducedMotion,
       wind: windLevelAt(skyTime),
+      skipRain: worldRain,
     });
+    if (worldRain) drawWorldRain(weatherNow, reducedMotion);
   }
   teleportEffects.drawOver(ctx,worldDimensionId,clientServerTime(),(x,y)=>point(x,y,camera,0),spriteScale);
   drawWaterReflections();

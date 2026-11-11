@@ -260,6 +260,12 @@ export const SOLID_TREES = [
   { x: 10.8, y: 10.2, r: 0.62 },
 ].map(tree => ({ ...tree, x: atDimensionOrigin(tree.x), y: atDimensionOrigin(tree.y) }));
 
+// Trees taken out of the clearing by the owner: no drawing and no collision. The entry stays in
+// the list so the ids of the other authored trees (and the edits that point at them) do not shift.
+// authored:5 is the lone tree beside the spawn fire, where the villagers gather at night.
+const RETIRED_AUTHORED_TREE_IDS = new Set(['authored:5']);
+const isTreeRetired = tree => RETIRED_AUTHORED_TREE_IDS.has(tree.id);
+
 for (const tree of SOLID_TREES) tree.r = .3;
 
 // Sparse routes connect authored landmarks; dense woodland gives exploration a boundary.
@@ -502,7 +508,7 @@ function chunksInBounds(bounds, select) {
 export function getSolidTreesInBounds(bounds) {
   if (isBareDarkDimension()) return [];
   return [...(isSurfaceDimension() ? queryWorldChunks(authoredTreesByChunk, bounds) : []), ...chunksInBounds(bounds, chunk => chunk.trees), ...worldTreesInBounds(bounds)]
-    .filter(tree => !isWorldTreeRemoved(tree.id))
+    .filter(tree => !isWorldTreeRemoved(tree.id) && !isTreeRetired(tree))
     .filter(tree => tree.id?.startsWith('maptree:') || tree.id?.startsWith('authored:') || worldTreeDensityAt(tree.x, tree.y) > 0)
     .filter(tree => waterBankDepthAt(tree.x,tree.y,WORLD_WATER_OPTIONS,Math.max(TREE_BANK_CLEARANCE,tree.r||0)) <= 0)
     .filter(tree => !treeNearWaterShore(tree.x,tree.y));
@@ -545,7 +551,7 @@ export function hasTreeCollision(position,radius=PLAYER_RADIUS,absoluteFeetZ=nul
     // Only flight uses absolute world altitude. Ground movement and jumps keep
     // their existing collision rules; rocks below remain solid at any height.
     if(Number.isFinite(absoluteFeetZ)&&absoluteFeetZ>=surfaceHeight(tree.x,tree.y)+EXPERIMENTAL_TREE_FLIGHT_HEIGHT)return false;
-    return !isWorldTreeRemoved(tree.id)
+    return !isWorldTreeRemoved(tree.id) && !isTreeRetired(tree)
       && (tree.id?.startsWith('maptree:')||tree.id?.startsWith('authored:')||worldTreeDensityAt(tree.x,tree.y)>0)
       && waterBankDepthAt(tree.x,tree.y,WORLD_WATER_OPTIONS,Math.max(TREE_BANK_CLEARANCE,tree.r||0))<=0
       && !treeNearWaterShore(tree.x,tree.y);

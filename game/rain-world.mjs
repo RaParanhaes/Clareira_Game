@@ -64,9 +64,9 @@ function dropsInCell(cx, cy, perCell) {
   return out;
 }
 
-export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], trees = [] }) {
+export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], trees = [], radius = SPAN / 2 }) {
   const drops = [], splashes = [], runoffs = [];
-  const half = SPAN / 2;
+  const half = radius;
   // Densidade: `count` gotas numa área de SPAN x SPAN; cada célula tem a mesma densidade.
   const perCell = Math.max(1, Math.round(count * (CELL * CELL) / (SPAN * SPAN)));
   const x0 = Math.floor((center.x - half) / CELL), x1 = Math.floor((center.x + half) / CELL);

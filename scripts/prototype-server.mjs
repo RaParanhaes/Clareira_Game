@@ -62,7 +62,8 @@ import {
   WILDLIFE_BY_ID, WILDLIFE_ZONE_SIZE, WILDLIFE_POPULATION_LIMIT, createWildlifeForZone, stepWildlifePopulation, wildlifeCollisionBodies,
 } from '../game/wildlife.mjs';
 import { huntWildlifeTarget } from '../game/wildlife-hunt.mjs';
-import { villageActorsFor } from '../game/village-npcs.mjs';
+import { villageActorsFor, villageNpcDayRoster } from '../game/village-npcs.mjs';
+import { createVillageNpcWalkers } from '../game/npc-village-walkers.mjs';
 import { restoreAmbientFires } from '../game/ambient-fires.mjs';
 import {
   CAMPFIRE_DECAY_REBUILD_COST, CAMPFIRE_FEED_COST, CAMPFIRE_FEED_WINDOW_MS,
@@ -467,6 +468,10 @@ export function createPrototypeServer({
   const pendingAccountAdmissions = new Set();
   const coordinatedSockets = new Map();
   const spatialIndex = new PlayerSpatialIndex();
+  // Village people walk a short loop beside their spot until their daily routine
+  // replaces these routes. Their bodies block players the same way players block them.
+  const villageWalkers = createVillageNpcWalkers(villageNpcDayRoster(),
+    (id, spot) => [spot, { x: spot.x + 2.5, y: spot.y }, { x: spot.x + 2.5, y: spot.y + 2.5 }]);
   const collisionIndex = new PlayerSpatialIndex({ cellSize: 2 });
   const indexPlayer = (socket, player) => {
     const contextId = playerContextId(player);
@@ -595,6 +600,7 @@ export function createPrototypeServer({
     const previousPosition = { x: player.position.x, y: player.position.y };
     const occupied = collisionIndex.query(playerContextId(player), player.position, 1)
       .filter(other => other !== player).map(other => other.position);
+    if (player.location !== 'room') occupied.push(...villageWalkers.bodies());
     const move = (position, input, delta) => player.location === 'room'
       ? moveRoomPlayer(player,position,input,delta,occupied)
       : stepPlayer(position, input, delta, occupied, [...firesFor(player.dimensionId).values()], now(),
@@ -1157,6 +1163,7 @@ export function createPrototypeServer({
         dimensionId, location:viewer.location, now:serverWallTimeMs,
         bounds:{left:area.center.x-area.radius,right:area.center.x+area.radius,
           top:area.center.y-area.radius,bottom:area.center.y+area.radius},
+        live:villageWalkers.positions(),
       }) : [],
       animals: viewer.location==='clearing'?(includeWildlife?[...wildlifeFor(dimensionId).values()]
         .filter(animal=>isInsideAoi(animal,area)||isInsideAoi({x:animal.shelterX,y:animal.shelterY},area)).map(serializeWildlifeForNetwork):undefined):[],
@@ -4199,6 +4206,9 @@ export function createPrototypeServer({
     const tickNow=performance.now();
     const elapsedSincePreviousTickMs=tickNow-tickAt;
     const budget=simulationBudget(tickRemainder,elapsedSincePreviousTickMs/1000);
+    // Village people step with the player physics; a long pause advances them at most 0.2 s.
+    villageWalkers.tick(Math.min(.2,elapsedSincePreviousTickMs/1000),
+      [...peers.values()].filter(other=>other.location==='clearing'&&other.dimensionId==='surface').map(other=>other.position),tickNow);
     tickAt=tickNow;tickRemainder=budget.remainder;
     const step = FIXED_STEP_SECONDS;
     const wildlifeCollidersByDimension = new Map();

@@ -36,3 +36,20 @@ test('sustain loops for three minutes, then decays through frame 14 to the extin
   assert.ok(decaying.has(CAMPFIRE_LOOP_OFF_FRAME - 1), 'passa pelo quadro 14');
   assert.equal(campfireLoopPhaseFrame(decayStart + CAMPFIRE_LOOP_DECAY_MS + 1000), CAMPFIRE_LOOP_OFF_FRAME);
 });
+
+import { campfireLoopElapsedMs } from './campfire-loop.mjs';
+
+test('elapsed time uses the server wall clock, not the browser performance clock', () => {
+  const litAt = 1_700_000_000_000;               // relógio do servidor (Date.now)
+  assert.equal(campfireLoopElapsedMs({ litAt }, litAt + 5000), 5000);
+  // Quando o servidor manda o combustível restante, a fase segue esse valor.
+  assert.equal(campfireLoopElapsedMs({ burnRemainingMs: 60_000, burnSampledAt: litAt }, litAt), 180_000);
+  // Com o relógio do navegador (performance.now, ~segundos desde a página), dava negativo: não pode mais.
+  assert.ok(campfireLoopElapsedMs({ litAt }, litAt + 5000) > 0);
+});
+
+test('permanent fires keep the lit loop and never go out', () => {
+  const fire = { permanent: true, litAt: 1_700_000_000_000 };
+  assert.ok(Number.isNaN(campfireLoopElapsedMs(fire, 1_700_000_000_000 + 10 * 60 * 1000)));
+  assert.ok(campfireLoopPhaseFrame(NaN, 2.5) >= CAMPFIRE_LOOP_FLAME_FIRST);
+});

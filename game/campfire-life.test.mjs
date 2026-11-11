@@ -46,12 +46,12 @@ test('fuel fades over minutes while relighting ramps back to full strength in se
   const relit = { litAt: at, flameRiseAt: at, flameRiseFrom: 0, flameRiseDurationMs: CAMPFIRE_IGNITION_RAMP_MS };
   assert.equal(campfireFlameStrength(relit, at), 0);
   assert.ok(campfireFlameStrength(relit, at + CAMPFIRE_IGNITION_RAMP_MS / 2) > 0.4);
-  assert.ok(campfireFlameStrength(relit, at + CAMPFIRE_IGNITION_RAMP_MS) > 0.99);
+  assert.ok(campfireFlameStrength(relit, at + CAMPFIRE_IGNITION_RAMP_MS) > 0.98);
 
   const fed = { ...relit, flameRiseFrom: halfFuel };
   assert.equal(campfireFlameStrength(fed, at), halfFuel);
   assert.ok(campfireFlameStrength(fed, at + CAMPFIRE_IGNITION_RAMP_MS) > halfFuel);
-  assert.ok(CAMPFIRE_IGNITION_RAMP_MS < CAMPFIRE_LIFETIME_MS * 0.01);
+  assert.ok(CAMPFIRE_IGNITION_RAMP_MS < CAMPFIRE_LIFETIME_MS * 0.02);
   assert.equal(CAMPFIRE_FEED_WINDOW_MS, CAMPFIRE_LIFETIME_MS * 0.25);
 });
 

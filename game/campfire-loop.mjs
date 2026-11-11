@@ -1,3 +1,4 @@
+import { CAMPFIRE_LIFETIME_MS, campfireRemainingMs } from './campfire-life.mjs';
 // Fogueira em laço: 11 quadros de pixel art (folha 5 x 3), só os de fogo aceso com lenha, pedras e chama.
 // Substitui a sequência de 20 quadros; os quadros vão de fogo médio a alto e voltam,
 // então o laço é contínuo. Reduzir a resolução dos quadros deixa a animação mais leve.
@@ -33,9 +34,10 @@ export function campfireLoopSourceRect(index) {
 }
 
 // Ciclo de vida da fogueira: acende, fica acesa 3 minutos e apaga devagar em 1 minuto.
+// O sprite segue o combustível (campfire-life): acende, fica no laço e apaga no último minuto.
 export const CAMPFIRE_LOOP_IGNITE_MS = 4 * 1000;
-export const CAMPFIRE_LOOP_SUSTAIN_MS = 3 * 60 * 1000;
 export const CAMPFIRE_LOOP_DECAY_MS = 60 * 1000;
+export const CAMPFIRE_LOOP_SUSTAIN_MS = CAMPFIRE_LIFETIME_MS - CAMPFIRE_LOOP_DECAY_MS - CAMPFIRE_LOOP_IGNITE_MS;
 
 // Quadro para um tempo (ms) desde que o fogo foi aceso. Sem tempo conhecido, mantém o laço aceso.
 export function campfireLoopPhaseFrame(elapsedMs, timeSeconds = 0, reducedMotion = false) {
@@ -56,4 +58,13 @@ export function campfireLoopPhaseFrame(elapsedMs, timeSeconds = 0, reducedMotion
     return Math.min(CAMPFIRE_LOOP_OFF_FRAME, CAMPFIRE_LOOP_FLAME_LAST + Math.floor(u * (steps + 1)));
   }
   return CAMPFIRE_LOOP_OFF_FRAME;
+}
+
+// Tempo desde que o fogo foi aceso, pela mesma conta do combustível (campfire-life),
+// no relógio do servidor. Fogueira permanente, ou sem dados de fogo, devolve NaN (fica acesa em laço).
+export function campfireLoopElapsedMs(fire, serverWallNowMs) {
+  if (fire?.permanent === true) return NaN;
+  if (!Number.isFinite(serverWallNowMs)) return NaN;
+  if (!Number.isFinite(fire?.litAt) && !Number.isFinite(fire?.burnRemainingMs)) return NaN;
+  return CAMPFIRE_LIFETIME_MS - campfireRemainingMs(fire, serverWallNowMs);
 }

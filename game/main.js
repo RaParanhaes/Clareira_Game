@@ -103,7 +103,7 @@ import {
 import { sampleCampfireParticles } from './campfire-motion.mjs';
 import { CAMPFIRE_SEQUENCE_FRAME_HEIGHT, CAMPFIRE_SEQUENCE_FRAME_WIDTH, CAMPFIRE_SEQUENCE_SHEET_HEIGHT,
   CAMPFIRE_SEQUENCE_SHEET_WIDTH, campfireSequenceSprite } from './campfire-sequence.mjs';
-import { campfireLoopPhaseFrame, campfireLoopSourceRect, CAMPFIRE_LOOP_FRAME_WIDTH, CAMPFIRE_LOOP_FRAME_HEIGHT, CAMPFIRE_LOOP_SHEET_WIDTH, CAMPFIRE_LOOP_SHEET_HEIGHT, CAMPFIRE_LOOP_DISPLAY_WIDTH } from './campfire-loop.mjs';
+import { campfireLoopElapsedMs, campfireLoopPhaseFrame, campfireLoopSourceRect, CAMPFIRE_LOOP_FRAME_WIDTH, CAMPFIRE_LOOP_FRAME_HEIGHT, CAMPFIRE_LOOP_SHEET_WIDTH, CAMPFIRE_LOOP_SHEET_HEIGHT, CAMPFIRE_LOOP_DISPLAY_WIDTH } from './campfire-loop.mjs';
 import { campfirePathOcclusion, worldToAudioPosition } from './campfire-acoustics.mjs';
 import {surfaceHeight,HEIGHT_PIXELS,ROOM_LEVEL} from './elevation.mjs';
 import { isDimensionPathTile, isDimensionSecretPathTile, isVillagePlazaTile } from './dimension-layout.mjs';
@@ -6068,7 +6068,7 @@ function drawCampfireSmokePuffs(p,puffs,smokeStrength,sway=0,soot=false){
 // Fogueira em laço (15 quadros): desenha o quadro atual com a base na posição do fogo.
 function drawCampfireLoop(fire,p,time,flameStrength,companionCount,now){
   // Tempo desde que o fogo foi aceso decide a fase: acender, laço de 3 minutos e apagar em 1 minuto.
-  const elapsed=Number.isFinite(fire.litAt)?now-fire.litAt:NaN;
+  const elapsed=campfireLoopElapsedMs(fire,rawGameDayTimestampMs());
   const index=campfireLoopPhaseFrame(elapsed,time,reducedMotion);
   const src=campfireLoopSourceRect(index);
   const unit=CAMPFIRE_LOOP_DISPLAY_WIDTH/CAMPFIRE_LOOP_FRAME_WIDTH*spriteScale;

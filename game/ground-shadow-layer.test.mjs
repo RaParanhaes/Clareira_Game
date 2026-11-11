@@ -69,8 +69,9 @@ test('building shadow source samples exposed facades instead of its occluded cen
 
 test('building ground shadows stay solar by day and survive weak moon or window light at night',()=>{
  assert.ok(Math.abs(buildingGroundShadowStrength({source:{kind:'sun'},strength:.84})-.5208)<1e-12);
- assert.ok(Math.abs(buildingGroundShadowStrength({source:{kind:'moon'},strength:.18})-.2394)<1e-12);
- assert.ok(Math.abs(buildingGroundShadowStrength({source:{kind:'moon'},strength:.30})-.399)<1e-12);
+ assert.ok(Math.abs(buildingGroundShadowStrength({source:{kind:'moon'},strength:.18})-.108)<1e-12);
+ assert.ok(Math.abs(buildingGroundShadowStrength({source:{kind:'moon'},strength:.30})-.18)<1e-12);
+assert.ok(buildingGroundShadowStrength({source:{kind:'moon'},strength:1})<=.20+1e-12);
  assert.equal(buildingGroundShadowStrength({source:{kind:'window'},strength:.04}),.28);
  assert.equal(buildingGroundShadowStrength({source:{kind:'fire'},strength:.04}),.28);
  assert.equal(buildingGroundShadowStrength({source:{kind:'ambient'},strength:0}),0);

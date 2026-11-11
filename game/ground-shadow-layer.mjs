@@ -95,7 +95,8 @@ export function strongestBuildingShadowDirection(bounds,resolve,clearance=.22){
 export function buildingGroundShadowStrength(direction){
   const strength=Math.max(0,Math.min(1,Number.isFinite(direction?.strength)?direction.strength:0));
   if(direction?.source?.kind==='sun')return .62*strength;
-  if(direction?.source?.kind==='moon')return Math.min(.40,strength*1.33);
+  // Lua: sombra suave. Antes ficava até .40 e pesava no chão à noite.
+  if(direction?.source?.kind==='moon')return Math.min(.20,strength*.6);
   if(['window','fire','lantern'].includes(direction?.source?.kind))return Math.min(.7,strength*7);
   return 0;
 }

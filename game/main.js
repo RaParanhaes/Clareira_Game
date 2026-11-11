@@ -23,6 +23,10 @@ import { drawNight, carriedLanternSources, setNightDeps } from './lighting-rende
 import { actorRimSource, exteriorEmitters, interiorEmitters, roomLightObstacles, lightAmount, roomGlowProfile, actorWindowLight } from './scene-lights.mjs';
 import { buildingWindows, buildingArchitecture } from './architectural-elements.mjs';
 import { lightmapFor, paintLightmap, processLightmapQueue, lightmapStats } from './lightmap-renderer.mjs';
+import { gameDayIndexAt } from './game-time.mjs';
+// The night's seed: the calendar day the night began on, so each night draws its own
+// pattern of lit windows and stays the same for everyone during that night.
+function nightSeedNow(){return gameDayIndexAt(gameDayTimestampMs())-(gameDay.hours<12?1:0);}
 import { BUILDING_STANDARD, fixtureBounds, roomWallDecor, roofGeometry } from './building-standard.mjs';
 import { buildingUsesAuthoredExterior, drawBuildingCanopy, drawBuildingExterior, drawBuildingPost, drawWallLabel, setCottageExteriorSprites, setFernExteriorSprites } from './building-renderer.mjs';
 import { setBuildingMaterialAtlas } from './building-materials.mjs';
@@ -2266,7 +2270,7 @@ function connect() {
       if(applied&&ui.roomCategory){ui.roomCategory.replaceChildren(...[{id:'basicos',label:'Móveis básicos'},...MEDIEVAL_FURNITURE_CATEGORIES].map(group=>{const option=document.createElement('option');option.value=group.id;option.textContent=group.label;return option;}));populateRoomFurnitureCategory();}
       if(applied){
         geometryCache.clear();fallenGeometryCache.clear();naturalGeometryCache.clear();naturalPatchCache.clear();
-        outdoorEmitters=exteriorEmitters([RECEPTION_BUILDING,...VILLAGE_BUILDINGS],gameDay.daylight,gameDay.hasMoon);worldChunkRangeKey='';solidTreeLightingKey='';
+        outdoorEmitters=exteriorEmitters([RECEPTION_BUILDING,...VILLAGE_BUILDINGS],gameDay.daylight,gameDay.hasMoon,gameDay.hours,nightSeedNow());worldChunkRangeKey='';solidTreeLightingKey='';
         walkPath=[];pendingInputs=[];outboundInputs=[];localRenderCorrection={x:0,y:0};
       }
     }
@@ -5054,7 +5058,7 @@ function currentSceneLights(){
     :worldGeometryCacheKey(definition))+`:objects:${objectCatalogRevision()}`;
   const key=`${geometryKey}:${daylight}:${gameDay.hasMoon?1:0}`;
   if(sceneLightState&&sceneLightKey===key)return sceneLightState;
-  if(!indoor&&worldDimensionId==='surface')outdoorEmitters=exteriorEmitters([RECEPTION_BUILDING,...VILLAGE_BUILDINGS],daylight,gameDay.hasMoon);
+  if(!indoor&&worldDimensionId==='surface')outdoorEmitters=exteriorEmitters([RECEPTION_BUILDING,...VILLAGE_BUILDINGS],daylight,gameDay.hasMoon,gameDay.hours,nightSeedNow());
   const lights=indoor?interiorEmitters(layout,furniture,daylight,0,gameDay.hasMoon):worldDimensionId==='surface'?outdoorEmitters:[];
   const obstacles=indoor?roomLightObstacles(layout,furniture):[RECEPTION_BUILDING,...VILLAGE_BUILDINGS].flatMap(building=>[
     {...building.bounds,height:building.height,owner:building.id},

@@ -3,19 +3,62 @@ import { buildingWindows } from './architectural-elements.mjs';
 import { roomWallDecor, fixtureBounds } from './building-standard.mjs';
 import { nightEmitterProfile } from './lighting.mjs';
 
-export function exteriorEmitters(buildings,daylight=1,hasMoon=false){
+// Windows light one at a time through the evening and go out one at a time at
+// dawn. Each window draws a fixed moment from its id, so every client agrees.
+const DUSK_FIRST_HOUR=18.33, DUSK_SPREAD_HOURS=3;
+const DAWN_FIRST_HOUR=5, DAWN_SPREAD_HOURS=2;
+const WINDOW_RAMP_HOURS=.4;
+const unitHash=text=>{let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0)/4294967296;};
+const smooth01=x=>{const t=Math.max(0,Math.min(1,x));return t*t*(3-2*t);};
+// Amount of light a window gives at this game hour (0..1). The first window of each
+// house always lights; about a third of the others stay dark all night.
+// Each night draws its own pattern from the night's seed (the calendar day it starts on).
+const nightRoll=(id,seed,salt)=>unitHash(`${id}|${seed}|${salt}`);
+// A house's mood for the night: every window, some windows, or only the first one.
+export function houseNightMood(buildingId,seed){
+  const r=nightRoll(buildingId,seed,'mood');
+  return r<.3?'all':r<.8?'some':'one';
+}
+// Lantern in front of the house: the first light to come on, before any window.
+const PORCH_FIRST_HOUR=17.9, PORCH_SPREAD_HOURS=.4;
+export function porchLightAmount(id,hours,seed=0){
+  if(!Number.isFinite(hours))return null;
+  const now=hours<12?hours+24:hours;
+  const onset=PORCH_FIRST_HOUR+nightRoll(id,seed,'porch')*PORCH_SPREAD_HOURS;
+  const offset=DAWN_FIRST_HOUR+24+DAWN_SPREAD_HOURS+nightRoll(id,seed,'porch-off')*.5;
+  return smooth01((now-onset)/WINDOW_RAMP_HOURS)*(1-smooth01((now-offset)/WINDOW_RAMP_HOURS));
+}
+// Amount of light a window gives at this game hour (0..1). The first window of each
+// house always lights, whatever the mood. Other windows follow the house's mood and
+// may stay dark; lit ones come on and go out at moments drawn for this night.
+export function windowLightAmount(id,primary,hours,{seed=0,mood='some'}={}){
+  if(!Number.isFinite(hours))return null;
+  const now=hours<12?hours+24:hours;
+  if(!primary){
+    if(mood==='one')return 0;
+    if(mood==='some'&&nightRoll(id,seed,'keep')>.6)return 0;
+  }
+  const u=nightRoll(id,seed,'on'),v=nightRoll(id,seed,'off');
+  const onset=primary?DUSK_FIRST_HOUR+u*DUSK_SPREAD_HOURS*.5:DUSK_FIRST_HOUR+u*DUSK_SPREAD_HOURS;
+  const offset=DAWN_FIRST_HOUR+24+v*DAWN_SPREAD_HOURS;
+  return smooth01((now-onset)/WINDOW_RAMP_HOURS)*(1-smooth01((now-offset)/WINDOW_RAMP_HOURS));
+}
+
+export function exteriorEmitters(buildings,daylight=1,hasMoon=false,hours=null,seed=0){
   const nightFactor=Math.max(0,Math.min(1,(.48-daylight)/.35));
-  const porch=nightEmitterProfile(5.3,1.7,{night:nightFactor,hasMoon});
+  // The porch lantern is round and a little wider than a window, so the front stays lit.
+  const porch=nightEmitterProfile(7.4,1.7,{night:nightFactor,hasMoon});
   return buildings.flatMap(building=>[
-    ...buildingWindows(building).filter(w=>w.enabled!==false&&w.light?.enabled!==false).map(w=>{
+    ...buildingWindows(building).filter(w=>w.enabled!==false&&w.light?.enabled!==false).map((w,index)=>{
       const sourceStrength=w.light?.strength??.8;
       const baseReach=w.light?.reach??5.8+w.z*.18;
       const profile=nightEmitterProfile(baseReach,w.light?.falloffExponent??1.4,{night:nightFactor,hasMoon});
-      return {...w,kind:'window',height:w.z,reach:profile.reach,strength:sourceStrength*nightFactor,
+      const lit=windowLightAmount(w.id,index===0,hours,{seed,mood:houseNightMood(building.id,seed)});
+      return {...w,kind:'window',height:w.z,reach:profile.reach,strength:sourceStrength*(lit??nightFactor),
         falloffExponent:profile.falloffExponent,color:w.light?.color||'#f29a4e',owner:building.id};
     }),
     {id:`${building.id}:porch`,kind:'lantern',owner:building.id,x:building.door.x+.84,y:building.bounds.bottom+.06,
-      height:3.25,nx:0,ny:1,reach:porch.reach,strength:.9*nightFactor,
+      height:3.25,nx:0,ny:0,reach:porch.reach,strength:.9*(porchLightAmount(building.id,hours,seed)??nightFactor),
       falloffExponent:porch.falloffExponent,color:'#ff9f4a'},
   ]);
 }

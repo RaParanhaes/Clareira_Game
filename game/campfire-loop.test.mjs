@@ -18,3 +18,21 @@ test('every frame rect stays inside the sheet', () => {
     assert.ok(r.sx + r.sw <= CAMPFIRE_LOOP_SHEET_WIDTH && r.sy + r.sh <= CAMPFIRE_LOOP_SHEET_HEIGHT);
   }
 });
+
+import { campfireLoopPhaseFrame, CAMPFIRE_LOOP_IGNITE_MS, CAMPFIRE_LOOP_SUSTAIN_MS, CAMPFIRE_LOOP_DECAY_MS } from './campfire-loop.mjs';
+
+test('ignition rises from embers to full flame', () => {
+  assert.equal(campfireLoopPhaseFrame(0), 0);
+  assert.ok(campfireLoopPhaseFrame(CAMPFIRE_LOOP_IGNITE_MS - 1) >= CAMPFIRE_LOOP_FRAME_COUNT - 2);
+});
+
+test('sustain loops for three minutes, then decays slowly over one minute', () => {
+  const sustainStart = CAMPFIRE_LOOP_IGNITE_MS;
+  const seen = new Set();
+  for (let t = sustainStart; t < sustainStart + CAMPFIRE_LOOP_SUSTAIN_MS; t += 500) seen.add(campfireLoopPhaseFrame(t, t / 1000));
+  assert.ok(seen.size > 3, 'o fogo deve variar durante os 3 minutos');
+  const decayStart = sustainStart + CAMPFIRE_LOOP_SUSTAIN_MS;
+  const mid = campfireLoopPhaseFrame(decayStart + CAMPFIRE_LOOP_DECAY_MS / 2);
+  assert.ok(mid > 0 && mid < CAMPFIRE_LOOP_FRAME_COUNT - 1, 'no meio do apagar, o fogo está entre alto e brasa');
+  assert.equal(campfireLoopPhaseFrame(decayStart + CAMPFIRE_LOOP_DECAY_MS + 1000), 0);
+});

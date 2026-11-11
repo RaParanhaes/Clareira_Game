@@ -153,6 +153,7 @@ import { dailyWeatherAt, moonAt, weatherLabel, windLevelAt, windLabel } from './
 import { applySkyToDay, effectiveWeatherAt, skyTimestamp } from './world-overrides.mjs';
 import { createStaffSky } from './staff-sky-ui.mjs';
 import { drawWeatherSky } from './weather-renderer.mjs';
+import { showFramedNotice } from './framed-notice.mjs';
 
 const canvas = document.querySelector('#world');
 let ctx = canvas.getContext('2d', { alpha: false });
@@ -2207,6 +2208,7 @@ function connect() {
       return;
     }
     if (message.type === 'mapExploration') { mergeMapExploration(message); return; }
+    if (message.type === 'aviso') showFramedNotice(message);
     if (message.type === 'notice') {
       if(message.action==='roomFurniture'&&Number.isSafeInteger(message.requestId)){
         const restored=roomFurniturePrediction.acknowledge(message.requestId,message.result==='accepted');

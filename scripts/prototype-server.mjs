@@ -4596,6 +4596,14 @@ export function createPrototypeServer({
     },
     async close() {
       serverClosing = true;
+      // Avisa todo mundo antes de desconectar: a posição já é gravada no fechamento
+      // e o jogador volta da última posição quando o servidor reabrir.
+      for (const socket of webSocketServer.clients) {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: 'aviso', tipo: 'manutencao', faixa: 'Atualização', titulo: 'Clareira em atualização', texto: 'O bosque está sendo atualizado. Você volta na sua última posição quando ele reabrir.', botao: 'Entendi' }));
+        }
+      }
+      await new Promise(resolve => setTimeout(resolve, 400));
       const closingPlayers = [...peers.values()];
       // Upgraded sockets can still be awaiting profile/world reads and have no
       // peer entry yet. Drain those too, before waiting on background writes.

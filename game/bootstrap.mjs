@@ -458,22 +458,33 @@ async function startGame() {
   if (!stylesheetReady) throw new Error('Não foi possível carregar o visual do jogo.');
   document.documentElement.classList.add('clareira-styles-ready');
   const { synchronizeGameCache } = await import('./cache-update.mjs');
-  await registerCacheWorker();
-  const downloadLease = await beginDownloadCapacityLease();
-  let cacheState;
-  try {
-    cacheState = await synchronizeGameCache({
-      manifestUrl: new URL('./game-assets', import.meta.url),
-      scopeUrl: new URL('./', import.meta.url),
-      onProgress: showCacheProgress,
-      getDownloadConcurrency: downloadLease.getConcurrency,
-    });
-  } finally { downloadLease.close(); }
-  if (cacheState.changed && cacheState.oldVersion) {
-    showLoadingPhrase();
-    await new Promise(resolve => setTimeout(resolve, 80));
-    location.reload();
-    return;
+  // Some embedded browsers (such as the desktop app's pane) refuse the service worker.
+  // The game still loads over the network; only the offline cache and its update check are skipped.
+  let cacheAvailable = true;
+  let cacheState = null;
+  try { await registerCacheWorker(); }
+  catch (error) {
+    cacheAvailable = false;
+    console.warn('Cache do jogo indisponível; carregando pela rede.', error);
+    // Nothing to download here, so the file stage is complete rather than stuck at its start.
+    showCacheProgress({ phase: 'complete', total: 0, completed: 0 });
+  }
+  if (cacheAvailable) {
+    const downloadLease = await beginDownloadCapacityLease();
+    try {
+      cacheState = await synchronizeGameCache({
+        manifestUrl: new URL('./game-assets', import.meta.url),
+        scopeUrl: new URL('./', import.meta.url),
+        onProgress: showCacheProgress,
+        getDownloadConcurrency: downloadLease.getConcurrency,
+      });
+    } finally { downloadLease.close(); }
+    if (cacheState.changed && cacheState.oldVersion) {
+      showLoadingPhrase();
+      await new Promise(resolve => setTimeout(resolve, 80));
+      location.reload();
+      return;
+    }
   }
   // Let the completed file stage finish filling before session verification
   // replaces it. This is a presentation hold after the real cache is ready.
@@ -485,7 +496,7 @@ async function startGame() {
   recoveryScheduled = false;
   try { sessionStorage.removeItem(retryKey); } catch {}
   reload.onclick = null;
-  const startupVersion = cacheState.version || await readGameVersion();
+  const startupVersion = cacheState?.version || await readGameVersion();
   void import('./update-monitor.mjs').then(({ createGameUpdateMonitor }) => {
     const monitor = createGameUpdateMonitor({
       initialVersion: startupVersion,

@@ -1,6 +1,7 @@
 import { GAME_DAY_DURATION_MS } from './day-night.mjs';
 
-export const CAMPFIRE_LIFETIME_MS = 15 * 60 * 1000;
+// Combustível: 3 minutos de fogo alto e 1 minuto apagando (4 minutos no total).
+export const CAMPFIRE_LIFETIME_MS = 4 * 60 * 1000;
 export const CAMPFIRE_PLAYER_BURN_DURATION_MS = 6 * 1000;
 export const CAMPFIRE_DECAY_DELAY_MS = GAME_DAY_DURATION_MS;
 export const CAMPFIRE_DECAY_DURATION_MS = GAME_DAY_DURATION_MS;

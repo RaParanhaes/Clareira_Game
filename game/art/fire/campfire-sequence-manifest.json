@@ -1,0 +1,23 @@
+{
+  "jogo": "Clareira",
+  "origem": "Sheet de 20 quadros gerado no chat do ChatGPT (imagem 6), recortado e normalizado",
+  "quadros": 20,
+  "arquivo": "campfire-sequence-frames.png",
+  "grade": { "colunas": 5, "linhas": 4, "quadro": [64, 80], "dimensoes": [320, 320] },
+  "ordem": "1 a 20, da esquerda para a direita e de cima para baixo",
+  "ancora": { "x": 32, "y": 79 },
+  "niveis": [
+    { "nivel": 0, "quadros": [17, 18, 19, 20], "descricao": "apagada, cinza com brasa" },
+    { "nivel": 1, "quadros": [3], "descricao": "faísca" },
+    { "nivel": 2, "quadros": [4], "descricao": "acendendo" },
+    { "nivel": 3, "quadros": [5], "descricao": "chama pequena" },
+    { "nivel": 4, "quadros": [16], "descricao": "brasa com chama baixa" },
+    { "nivel": 5, "quadros": [15], "descricao": "enfraquecendo" },
+    { "nivel": 6, "quadros": [14], "descricao": "chama média" },
+    { "nivel": 7, "quadros": [13], "descricao": "chama alta caindo" },
+    { "nivel": 8, "quadros": [12], "descricao": "chama alta" },
+    { "nivel": 9, "quadros": [6, 7, 8, 9, 10, 11], "descricao": "cheia, varia entre os quadros" }
+  ],
+  "alpha": "RGBA, fundo transparente (branco do sheet original removido)",
+  "paleta": "128 cores (ImageMagick -colors 128)"
+}

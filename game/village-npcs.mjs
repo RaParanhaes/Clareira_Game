@@ -4,7 +4,7 @@ import { SPAWN_CAMPFIRE } from './world.mjs';
 import { normalizeAppearance } from './appearance.mjs';
 
 export const VILLAGE_NPC_LIMIT = 6;
-export const VILLAGE_NPC_NIGHT_GATHERING = 4;
+export const VILLAGE_NPC_NIGHT_GATHERING = VILLAGE_NPC_LIMIT;
 export const VILLAGE_NPC_DAY_MIN_SPACING = 6;
 
 const offset = DIMENSION_COORDINATE_OFFSET;
@@ -24,25 +24,43 @@ const DAY_ROSTER = Object.freeze([
   rosterIndex:index,
 })));
 
-const NIGHT_OFFSETS = Object.freeze([
-  [-1.7,-1.7],[1.7,-1.7],[1.7,1.7],[-1.7,1.7],
-]);
+// Evening routine, in game hours. From dusk the villagers sit around the spawn fire; at 23h
+// each one goes indoors (out of the clearing) and comes back out at dawn, at their day spots.
+export const VILLAGE_NPC_GATHER_START_HOUR = 20;
+export const VILLAGE_NPC_GATHER_END_HOUR = 23;
+export const VILLAGE_NPC_DAWN_HOUR = 8;
+// Where each villager sleeps: most go to the largest inn, the other two to their cabins.
+export const VILLAGE_NPC_INDOORS = Object.freeze({
+  'village:mara':'lodging-ember-hotel',
+  'village:tomas':'lodging-ember-hotel',
+  'village:lia':'lodging-ember-hotel',
+  'village:bento':'lodging-ember-hotel',
+  'village:noa':'cabin-cedar-two',
+  'village:ivo':'cabin-cedar-three',
+});
+const GATHERING_RADIUS = 2.4;
+
+// Even ring around the fire: each villager gets his own seat, starting from the south.
+function gatheringSpot(index) {
+  const angle = Math.PI / 2 + index / VILLAGE_NPC_LIMIT * Math.PI * 2;
+  return { x: SPAWN_CAMPFIRE.x + Math.cos(angle) * GATHERING_RADIUS, y: SPAWN_CAMPFIRE.y + Math.sin(angle) * GATHERING_RADIUS };
+}
 
 export function villageActorsFor({ dimensionId='surface', location='clearing', now=Date.now(), theme='forest', bounds=null }={}) {
   if (location!=='clearing'||dimensionId!=='surface') return [];
-  const night=getGameDayState(now,{theme,dimensionId}).isNight;
-  const actors=DAY_ROSTER.map((npc,index)=>{
-    const seated=night&&index<VILLAGE_NPC_NIGHT_GATHERING;
-    const position=seated?{
-      x:SPAWN_CAMPFIRE.x+NIGHT_OFFSETS[index][0],
-      y:SPAWN_CAMPFIRE.y+NIGHT_OFFSETS[index][1],
-    }:{x:npc.x,y:npc.y};
-    return {
+  const { hours } = getGameDayState(now,{theme,dimensionId});
+  const gathering = hours>=VILLAGE_NPC_GATHER_START_HOUR && hours<VILLAGE_NPC_GATHER_END_HOUR;
+  const indoors = hours>=VILLAGE_NPC_GATHER_END_HOUR || hours<VILLAGE_NPC_DAWN_HOUR;
+  const actors=DAY_ROSTER.flatMap((npc,index)=>{
+    if (indoors && VILLAGE_NPC_INDOORS[npc.id]) return [];
+    const seated=gathering;
+    const position=seated?gatheringSpot(index):{x:npc.x,y:npc.y};
+    return [{
       id:npc.id,name:npc.name,roleId:npc.roleId,
       x:position.x,y:position.y,z:0,vx:0,vy:0,moving:false,running:0,crouching:0,
       sitting:seated,emote:seated?'sit':null,location:'clearing',dimensionId,
       facing:'south',npc:true,
-    };
+    }];
   });
   if(!bounds)return actors;
   return actors.filter(actor=>actor.x>=bounds.left&&actor.x<=bounds.right&&actor.y>=bounds.top&&actor.y<=bounds.bottom);

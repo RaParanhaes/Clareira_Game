@@ -38,12 +38,13 @@ test('sustain loops for three minutes, then decays through frame 14 to the extin
 });
 
 import { campfireLoopElapsedMs } from './campfire-loop.mjs';
+import { CAMPFIRE_LIFETIME_MS } from './campfire-life.mjs';
 
 test('elapsed time uses the server wall clock, not the browser performance clock', () => {
   const litAt = 1_700_000_000_000;               // relógio do servidor (Date.now)
   assert.equal(campfireLoopElapsedMs({ litAt }, litAt + 5000), 5000);
   // Quando o servidor manda o combustível restante, a fase segue esse valor.
-  assert.equal(campfireLoopElapsedMs({ burnRemainingMs: 60_000, burnSampledAt: litAt }, litAt), 180_000);
+  assert.equal(campfireLoopElapsedMs({ burnRemainingMs: 60_000, burnSampledAt: litAt }, litAt), CAMPFIRE_LIFETIME_MS - 60_000);
   // Com o relógio do navegador (performance.now, ~segundos desde a página), dava negativo: não pode mais.
   assert.ok(campfireLoopElapsedMs({ litAt }, litAt + 5000) > 0);
 });

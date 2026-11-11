@@ -47,7 +47,11 @@ export function campfireLoopSourceRect(index) {
 
 // Ciclo de vida da fogueira: acende, fica acesa 3 minutos e apaga devagar em 1 minuto.
 // O sprite segue o combustível (campfire-life): acende, fica no laço e apaga no último minuto.
-export const CAMPFIRE_LOOP_IGNITE_MS = 4 * 1000;
+export const CAMPFIRE_LOOP_IGNITE_MS = 12 * 1000;
+// Acender: janelas que sobem devagar das brasas até o fogo máximo (7-8-9), em índices da folha.
+export const CAMPFIRE_LOOP_IGNITE_WINDOWS = Object.freeze([
+  [0], [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7, 8],
+].map(w => Object.freeze(w)));
 export const CAMPFIRE_LOOP_DECAY_MS = 60 * 1000;
 export const CAMPFIRE_LOOP_SUSTAIN_MS = CAMPFIRE_LIFETIME_MS - CAMPFIRE_LOOP_DECAY_MS - CAMPFIRE_LOOP_IGNITE_MS;
 
@@ -56,9 +60,10 @@ export function campfireLoopPhaseFrame(elapsedMs, timeSeconds = 0, reducedMotion
   if (!Number.isFinite(elapsedMs)) return campfireLoopFrameIndex(timeSeconds, reducedMotion);
   if (elapsedMs < 0) return CAMPFIRE_LOOP_EMBER_FIRST;
   if (elapsedMs < CAMPFIRE_LOOP_IGNITE_MS) {
-    // Acende: brasas (quadros 1 e 2 do zip), depois o fogo sobe até o laço.
-    const u = elapsedMs / CAMPFIRE_LOOP_IGNITE_MS;
-    return Math.min(CAMPFIRE_LOOP_FLAME_LAST, Math.floor(u * (CAMPFIRE_LOOP_FLAME_FIRST + 1 + 1)));
+    // Acende: as janelas sobem devagar das brasas até o fogo máximo.
+    const per = CAMPFIRE_LOOP_IGNITE_MS / CAMPFIRE_LOOP_IGNITE_WINDOWS.length;
+    const w = Math.min(CAMPFIRE_LOOP_IGNITE_WINDOWS.length - 1, Math.floor(elapsedMs / per));
+    return frameInWindow(CAMPFIRE_LOOP_IGNITE_WINDOWS[w], elapsedMs - w * per);
   }
   const sustainEnd = CAMPFIRE_LOOP_IGNITE_MS + CAMPFIRE_LOOP_SUSTAIN_MS;
   if (elapsedMs < sustainEnd) return campfireLoopFrameIndex(timeSeconds, reducedMotion);

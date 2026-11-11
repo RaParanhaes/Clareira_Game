@@ -84,8 +84,8 @@ export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], tree
       if (h !== null) covered = true;
       if (h !== null && h > hitZ && h < Z0) { hitZ = h; hitKind = 'roof'; }
     }
-    // Sobre um telhado a chuva não aparece: o telhado cobre a gota (o escorrimento é desenhado à parte).
-    if (covered) continue;
+    // Sobre o telhado a gota cai normalmente e some ao tocar, sem bolinha de respingo.
+    void covered;
     for (const tree of trees) {
       const dx = x - tree.x, dy = y - tree.y;
       if (dx * dx + dy * dy < (tree.r || 0.6) * (tree.r || 0.6) * 0.81 && TREE_TOP > hitZ && TREE_TOP < Z0) {

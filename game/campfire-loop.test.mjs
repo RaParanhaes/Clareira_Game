@@ -19,11 +19,11 @@ test('every frame rect stays inside the sheet', () => {
   }
 });
 
-import { campfireLoopPhaseFrame, CAMPFIRE_LOOP_IGNITE_MS, CAMPFIRE_LOOP_SUSTAIN_MS, CAMPFIRE_LOOP_DECAY_MS } from './campfire-loop.mjs';
+import { CAMPFIRE_LOOP_OFF_FRAME, campfireLoopPhaseFrame, CAMPFIRE_LOOP_IGNITE_MS, CAMPFIRE_LOOP_SUSTAIN_MS, CAMPFIRE_LOOP_DECAY_MS } from './campfire-loop.mjs';
 
 test('ignition rises from embers to full flame', () => {
-  assert.equal(campfireLoopPhaseFrame(0), 0);
-  assert.ok(campfireLoopPhaseFrame(CAMPFIRE_LOOP_IGNITE_MS - 1) >= CAMPFIRE_LOOP_FRAME_COUNT - 2);
+  assert.equal(campfireLoopPhaseFrame(0), CAMPFIRE_LOOP_OFF_FRAME);
+  assert.ok(campfireLoopPhaseFrame(CAMPFIRE_LOOP_IGNITE_MS - 1) <= 10);
 });
 
 test('sustain loops for three minutes, then decays slowly over one minute', () => {
@@ -33,6 +33,6 @@ test('sustain loops for three minutes, then decays slowly over one minute', () =
   assert.ok(seen.size > 3, 'o fogo deve variar durante os 3 minutos');
   const decayStart = sustainStart + CAMPFIRE_LOOP_SUSTAIN_MS;
   const mid = campfireLoopPhaseFrame(decayStart + CAMPFIRE_LOOP_DECAY_MS / 2);
-  assert.ok(mid > 0 && mid < CAMPFIRE_LOOP_FRAME_COUNT - 1, 'no meio do apagar, o fogo está entre alto e brasa');
-  assert.equal(campfireLoopPhaseFrame(decayStart + CAMPFIRE_LOOP_DECAY_MS + 1000), 0);
+  assert.ok(mid > 0 && mid < CAMPFIRE_LOOP_OFF_FRAME, 'no meio do apagar, ainda há chama');
+  assert.equal(campfireLoopPhaseFrame(decayStart + CAMPFIRE_LOOP_DECAY_MS + 1000), CAMPFIRE_LOOP_OFF_FRAME);
 });

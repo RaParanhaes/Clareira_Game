@@ -29,11 +29,11 @@ test('sustain loops for three minutes, then decays through frame 14 to the extin
   const sustainStart = CAMPFIRE_LOOP_IGNITE_MS;
   const seen = new Set();
   for (let t = sustainStart; t < sustainStart + CAMPFIRE_LOOP_SUSTAIN_MS; t += 500) seen.add(campfireLoopPhaseFrame(t, t / 1000));
-  assert.ok(seen.size > 3);
+  assert.deepEqual([...seen].sort(), [6, 7, 8], 'o laço aceso usa só os quadros 7, 8 e 9');
   const decayStart = sustainStart + CAMPFIRE_LOOP_SUSTAIN_MS;
   const decaying = new Set();
   for (let t = decayStart; t < decayStart + CAMPFIRE_LOOP_DECAY_MS; t += 250) decaying.add(campfireLoopPhaseFrame(t));
-  assert.ok(decaying.has(CAMPFIRE_LOOP_OFF_FRAME - 1), 'passa pelo quadro 14');
+  assert.ok(decaying.has(13), 'passa pelo quadro 14');
   assert.equal(campfireLoopPhaseFrame(decayStart + CAMPFIRE_LOOP_DECAY_MS + 1000), CAMPFIRE_LOOP_OFF_FRAME);
 });
 

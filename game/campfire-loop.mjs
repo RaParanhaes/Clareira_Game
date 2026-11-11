@@ -4,10 +4,10 @@ import { CAMPFIRE_LIFETIME_MS, campfireRemainingMs } from './campfire-life.mjs';
 // então o laço é contínuo. Reduzir a resolução dos quadros deixa a animação mais leve.
 export const CAMPFIRE_LOOP_COLUMNS = 5;
 export const CAMPFIRE_LOOP_FRAME_COUNT = 15;
-// Índices na folha (quadro do zip - 1): 0-1 brasas, 2-12 fogo aceso, 13 apagando, 14 apagada.
+// Índices na folha (quadro do zip - 1): 0-1 brasas, 6-8 fogo alto, 14 apagada.
 export const CAMPFIRE_LOOP_EMBER_FIRST = 0;
-export const CAMPFIRE_LOOP_FLAME_FIRST = 2;
-export const CAMPFIRE_LOOP_FLAME_LAST = 12;
+export const CAMPFIRE_LOOP_FLAME_FIRST = 6;
+export const CAMPFIRE_LOOP_FLAME_LAST = 8;
 export const CAMPFIRE_LOOP_OFF_FRAME = 14;
 export const CAMPFIRE_LOOP_FRAME_WIDTH = 68;
 export const CAMPFIRE_LOOP_FRAME_HEIGHT = 72;
@@ -17,12 +17,24 @@ export const CAMPFIRE_LOOP_FRAME_DURATION_MS = 110;
 // Largura aparente na tela, igual à da fogueira anterior (40 px no zoom 1).
 export const CAMPFIRE_LOOP_DISPLAY_WIDTH = 40;
 
-// Laço do fogo aceso: só os quadros de chama, em ordem e voltando ao começo.
+// Janelas de quadros (índices da folha = número do quadro do zip - 1).
+// Fogo alto: quadros 7, 8 e 9 do zip (índices 6, 7, 8), em laço.
+export const CAMPFIRE_LOOP_SUSTAIN_WINDOW = Object.freeze([6, 7, 8]);
+// Apagar: a janela anda para frente e encolhe até a fogueira apagada (quadro 15).
+export const CAMPFIRE_LOOP_DECAY_WINDOWS = Object.freeze([
+  [6, 7, 8], [7, 8, 9], [8, 9], [9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14], [14],
+].map(w => Object.freeze(w)));
+
+// Quadro que toca dentro de uma janela, em um tempo (ms) dentro dela.
+function frameInWindow(windowFrames, msInto) {
+  const step = Math.floor(msInto / CAMPFIRE_LOOP_FRAME_DURATION_MS);
+  return windowFrames[((step % windowFrames.length) + windowFrames.length) % windowFrames.length];
+}
+
+// Fogo aceso em laço: quadros 7, 8 e 9.
 export function campfireLoopFrameIndex(timeSeconds, reducedMotion = false) {
-  const span = CAMPFIRE_LOOP_FLAME_LAST - CAMPFIRE_LOOP_FLAME_FIRST + 1;
-  if (reducedMotion || !Number.isFinite(timeSeconds)) return CAMPFIRE_LOOP_FLAME_FIRST;
-  const frame = Math.floor(timeSeconds * 1000 / CAMPFIRE_LOOP_FRAME_DURATION_MS);
-  return CAMPFIRE_LOOP_FLAME_FIRST + (((frame % span) + span) % span);
+  if (reducedMotion || !Number.isFinite(timeSeconds)) return CAMPFIRE_LOOP_SUSTAIN_WINDOW[0];
+  return frameInWindow(CAMPFIRE_LOOP_SUSTAIN_WINDOW, timeSeconds * 1000);
 }
 
 // Retângulo de origem na folha para um quadro.
@@ -52,10 +64,11 @@ export function campfireLoopPhaseFrame(elapsedMs, timeSeconds = 0, reducedMotion
   if (elapsedMs < sustainEnd) return campfireLoopFrameIndex(timeSeconds, reducedMotion);
   const decayEnd = sustainEnd + CAMPFIRE_LOOP_DECAY_MS;
   if (elapsedMs < decayEnd) {
-    // Apaga: do fogo alto, passa pelo quadro 14 e termina no quadro 15 (apagada).
+    // Apaga: as janelas andam do fogo alto até o quadro 15 (apagada).
     const u = (elapsedMs - sustainEnd) / CAMPFIRE_LOOP_DECAY_MS;
-    const steps = CAMPFIRE_LOOP_OFF_FRAME - CAMPFIRE_LOOP_FLAME_LAST;
-    return Math.min(CAMPFIRE_LOOP_OFF_FRAME, CAMPFIRE_LOOP_FLAME_LAST + Math.floor(u * (steps + 1)));
+    const w = Math.min(CAMPFIRE_LOOP_DECAY_WINDOWS.length - 1, Math.floor(u * CAMPFIRE_LOOP_DECAY_WINDOWS.length));
+    const windowStart = sustainEnd + w * CAMPFIRE_LOOP_DECAY_MS / CAMPFIRE_LOOP_DECAY_WINDOWS.length;
+    return frameInWindow(CAMPFIRE_LOOP_DECAY_WINDOWS[w], elapsedMs - windowStart);
   }
   return CAMPFIRE_LOOP_OFF_FRAME;
 }

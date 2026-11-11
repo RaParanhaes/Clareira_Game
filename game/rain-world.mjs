@@ -12,6 +12,8 @@ const SPAN = 22;       // lado do quadrado de gotas em volta da câmera (tiles)
 const SPLASH_SECONDS = 0.22; // tempo em que o respingo fica visível
 const RUNOFF_SECONDS = 1.1;  // tempo em que o filete escorre pelo telhado até a beirada
 const EAVE_DRIP_CHANCE = 0.8; // parte dos telhados que pinga da beirada
+const RIVULETS_PER_ROOF = 14; // pontos de escorrimento por telhado
+const RIVULET_SECONDS = 1.6;  // tempo para um córrego descer do ponto até a beirada
 const TREE_TOP = 3.2;  // altura padrão da copa, em unidades de altura da cena
 const DRIP_CHANCE = 0.3;
 
@@ -68,10 +70,6 @@ export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], tree
     const hitPhase = 1 - hitZ / Z0;
     const SPLASH = Math.min(0.5, SPLASH_SECONDS / period);
     const RUNOFF = Math.min(0.9, RUNOFF_SECONDS / period);
-    // O filete escorre pelo telhado durante todo o tempo RUNOFF, não só no respingo.
-    if (hitKind === 'roof' && phase >= hitPhase && phase < hitPhase + RUNOFF) {
-      runoffFrom(runoffs, hitRoof, x, y, hitZ, (phase - hitPhase) / RUNOFF);
-    }
     // A gota que acabou de cair no chão (início do ciclo) faz um respingo no ponto.
     if (hitKind === 'ground' && phase < SPLASH) {
       splashes.push({ x, y, z: 0, t: phase / SPLASH, kind: 'ground' });
@@ -80,6 +78,21 @@ export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], tree
       drops.push({ x, y, z, phase });
     } else if (phase < hitPhase + SPLASH && hitKind !== 'ground') {
       splashes.push({ x, y, z: hitZ, t: (phase - hitPhase) / SPLASH, kind: hitKind });
+    }
+  }
+  // Córregos: vários pontos do telhado soltam água que desce pelo caimento até a beirada,
+  // em ciclos próprios. Com muitos pontos por telhado, o escorrimento fica contínuo.
+  for (let k = 0; k < roofs.length; k++) {
+    const roof = roofs[k];
+    const cx0 = (roof.x1 + roof.x2) / 2, cy0 = (roof.y1 + roof.y2) / 2;
+    if (Math.abs(cx0 - center.x) > half + 6 || Math.abs(cy0 - center.y) > half + 6) continue;
+    for (let i = 0; i < RIVULETS_PER_ROOF; i++) {
+      const id = k * 64 + i;
+      const x = roof.x1 + (roof.x2 - roof.x1) * hash(id, 61);
+      const y = roof.y1 + (roof.y2 - roof.y1) * hash(id, 62);
+      const period = RIVULET_SECONDS * (0.8 + 0.4 * hash(id, 63));
+      const flow = wrap1(seconds / period + hash(id, 64));
+      runoffFrom(runoffs, roof, x, y, roof.base, flow, 1);
     }
   }
   // Pingadas da beirada: a água que escorreu do telhado pinga da borda, em ciclo próprio.
@@ -112,7 +125,7 @@ export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], tree
 }
 
 // Filete que escorre do ponto de impacto até a beirada mais próxima, no sentido do caimento.
-function runoffFrom(out, roof, x, y, z, progress) {
+function runoffFrom(out, roof, x, y, z, progress, fade = 0.5) {
   if (!roof || progress < 0 || progress > 1) return;
   const alongY = roof.axis !== 'x';
   let dx = 0, dy = 0, len;
@@ -120,7 +133,7 @@ function runoffFrom(out, roof, x, y, z, progress) {
   else { dy = y < (roof.y1 + roof.y2) / 2 ? -1 : 1; len = Math.abs(dy > 0 ? roof.y2 - y : y - roof.y1); }
   // O filete desce até a beirada real do telhado.
   const reach = len * progress;
-  out.push({ x0: x, y0: y, z, x1: x + dx * reach, y1: y + dy * reach, alpha: 1 - progress * 0.5 });
+  out.push({ x0: x, y0: y, z, x1: x + dx * reach, y1: y + dy * reach, alpha: 1 - progress * fade });
 }
 
 // Desenha a chuva do mundo sobre a cena. project(x, y, z) devolve o ponto na tela.

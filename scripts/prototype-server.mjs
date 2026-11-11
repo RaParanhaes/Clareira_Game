@@ -63,6 +63,7 @@ import {
 } from '../game/wildlife.mjs';
 import { huntWildlifeTarget } from '../game/wildlife-hunt.mjs';
 import { villageActorsFor } from '../game/village-npcs.mjs';
+import { restoreAmbientFires } from '../game/ambient-fires.mjs';
 import {
   CAMPFIRE_DECAY_REBUILD_COST, CAMPFIRE_FEED_COST, CAMPFIRE_FEED_WINDOW_MS,
   CAMPFIRE_IGNITION_RAMP_MS, CAMPFIRE_NEW_COST,
@@ -720,8 +721,10 @@ export function createPrototypeServer({
       arrival.y = arrivalAnchor.y;
       migratedArrival = true;
     }
+    // A saved list written before the spawn fire existed would hide it for good; put it back.
+    const restoredAmbient = saved != null && restoreAmbientFires(fires, initialCampfiresFor(dimensionId));
     firesByDimension.set(dimensionId, fires);
-    if (saved == null || migratedArrival) await saveCampfires(dimensionId);
+    if (saved == null || migratedArrival || restoredAmbient) await saveCampfires(dimensionId);
     return fires;
   };
   const firesFor = dimensionId => {

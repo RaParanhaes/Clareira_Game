@@ -57,3 +57,11 @@ export function campfireLoopPhaseFrame(elapsedMs, timeSeconds = 0, reducedMotion
   }
   return CAMPFIRE_LOOP_OFF_FRAME;
 }
+
+// Tempo desde que o fogo foi aceso, no relógio do servidor (litAt vem do servidor).
+// Fogueira permanente (chegada do jogador) não apaga: devolve NaN e fica no laço aceso.
+export function campfireLoopElapsedMs(fire, serverWallNowMs) {
+  if (fire?.permanent === true) return NaN;
+  if (!Number.isFinite(fire?.litAt) || !Number.isFinite(serverWallNowMs)) return NaN;
+  return serverWallNowMs - fire.litAt;
+}

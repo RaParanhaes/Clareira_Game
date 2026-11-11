@@ -103,6 +103,7 @@ import {
 import { sampleCampfireParticles } from './campfire-motion.mjs';
 import { CAMPFIRE_SEQUENCE_FRAME_HEIGHT, CAMPFIRE_SEQUENCE_FRAME_WIDTH, CAMPFIRE_SEQUENCE_SHEET_HEIGHT,
   CAMPFIRE_SEQUENCE_SHEET_WIDTH, campfireSequenceSprite } from './campfire-sequence.mjs';
+import { campfireLoopPhaseFrame, campfireLoopSourceRect, CAMPFIRE_LOOP_FRAME_WIDTH, CAMPFIRE_LOOP_FRAME_HEIGHT, CAMPFIRE_LOOP_SHEET_WIDTH, CAMPFIRE_LOOP_SHEET_HEIGHT, CAMPFIRE_LOOP_DISPLAY_WIDTH } from './campfire-loop.mjs';
 import { campfirePathOcclusion, worldToAudioPosition } from './campfire-acoustics.mjs';
 import {surfaceHeight,HEIGHT_PIXELS,ROOM_LEVEL} from './elevation.mjs';
 import { isDimensionPathTile, isDimensionSecretPathTile, isVillagePlazaTile } from './dimension-layout.mjs';
@@ -152,7 +153,8 @@ import { gameDateTimeLabel } from './game-calendar.mjs';
 import { dailyWeatherAt, moonAt, weatherLabel, windLevelAt, windLabel } from './game-weather.mjs';
 import { applySkyToDay, effectiveWeatherAt, skyTimestamp } from './world-overrides.mjs';
 import { createStaffSky } from './staff-sky-ui.mjs';
-import { drawWeatherSky } from './weather-renderer.mjs';
+import { drawWeatherSky, rainStyleFor } from './weather-renderer.mjs';
+import { rainFrame, rainDropCount, drawRainWorld } from './rain-world.mjs';
 import { showFramedNotice } from './framed-notice.mjs';
 
 const canvas = document.querySelector('#world');
@@ -1647,6 +1649,7 @@ function beginSceneLoading(text, { fade = false, genericTitle = false, showOverl
 }
 let campfireFlameImage = null;
 let campfireSequenceImage = null;
+let campfireLoopImage = null;
 let campfireAuraImage = null;
 let campfireSkyRaysImage = null;
 let campfireHearthBaseImage = null;
@@ -1670,6 +1673,7 @@ const contentAssets = createAssetLoader({load: async (asset,{signal}) => {
   finally { signal.removeEventListener('abort',abort); }
   if (asset.id === 'image.campfire-flame') campfireFlameImage = image;
   if (asset.id === 'image.campfire-sequence') campfireSequenceImage = image;
+  if (asset.id === 'image.campfire-loop') campfireLoopImage = image;
   if (asset.id === 'image.campfire-hearth-base') campfireHearthBaseImage = image;
   if (asset.id === 'image.campfire-hearth-flames') campfireHearthFlamesImage = image;
   if (asset.id === 'image.campfire-aura') campfireAuraImage = image;
@@ -4326,6 +4330,33 @@ function emote(name) {
   sendPlayerCommand({ type: 'emote', name });
 }
 
+// Chuva no mundo: gotas que batem em telhados e copas, escorrem e respingam no chão.
+// Usa só os telhados e as árvores perto da câmera, para não pesar.
+const WORLD_RAIN_HALF_SPAN = 11;
+function drawWorldRain(weather, reducedMotion) {
+  const intensity = weather.kind === 'storm' ? 1 : Math.max(0, Math.min(1, weather.intensity || 0));
+  const style = rainStyleFor(weather.kind, intensity);
+  const cx = camera.x, cy = camera.y, h = WORLD_RAIN_HALF_SPAN;
+  const roofs = [RECEPTION_BUILDING, ...VILLAGE_BUILDINGS].map(building => {
+    const b = building.bounds, e = building.roofEave ?? BUILDING_STANDARD.eave;
+    return { x1: b.left - e, x2: b.right + e, y1: b.top - e, y2: b.bottom + e,
+      axis: building.roofAxis || 'y', base: building.height, ridge: building.height + (building.roofRise || 0) };
+  }).filter(r => r.x2 > cx - h && r.x1 < cx + h && r.y2 > cy - h && r.y1 < cy + h);
+  const trees = getSolidTreesInBounds({ left: cx - h, right: cx + h, top: cy - h, bottom: cy + h })
+    .map(tree => ({ x: tree.x, y: tree.y, r: tree.r || 0.6 }));
+  const frame = rainFrame({
+    center: { x: cx, y: cy },
+    count: rainDropCount(intensity),
+    seconds: reducedMotion ? 0 : worldClock,
+    fall: 0.8 - 0.3 * intensity,
+    roofs,
+    trees,
+  });
+  drawRainWorld(ctx, frame, (x, y, z) => point(x, y, camera, z),
+    { width: style.width, color: style.color, len: 0.45 + 0.25 * intensity }, rainSlantFor(intensity));
+}
+function rainSlantFor(intensity) { return 0.08 + 0.12 * intensity; }
+
 function point(x, y, target = camera, height = surfaceHeight(x,y,worldLocation,currentRoomLayout())) {
   if (projectionOverride) {
     const {anchor,left,top} = projectionOverride;
@@ -6034,6 +6065,21 @@ function drawCampfireSmokePuffs(p,puffs,smokeStrength,sway=0,soot=false){
 
 // The 20-frame sequence: its frame already holds the stones, logs, flame and smoke, so it stands alone.
 // The sprite keeps the old footprint (40 units wide) and its bottom sits where the hearth's bottom did.
+// Fogueira em laço (15 quadros): desenha o quadro atual com a base na posição do fogo.
+function drawCampfireLoop(fire,p,time,flameStrength,companionCount,now){
+  // Tempo desde que o fogo foi aceso decide a fase: acender, laço de 3 minutos e apagar em 1 minuto.
+  const elapsed=Number.isFinite(fire.litAt)?now-fire.litAt:NaN;
+  const index=campfireLoopPhaseFrame(elapsed,time,reducedMotion);
+  const src=campfireLoopSourceRect(index);
+  const unit=CAMPFIRE_LOOP_DISPLAY_WIDTH/CAMPFIRE_LOOP_FRAME_WIDTH*spriteScale;
+  ctx.save();ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(campfireLoopImage,src.sx,src.sy,src.sw,src.sh,
+    Math.round(p.x-(CAMPFIRE_LOOP_FRAME_WIDTH/2)*unit),Math.round(p.y+4*spriteScale-CAMPFIRE_LOOP_FRAME_HEIGHT*unit),
+    Math.round(CAMPFIRE_LOOP_FRAME_WIDTH*unit),Math.round(CAMPFIRE_LOOP_FRAME_HEIGHT*unit));
+  ctx.restore();
+  if(flameStrength>.2)drawCampfireGatheringMark(p,time,companionCount);
+}
+
 function drawCampfireSequence(fire,p,now,time,flameStrength,companionCount){
   const rect=campfireSequenceSprite(`${fire.x},${fire.y}`,flameStrength,now,reducedMotion);
   const unit=40/CAMPFIRE_SEQUENCE_FRAME_WIDTH*spriteScale;
@@ -6070,6 +6116,11 @@ function drawFire(fire,time,companionCount=0) {
     groundGlow.addColorStop(0,'rgba(255,210,120,.26)');groundGlow.addColorStop(.2,'rgba(255,160,65,.16)');
     groundGlow.addColorStop(.48,'rgba(240,110,40,.07)');groundGlow.addColorStop(.75,'rgba(205,75,25,.02)');groundGlow.addColorStop(1,'rgba(190,50,20,0)');
     ctx.fillStyle=groundGlow;ctx.fillRect(-lightRadius,-lightRadius,lightRadius*2,lightRadius*2);ctx.restore();
+  }
+  if(campfireLoopImage?.naturalWidth===CAMPFIRE_LOOP_SHEET_WIDTH
+    &&campfireLoopImage.naturalHeight===CAMPFIRE_LOOP_SHEET_HEIGHT){
+    drawCampfireLoop(fire,p,time,flameStrength,companionCount,fireSampleNow);
+    return;
   }
   if(campfireSequenceImage?.naturalWidth===CAMPFIRE_SEQUENCE_SHEET_WIDTH
     &&campfireSequenceImage.naturalHeight===CAMPFIRE_SEQUENCE_SHEET_HEIGHT){
@@ -7306,14 +7357,18 @@ function drawDaylightAtmosphere() {
   drawDaylightAtmosphere();
   if (worldLocation === 'clearing' && worldDimensionId === 'surface') {
     const skyTime = gameDayTimestampMs();
+    const weatherNow = effectiveWeatherAt(skyTime, currentSky());
+    const worldRain = weatherNow?.kind === 'rain' || weatherNow?.kind === 'storm';
     drawWeatherSky(ctx, viewWidth, viewHeight, {
-      weather: effectiveWeatherAt(skyTime, currentSky()),
+      weather: weatherNow,
       moon: gameDay.night > .5 ? moonAt(skyTime) : null,
       night: gameDay.night,
       seconds: worldClock,
       reducedMotion,
       wind: windLevelAt(skyTime),
+      skipRain: worldRain,
     });
+    if (worldRain) drawWorldRain(weatherNow, reducedMotion);
   }
   teleportEffects.drawOver(ctx,worldDimensionId,clientServerTime(),(x,y)=>point(x,y,camera,0),spriteScale);
   drawWaterReflections();

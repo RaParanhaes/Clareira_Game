@@ -41,6 +41,11 @@ export function precipitationCount(kind, intensity, width, height) {
   return 0;
 }
 
+// Colour, stroke width and wind slant of a rain strength, for the rain drawn in the world.
+export function rainStyleFor(kind, intensity) {
+  return RAIN_STYLE[rainStrengthFor(kind, intensity)];
+}
+
 // The wind leans rain: a calm day falls almost straight, a storm slants hard.
 function rainSlant(wind) {
   return Math.max(0.05, Math.min(0.9, 0.1 + 0.16 * (wind - 1)));
@@ -132,7 +137,8 @@ export function drawWeatherSky(ctx, width, height, options) {
     ctx.fillRect(0, 0, width, height);
   }
   const count = precipitationCount(kind, intensity, width, height);
-  if (kind === 'rain' || kind === 'storm') {
+  // A chuva do mundo (rain-world.mjs) pode substituir a chuva de tela.
+  if ((kind === 'rain' || kind === 'storm') && !options.skipRain) {
     drawRain(ctx, width, height, count, time, rainStrengthFor(kind, intensity), wind);
   }
   if (kind === 'snowing') drawSnow(ctx, width, height, count, time, wind);

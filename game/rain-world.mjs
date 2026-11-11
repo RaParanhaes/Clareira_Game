@@ -158,9 +158,12 @@ export function drawRainWorld(ctx, frame, project, style, slant = 0.1) {
       ctx.fill();
     }
   }
+  // Filetes do telhado: mais grossos e claros, para aparecer sobre a madeira escura.
+  ctx.lineWidth = style.width * 2;
+  ctx.strokeStyle = 'rgba(214,232,248,0.9)';
   for (const r of runoffs) {
     const a = project(r.x0, r.y0, r.z), b = project(r.x1, r.y1, r.z);
-    ctx.globalAlpha = r.alpha * 0.8;
+    ctx.globalAlpha = r.alpha;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);

@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Clareira · Notícias</title>
+<style>
+:root{--ink:#3a2a18;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#081525}
+body{overflow:hidden;font-family:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;color:#f3e7cf}
+.art{position:fixed;inset:0;overflow:hidden;background:#081525}
+/* Palco 3:2: todas as medidas em % do palco */
+.stack{position:absolute;left:50%;top:50%;width:max(100vw,150vh);aspect-ratio:3/2;transform:translate(-50%,-50%);
+  animation:camera 3.4s cubic-bezier(.22,.8,.2,1) both,stackIn 2.2s ease-out both;transform-origin:50% 50%}
+@keyframes stackIn{from{opacity:0;filter:blur(6px)}to{opacity:1;filter:none}}
+@keyframes camera{0%{transform:translate(-50%,-50%) scale(2.2)}70%{transform:translate(-50%,-50%) scale(1.02)}100%{transform:translate(-50%,-50%) scale(1)}}
+.layer{position:absolute;display:block;pointer-events:none;user-select:none}
+.bg{left:0;top:0;width:100%;height:100%;z-index:0}
+.mist{left:0;bottom:6%;width:100%;height:30%;opacity:.3;mix-blend-mode:screen;z-index:1;animation:mist 24s ease-in-out infinite alternate}
+@keyframes mist{from{transform:translateX(-3%)}to{transform:translateX(3%)}}
+.flies{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
+.flies-front{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}
+.fx{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;will-change:transform}
+.dot{position:absolute;left:0;top:0;width:2.6%;aspect-ratio:1/1;border-radius:50%;opacity:0;will-change:transform,opacity;
+  background:radial-gradient(circle,rgba(246,255,200,.78) 0,rgba(243,255,176,.5) 22%,rgba(243,255,176,0) 50%)}
+.dot.solid{background:radial-gradient(circle,#fffde6 0,#f4ffc0 34%,rgba(244,255,192,0) 48%)}
+.dot.soft{background:radial-gradient(circle,rgba(255,240,190,.6) 0,rgba(243,255,176,.28) 30%,rgba(243,255,176,0) 56%)}
+.star{position:absolute;z-index:1;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;border-radius:50%;pointer-events:none;background:#fff;box-shadow:0 0 2px 1px rgba(255,255,255,.55)}
+.st-pulse{animation:twinkle 3.2s ease-in-out infinite;animation-delay:var(--d,0s)}
+.st-appear{animation:appear 11s linear infinite;animation-delay:var(--d,0s);opacity:0}
+.st-color{animation:tint 14s linear infinite;animation-delay:var(--d,0s)}
+.st-color.st-pulse{animation:twinkle 3.2s ease-in-out infinite,tint 14s linear infinite}
+@keyframes twinkle{0%,100%{opacity:.5;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
+@keyframes appear{0%,62%{opacity:0}64%{opacity:1}74%{opacity:.15}78%{opacity:1}86%,100%{opacity:0}}
+@keyframes tint{0%{filter:hue-rotate(0deg) saturate(2.2)}33%{filter:hue-rotate(120deg) saturate(2.2)}66%{filter:hue-rotate(240deg) saturate(2.2)}100%{filter:hue-rotate(360deg) saturate(2.2)}}
+.ui{position:absolute;left:15%;top:16.4%;width:70%;height:70%;z-index:5}
+.ui .pergaminho{left:20.2%;top:21.3%;width:59.5%;height:63.4%;object-fit:fill;z-index:1}
+.ui .moldura{left:0;top:0;width:100%;height:100%;z-index:2}
+.glow{position:absolute;width:17%;aspect-ratio:1/1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,226,150,.85) 0,rgba(255,176,80,.36) 32%,rgba(255,150,60,.12) 55%,transparent 72%);animation:lamp 9s ease-in-out infinite;z-index:5;pointer-events:none}
+@keyframes lamp{0%,100%{opacity:.86;transform:translate(-50%,-50%) scale(1.12)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.36)}58%{opacity:.9;transform:translate(-50%,-50%) scale(1.18)}80%{opacity:.97;transform:translate(-50%,-50%) scale(1.3)}}
+
+/* ===== área do aviso: grade de até 3 linhas x 3 colunas ===== */
+/* área segura: dentro das quatro molduras de canto do papiro, com margem (medida na captura: x 33–67%, y 37–69%) */
+.text{position:absolute;left:34%;top:38%;width:32%;height:30%;display:flex;flex-direction:column;align-items:stretch;justify-content:center;z-index:8}
+.pg{width:100%;height:100%;display:flex;flex-direction:column;animation:pgIn .5s ease both}
+@keyframes pgIn{from{opacity:0;transform:translateX(16px);filter:blur(3px)}to{opacity:1;transform:none;filter:none}}
+.eyebrow{margin:0 0 4px;font-size:clamp(9px,.8vw,11px);letter-spacing:.22em;text-transform:uppercase;color:#6f4a22;font-weight:700;text-align:center}
+.grid{flex:1;min-height:0;width:100%;display:grid;gap:6px 10px}
+.cel{min-width:0;min-height:0;display:flex;flex-direction:column;justify-content:center}
+.cel.v-top{justify-content:flex-start}
+.cel.v-bottom{justify-content:flex-end}
+.cel.a-left{text-align:left;align-items:flex-start}
+.cel.a-center{text-align:center;align-items:center}
+.cel.a-right{text-align:right;align-items:flex-end}
+.cel.a-justify{text-align:justify;text-justify:inter-word;align-items:stretch}
+.cel h2{margin:0 0 3px;font-family:Georgia,'Palatino Linotype',serif;font-size:clamp(12px,1.35vw,18px);line-height:1.15;color:#4a2a10}
+.cel p{margin:0;font-size:clamp(9.5px,.85vw,12px);line-height:1.45;color:#3f2c17}
+.cel img{display:block;max-width:100%;max-height:100%;object-fit:contain;border-radius:3px;box-shadow:0 2px 6px #0004}
+.cel .lbl{display:inline-block;padding:4px 12px;border-radius:999px;background:#5a3a1a;color:#f7e6bd;font-size:clamp(9.5px,.85vw,12px);font-weight:700;letter-spacing:.03em;text-decoration:none;box-shadow:0 2px 4px #0005}
+.cel .lbl:hover{background:#7a4f24}
+.cel .htm{width:100%}
+/* setas e pontinhos */
+.nav{position:absolute;top:52%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:2px solid #7a4f24;background:radial-gradient(circle at 35% 30%,#fbeccb,#e4c489);color:#4a2a10;font-size:22px;line-height:1;cursor:pointer;display:grid;place-items:center;box-shadow:0 2px 8px #0008;z-index:9;padding:0}
+.nav:hover{filter:brightness(1.06)}
+/* as setas ficam nas laterais do papiro (medidas em relação à área do texto) */
+.nav.prev{left:-17%}
+.nav.next{right:-12%}
+.dots{position:absolute;bottom:-5%;left:0;right:0;display:flex;justify-content:center;gap:8px;z-index:9}
+.dots i{width:7px;height:7px;border-radius:50%;background:#7a5a30;opacity:.45;display:block}
+.dots i.on{opacity:1;background:#4a2a10}
+/* celular (retrato): cartão de pergaminho com os blocos em uma coluna */
+.card{display:none}
+@media (orientation:portrait){
+  .ui,.text,.glow,.flies,.flies-front,.star{display:none}
+  .card{display:flex;flex-direction:column;align-items:center;justify-content:center;position:fixed;left:0;right:0;top:0;bottom:0;margin:auto;height:auto;
+    width:min(94vw,440px);aspect-ratio:1348/946;padding:21% 19% 19%;
+    background:url(assets/paper.png) center/100% 100% no-repeat;filter:drop-shadow(0 14px 24px #000a)}
+  .card .pg{height:auto}
+  .card .grid{grid-template-columns:1fr !important;grid-template-rows:none !important;gap:8px}
+  .card .cel{grid-row:auto !important;grid-column:auto !important}
+  .card .cel h2{font-size:clamp(14px,4.4vw,18px)}
+  .card .cel p{font-size:clamp(10.5px,3vw,12px)}
+  .card .nav{top:auto;bottom:4%;transform:none;width:30px;height:30px;font-size:18px}
+  .card .nav.prev{left:8%}
+  .card .nav.next{right:8%}
+  .card .dots{bottom:auto;top:5%}
+}
+.veil{position:fixed;inset:0;z-index:30;background:radial-gradient(ellipse at 50% 45%,#0e1e33,#050a14);animation:veilOut 2.2s cubic-bezier(.4,0,.2,1) .1s forwards;pointer-events:none}
+@keyframes veilOut{to{opacity:0;visibility:hidden}}
+</style>
+</head>
+<body>
+<div class="veil" aria-hidden="true"></div>
+<div class="art">
+  <div class="stack" id="stack">
+    <img class="layer bg" src="assets/scene-clean.webp" alt="">
+    <img class="layer mist" src="assets/mist.png" alt="">
+    <span class="star st-pulse" style="left:72%;top:1.2%;--d:-1s"></span>
+    <span class="star st-appear" style="left:79%;top:1.6%;--d:-3s"></span>
+    <span class="star st-color" style="left:83.5%;top:6%;--d:-6s"></span>
+    <span class="star st-pulse st-color" style="left:62.5%;top:5.2%;--d:-2s"></span>
+    <span class="star st-appear st-color" style="left:70%;top:17%;--d:-8s"></span>
+    <span class="star st-pulse" style="left:78%;top:16.5%;--d:-4s"></span>
+    <div class="layer flies" id="flies"></div>
+    <div class="flies-front" id="flies-front"></div>
+    <div class="ui">
+      <img class="layer moldura" src="assets/frame.png" alt="">
+      <img class="layer pergaminho" src="assets/paper.png" alt="">
+      <span class="glow" id="glowL" style="left:12.3%;top:38%;animation-delay:-.7s"></span>
+      <span class="glow" id="glowR" style="left:88%;top:38%"></span>
+    </div>
+    <section class="text" id="textDesk" aria-label="Avisos"></section>
+  </div>
+</div>
+<section class="card" id="textCard" aria-label="Avisos"></section>
+
+<script>
+/* =========================================================
+   CONTEÚDO DO AVISO — o staff edita só este trecho.
+   tag: texto pequeno no topo.
+   Cada página tem:
+     rows, cols  -> grade de 1 a 2 linhas e de 1 a 2 colunas (máximo 2 x 2; 3 ficou apertado)
+     cells       -> cada bloco:
+        r, c         linha e coluna (1 a 2), começando do canto de cima à esquerda
+        rs, cs       quantas linhas e colunas o bloco ocupa (opcional, padrão 1)
+        align        "left" | "center" | "right" | "justify"
+        valign       "top" | "middle" | "bottom" (opcional, padrão "middle")
+        type         "text" | "img" | "link" | "html"
+          text: title, html (texto com formatação livre)
+          img:  src, alt
+          link: label, url
+          html: html (bloco livre)
+   ========================================================= */
+var AVISO = {
+  tag: "Clareira · Notícias",
+  pages: [
+    { rows: 2, cols: 2, cells: [
+      { r: 1, c: 1, align: "left",   valign: "top",    type: "text", title: "Nova trilha no bosque", html: "<p>Uma trilha nova cruza o bosque e leva até a clareira do lago.</p>" },
+      { r: 1, c: 2, align: "center", valign: "middle", type: "img",  src: "", alt: "Imagem da trilha" },
+      { r: 2, c: 1, cs: 2, align: "center", valign: "middle", type: "link", label: "Ver o mapa", url: "#" }
+    ] },
+    { rows: 2, cols: 2, cells: [
+      { r: 1, c: 1, align: "left",    valign: "top",    type: "text", title: "Temporada", html: "<p>Começa em breve.</p>" },
+      { r: 1, c: 2, align: "right",   valign: "top",    type: "text", title: "Novidades", html: "<p>Mais áreas e mais brasas.</p>" },
+      { r: 2, c: 1, align: "justify", type: "html", html: "<p><b>Destaque</b><br>Este texto está justificado para ocupar a largura do bloco de forma uniforme.</p>" },
+      { r: 2, c: 2, align: "center", valign: "bottom", type: "link", label: "Acompanhar", url: "#" }
+    ] },
+    { rows: 1, cols: 1, cells: [
+      { r: 1, c: 1, align: "center", type: "text", title: "Lançamento da temporada", html: "<p>A temporada começa em breve. Prepare o seu personagem e acompanhe as novidades no painel.</p>" }
+    ] }
+  ]
+};
+
+(function () {
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var idx = 0;
+  var desk = document.getElementById("textDesk"), card = document.getElementById("textCard");
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function cellHtml(b) {
+    var pos = 'grid-row:' + b.r + (b.rs ? ' / span ' + b.rs : '') + ';grid-column:' + b.c + (b.cs ? ' / span ' + b.cs : '') + ';';
+    var al = { left: 'a-left', center: 'a-center', right: 'a-right', justify: 'a-justify' }[b.align] || 'a-center';
+    var va = { top: 'v-top', bottom: 'v-bottom', middle: '' }[b.valign] || '';
+    var inner = '';
+    if (b.type === "text") inner = (b.title ? '<h2>' + esc(b.title) + '</h2>' : '') + (b.html || '');
+    else if (b.type === "img") inner = b.src ? '<img src="' + esc(b.src) + '" alt="' + esc(b.alt) + '">' : '';
+    else if (b.type === "link") inner = '<a class="lbl" href="' + esc(b.url) + '">' + esc(b.label) + '</a>';
+    else if (b.type === "html") inner = '<div class="htm">' + (b.html || '') + '</div>';
+    return '<div class="cel ' + al + ' ' + va + '" style="' + pos + '">' + inner + '</div>';
+  }
+  function pageHtml(p) {
+    var rows = Math.min(2, p.rows || 1), cols = Math.min(2, p.cols || 1); // limite: no máximo 2 linhas e 2 colunas
+    var tpl = 'grid-template-rows:repeat(' + rows + ',minmax(0,1fr));grid-template-columns:repeat(' + cols + ',minmax(0,1fr));';
+    return '<div class="pg">' +
+      (AVISO.tag ? '<p class="eyebrow">' + esc(AVISO.tag) + '</p>' : '') +
+      '<div class="grid" style="' + tpl + '">' + p.cells.map(cellHtml).join('') + '</div></div>';
+  }
+  function navHtml() {
+    var dots = ''; for (var i = 0; i < AVISO.pages.length; i++) dots += '<i class="' + (i === idx ? 'on' : '') + '"></i>';
+    return '<button class="nav prev" aria-label="Página anterior">&#8249;</button>' +
+           '<button class="nav next" aria-label="Próxima página">&#8250;</button>' +
+           '<div class="dots">' + dots + '</div>';
+  }
+  function render() {
+    var html = pageHtml(AVISO.pages[idx]) + navHtml();
+    desk.innerHTML = html; card.innerHTML = html;
+    [desk, card].forEach(function (box) {
+      box.querySelector(".prev").onclick = function () { go(-1); };
+      box.querySelector(".next").onclick = function () { go(1); };
+    });
+  }
+  function go(d) { var n = AVISO.pages.length; idx = (idx + d + n) % n; render(); }
+  render();
+  document.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft") go(-1); if (e.key === "ArrowRight") go(1); });
+
+  // vagalumes e luz (mesmo cenário do aviso de manutenção)
+  var fliesBack = document.getElementById("flies"), fliesFront = document.getElementById("flies-front");
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+  if (!reduce && Element.prototype.animate) {
+    function loop(box, n, a, f, sp) {
+      var P = [], j, x = rnd(box.x0, box.x1), y = rnd(box.y0, box.y1);
+      P.push({ x: x, y: y, front: false, a: a, dt: 0.5 });
+      for (j = 0; j < n; j++) { x = clamp(x + rnd(-1.4, 1.4) * f * sp, box.x0, box.x1); y = clamp(y + rnd(-0.9, 0.9) * f * sp, box.y0, box.y1); P.push({ x: x, y: y, front: false, a: a, dt: 0.5 }); }
+      var st = P[0], lp = P[P.length - 1], dx = st.x - lp.x, dy = st.y - lp.y, m = Math.max(2, Math.round(Math.sqrt(dx * dx + dy * dy) / (f * sp * 0.5)));
+      for (j = 1; j <= m; j++) { var t = j / m; P.push({ x: lp.x + dx * t, y: lp.y + dy * t, front: false, a: a, dt: 0.5 }); }
+      return P;
+    }
+    function fly(P, sm, am, solid, soft) {
+      var T = 0, tm = [], j;
+      for (j = 0; j < P.length; j++) { tm.push(T); T += P[j].dt; }
+      var wb = document.createElement("div"); wb.className = "fx"; var db = document.createElement("span"); db.className = "dot";
+      if (solid) db.classList.add("solid");
+      if (soft) db.classList.add("soft");
+      wb.appendChild(db); fliesBack.appendChild(wb);
+      var t0 = performance.now() - rnd(0, T) * 1000, k = 0;
+      (function frame(now) {
+        var tt = ((now - t0) / 1000) % T; if (tt < 0) tt += T;
+        if (tt < tm[k]) k = 0;
+        while (k < P.length - 1 && tm[k + 1] <= tt) k++;
+        var p1 = P[k], k1 = Math.min(k + 1, P.length - 1), p2 = P[k1];
+        var seg = tm[k1] - tm[k], u = seg > 0 ? clamp((tt - tm[k]) / seg, 0, 1) : 0;
+        var x = p1.x + (p2.x - p1.x) * u, y = p1.y + (p2.y - p1.y) * u;
+        var base = 0.6 + (clamp(y, 14, 92) - 14) / 78 * 0.9, s = base * sm;
+        wb.style.transform = "translate(" + x.toFixed(2) + "%," + y.toFixed(2) + "%)";
+        db.style.transform = "translate(-50%,-50%) scale(" + s.toFixed(3) + ")";
+        db.style.opacity = (p1.a * 0.6 * am).toFixed(3);
+        requestAnimationFrame(frame);
+      })(performance.now());
+    }
+    var i;
+    for (i = 0; i < 8; i++) fly(loop({ x0: 6, x1: 94, y0: 58, y1: 80 }, 40, 0.9, rnd(0.6, 1.0), 0.8), 0.9, 0.9, false, false);
+    for (i = 0; i < 6; i++) fly(loop({ x0: 52, x1: 96, y0: 33, y1: 40 }, 40, 0.9, rnd(0.6, 1.0), 0.5), 0.4, 0.7, true, false);
+  }
+})();
+</script>
+</body>
+</html>

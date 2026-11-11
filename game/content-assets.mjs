@@ -4,6 +4,7 @@ export const ASSETS = Object.freeze([
   {id:'image.soil-texture',scene:'clearing',url:'art/terrain/forest-soil-2026-v1.png',version:1,critical:true,maxBytes:40000},
   {id:'image.soil-fade',scene:'clearing',url:'art/terrain/forest-soil-fade-2026-v1.png',version:1,critical:true,maxBytes:50000},
   {id:'image.campfire-flame',scene:'clearing',url:'art/fire/campfire-flame-frames.png',version:6,critical:false,maxBytes:10000},
+  {id:'image.campfire-sequence',scene:'clearing',url:'art/fire/campfire-sequence-frames.png',version:1,critical:false,maxBytes:80000},
   {id:'image.campfire-hearth-base',scene:'clearing',url:'art/fire/campfire-hearth-base.png',version:1,critical:false,maxBytes:5000},
   {id:'image.campfire-hearth-flames',scene:'clearing',url:'art/fire/campfire-hearth-flame-frames.png',version:1,critical:false,maxBytes:10000},
   {id:'image.campfire-aura',scene:'clearing',url:'art/fire/campfire-aura-frames.png',version:1,critical:false,maxBytes:16000},

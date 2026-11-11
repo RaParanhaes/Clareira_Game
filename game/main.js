@@ -97,6 +97,8 @@ import {
   campfireFuelRatio, campfireSmokeState,
 } from './campfire-life.mjs';
 import { sampleCampfireParticles } from './campfire-motion.mjs';
+import { CAMPFIRE_SEQUENCE_FRAME_HEIGHT, CAMPFIRE_SEQUENCE_FRAME_WIDTH, CAMPFIRE_SEQUENCE_SHEET_HEIGHT,
+  CAMPFIRE_SEQUENCE_SHEET_WIDTH, campfireSequenceSprite } from './campfire-sequence.mjs';
 import { campfirePathOcclusion, worldToAudioPosition } from './campfire-acoustics.mjs';
 import {surfaceHeight,HEIGHT_PIXELS,ROOM_LEVEL} from './elevation.mjs';
 import { isDimensionPathTile, isDimensionSecretPathTile, isVillagePlazaTile } from './dimension-layout.mjs';
@@ -1639,6 +1641,7 @@ function beginSceneLoading(text, { fade = false, genericTitle = false, showOverl
   ui.shell.inert = true; ui.shell.setAttribute('aria-busy','true');
 }
 let campfireFlameImage = null;
+let campfireSequenceImage = null;
 let campfireAuraImage = null;
 let campfireSkyRaysImage = null;
 let campfireHearthBaseImage = null;
@@ -1661,6 +1664,7 @@ const contentAssets = createAssetLoader({load: async (asset,{signal}) => {
   try { await image.decode();signal.throwIfAborted(); }
   finally { signal.removeEventListener('abort',abort); }
   if (asset.id === 'image.campfire-flame') campfireFlameImage = image;
+  if (asset.id === 'image.campfire-sequence') campfireSequenceImage = image;
   if (asset.id === 'image.campfire-hearth-base') campfireHearthBaseImage = image;
   if (asset.id === 'image.campfire-hearth-flames') campfireHearthFlamesImage = image;
   if (asset.id === 'image.campfire-aura') campfireAuraImage = image;
@@ -6009,6 +6013,19 @@ function drawCampfireSmokePuffs(p,puffs,smokeStrength,sway=0,soot=false){
   ctx.globalAlpha=1;
 }
 
+// The 20-frame sequence: its frame already holds the stones, logs, flame and smoke, so it stands alone.
+// The sprite keeps the old footprint (40 units wide) and its bottom sits where the hearth's bottom did.
+function drawCampfireSequence(fire,p,now,time,flameStrength,companionCount){
+  const rect=campfireSequenceSprite(`${fire.x},${fire.y}`,flameStrength,now,reducedMotion);
+  const unit=40/CAMPFIRE_SEQUENCE_FRAME_WIDTH*spriteScale;
+  ctx.save();ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(campfireSequenceImage,rect.sx,rect.sy,rect.sw,rect.sh,
+    Math.round(p.x-32*unit),Math.round(p.y+4*spriteScale-CAMPFIRE_SEQUENCE_FRAME_HEIGHT*unit),
+    Math.round(CAMPFIRE_SEQUENCE_FRAME_WIDTH*unit),Math.round(CAMPFIRE_SEQUENCE_FRAME_HEIGHT*unit));
+  ctx.restore();
+  if(flameStrength>.2)drawCampfireGatheringMark(p,time,companionCount);
+}
+
 function drawFire(fire,time,companionCount=0) {
   if(worldDimensionId==='breu'){drawArrivalHearth(fire,time);return;}
   const arrivalHearth=worldDimensionId.startsWith('arrival-');
@@ -6034,6 +6051,11 @@ function drawFire(fire,time,companionCount=0) {
     groundGlow.addColorStop(0,'rgba(255,210,120,.26)');groundGlow.addColorStop(.2,'rgba(255,160,65,.16)');
     groundGlow.addColorStop(.48,'rgba(240,110,40,.07)');groundGlow.addColorStop(.75,'rgba(205,75,25,.02)');groundGlow.addColorStop(1,'rgba(190,50,20,0)');
     ctx.fillStyle=groundGlow;ctx.fillRect(-lightRadius,-lightRadius,lightRadius*2,lightRadius*2);ctx.restore();
+  }
+  if(campfireSequenceImage?.naturalWidth===CAMPFIRE_SEQUENCE_SHEET_WIDTH
+    &&campfireSequenceImage.naturalHeight===CAMPFIRE_SEQUENCE_SHEET_HEIGHT){
+    drawCampfireSequence(fire,p,fireSampleNow,time,flameStrength,companionCount);
+    return;
   }
   if(campfireHearthBaseImage?.naturalWidth===CAMPFIRE_HEARTH_FRAME_WIDTH
     &&campfireHearthBaseImage.naturalHeight===CAMPFIRE_HEARTH_FRAME_HEIGHT){

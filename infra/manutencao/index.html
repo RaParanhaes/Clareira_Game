@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Clareira em manutenção</title>
+<style>
+:root{--ink:#3a2a18;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#081525}
+body{overflow:hidden;font-family:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;color:#f3e7cf}
+.art{position:fixed;inset:0;overflow:hidden;background:#081525}
+/* Palco 3:2: todas as medidas em % do palco (ver layout-spec.json) */
+.stack{position:absolute;left:50%;top:50%;width:max(100vw,150vh);aspect-ratio:3/2;transform:translate(-50%,-50%);
+  animation:camera 3.4s cubic-bezier(.22,.8,.2,1) both,stackIn 2.2s ease-out both;transform-origin:50% 50%}
+@keyframes stackIn{from{opacity:0;filter:blur(6px)}to{opacity:1;filter:none}}
+@keyframes camera{0%{transform:translate(-50%,-50%) scale(2.2)}70%{transform:translate(-50%,-50%) scale(1.02)}100%{transform:translate(-50%,-50%) scale(1)}}
+.layer{position:absolute;display:block;pointer-events:none;user-select:none}
+.bg{left:0;top:0;width:100%;height:100%;z-index:0}
+.mist{left:0;bottom:6%;width:100%;height:30%;opacity:.3;mix-blend-mode:screen;z-index:1;animation:mist 24s ease-in-out infinite alternate}
+@keyframes mist{from{transform:translateX(-3%)}to{transform:translateX(3%)}}
+/* vagalumes: quadros do tamanho do palco, movidos por script (transform e opacidade) */
+.flies{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
+.flies-front{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}
+.fx{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;will-change:transform}
+.dot{position:absolute;left:0;top:0;width:2.6%;aspect-ratio:1/1;border-radius:50%;opacity:0;will-change:transform,opacity;
+  background:radial-gradient(circle,rgba(246,255,200,.78) 0,rgba(243,255,176,.5) 22%,rgba(243,255,176,0) 50%)}
+/* vagalume compacto: núcleo sólido e bordas curtas (sem dispersão) */
+.dot.solid{background:radial-gradient(circle,#fffde6 0,#f4ffc0 34%,rgba(244,255,192,0) 48%)}
+/* brilho suave, um pouco dissolvido, para os vagalumes distantes */
+.dot.soft{background:radial-gradient(circle,rgba(255,240,190,.6) 0,rgba(243,255,176,.28) 30%,rgba(243,255,176,0) 56%)}
+/* logo do medalhão redondo no topo da moldura (centro do medalhão em 50% x 25,3%) */
+.medal{position:absolute;left:50%;top:25.3%;width:6.6%;height:auto;transform:translate(-50%,-50%);z-index:9;pointer-events:none;filter:drop-shadow(0 2px 2px #0008)}
+/* estrelas no céu: pulsam, aparecem de repente ou trocam de cor (vermelho, azul, amarelo) */
+.star{position:absolute;z-index:1;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;border-radius:50%;pointer-events:none;
+  background:#fff;box-shadow:0 0 2px 1px rgba(255,255,255,.55)}
+.st-pulse{animation:twinkle 3.2s ease-in-out infinite;animation-delay:var(--d,0s)}
+.st-appear{animation:appear 11s linear infinite;animation-delay:var(--d,0s);opacity:0}
+.st-color{animation:tint 14s linear infinite;animation-delay:var(--d,0s)}
+.st-color.st-pulse{animation:twinkle 3.2s ease-in-out infinite,tint 14s linear infinite}
+@keyframes twinkle{0%,100%{opacity:.5;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
+@keyframes appear{0%,62%{opacity:0}64%{opacity:1}74%{opacity:.15}78%{opacity:1}86%,100%{opacity:0}}
+@keyframes tint{0%{filter:hue-rotate(0deg) saturate(2.2)}33%{filter:hue-rotate(120deg) saturate(2.2)}66%{filter:hue-rotate(240deg) saturate(2.2)}100%{filter:hue-rotate(360deg) saturate(2.2)}}
+.logo{display:block;width:clamp(48px,5.2vw,76px);height:auto;margin:0 auto 4px;filter:drop-shadow(0 2px 2px #0006)}
+/* moldura (z 5): as lanternas já fazem parte dela; só o brilho do vidro é animado */
+.ui{position:absolute;left:15%;top:16.4%;width:70%;height:70%;z-index:5}
+/* abertura da moldura (medida na arte): x 20.51–79.36%, y 21.68–84.28%; o pergaminho passa um pouco por baixo da madeira */
+.ui .pergaminho{left:20.2%;top:21.3%;width:59.5%;height:63.4%;object-fit:fill;z-index:1}
+.ui .moldura{left:0;top:0;width:100%;height:100%;z-index:2}
+/* luz das lanternas: halo quente que aumenta e diminui de intensidade (irregular) */
+.glow{position:absolute;width:17%;aspect-ratio:1/1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,226,150,.85) 0,rgba(255,176,80,.36) 32%,rgba(255,150,60,.12) 55%,transparent 72%);animation:lamp 9s ease-in-out infinite;z-index:5;pointer-events:none}
+/* variação lenta: o mínimo é a intensidade que antes era o máximo, e o alcance é maior */
+@keyframes lamp{0%,100%{opacity:.86;transform:translate(-50%,-50%) scale(1.12)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.36)}58%{opacity:.9;transform:translate(-50%,-50%) scale(1.18)}80%{opacity:.97;transform:translate(-50%,-50%) scale(1.3)}}
+/* texto dentro do pergaminho (z 8) */
+.text{position:absolute;left:31.5%;top:37.5%;width:37%;height:32%;display:grid;align-content:center;justify-items:center;text-align:center;z-index:8;animation:reveal .9s ease both}
+@keyframes reveal{from{opacity:0;transform:translateY(8px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+.eyebrow{margin:0;font-size:clamp(9px,.85vw,12px);letter-spacing:.22em;text-transform:uppercase;color:#6f4a22;font-weight:700}
+h1{margin:4px 0 0;font-family:Georgia,'Palatino Linotype',serif;font-size:clamp(18px,2.4vw,34px);line-height:1.1;color:#4a2a10;text-shadow:0 1px 0 #f5e2b0}
+.lead{margin:6px 0 0;max-width:34ch;font-size:clamp(11px,1.05vw,15px);line-height:1.5;color:#3f2c17;text-wrap:balance}
+.msg{margin:10px 0 0;height:1.6em;line-height:1.6em;white-space:nowrap;font-size:clamp(12px,1.1vw,16px);font-weight:600;color:#4a2f14;transition:opacity .4s,filter .4s}
+.msg.fade{opacity:0;filter:blur(3px)}
+.status{margin:6px 0 0;font-size:clamp(10px,.9vw,12px);color:#6f5530}
+/* celular (retrato): cena de fundo + cartão de pergaminho centralizado */
+.card{display:none}
+@media (orientation:portrait){
+  .ui,.text,.glow,.flies,.flies-front{display:none}
+  .card{display:grid;position:fixed;left:0;right:0;top:0;bottom:0;margin:auto;height:auto;
+    width:min(94vw,440px);aspect-ratio:1348/946;padding:12% 12% 11%;justify-items:center;text-align:center;
+    background:url(assets/paper.png) center/100% 100% no-repeat;animation:reveal .9s ease both;filter:drop-shadow(0 14px 24px #000a);align-content:center}
+  .card .eyebrow{display:none}
+  .card h1{font-size:clamp(15px,4.6vw,19px);margin:0;line-height:1.15}
+  .card .lead{font-size:clamp(10.5px,3vw,12px);margin:6px 0 0;line-height:1.42;max-width:none}
+  .card .logo{width:clamp(40px,12vw,56px)}
+  .card .msg{font-size:clamp(11px,3.2vw,13px);margin:8px 0 0;height:1.6em;line-height:1.6em}
+  .card .status{font-size:10px;margin:6px 0 0}
+  .card }
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.fx{display:none}}
+.veil{position:fixed;inset:0;z-index:30;background:radial-gradient(ellipse at 50% 45%,#0e1e33,#050a14);animation:veilOut 2.2s cubic-bezier(.4,0,.2,1) .1s forwards;pointer-events:none}
+@keyframes veilOut{to{opacity:0;visibility:hidden}}
+/* carregamento infinito: anel de brasas, runa pulsando e trilho (CSS puro) */
+.loader{position:relative;width:46px;height:46px;margin:12px auto 0;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#4a3217,#1c1009 70%);box-shadow:inset 0 0 0 2px #7d5a2e,inset 0 0 8px #000c,0 0 0 2px #2a1808,0 0 0 3px #d9b06a88,0 4px 10px #0008}
+.loader .orbit{position:absolute;inset:-7px;border-radius:50%;animation:spin 1.6s linear infinite}
+.loader .orbit i{position:absolute;left:50%;top:-2px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:radial-gradient(circle,#fff3c4 0,#ffb347 45%,#ff6a1f 80%);box-shadow:0 0 6px 2px #ff9a3d88}
+.loader .orbit i:nth-child(2){transform:rotate(120deg);transform-origin:50% 30px;opacity:.7}
+.loader .orbit i:nth-child(3){transform:rotate(240deg);transform-origin:50% 30px;opacity:.5}
+.loader .orbit i:nth-child(1){transform-origin:50% 30px}
+.loader .rune{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;transform:rotate(45deg);border:2px solid #f0c77a;border-radius:3px;background:linear-gradient(135deg,#ffd27a,#b8642a);animation:pulse 1.4s ease-in-out infinite;box-shadow:0 0 10px #ff9a3d99}
+.loader .rune::after{content:"";position:absolute;inset:4px;border-radius:50%;background:#1c1009}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{transform:rotate(45deg) scale(.9);opacity:.85}50%{transform:rotate(45deg) scale(1.08);opacity:1}}
+.loader .trail{position:absolute;left:50%;top:100%;width:120px;height:2px;margin:10px 0 0 -60px;background:linear-gradient(90deg,transparent,#d9b06a,transparent);background-size:200% 100%;animation:trail 2.4s linear infinite;opacity:.8}
+@keyframes trail{from{background-position:100% 0}to{background-position:-100% 0}}
+</style>
+</head>
+<body>
+<div class="veil" aria-hidden="true"></div>
+<div class="art">
+  <div class="stack" id="stack">
+    <img class="layer bg" src="assets/scene-clean.webp" alt="">
+    <img class="layer mist" src="assets/mist.png" alt="">
+    <span class="star st-pulse" style="left:72%;top:1.2%;--d:-1s"></span>
+    <span class="star st-appear" style="left:79%;top:1.6%;--d:-3s"></span>
+    <span class="star st-color" style="left:83.5%;top:6%;--d:-6s"></span>
+    <span class="star st-pulse st-color" style="left:62.5%;top:5.2%;--d:-2s"></span>
+    <span class="star st-appear st-color" style="left:70%;top:17%;--d:-8s"></span>
+    <span class="star st-pulse" style="left:78%;top:16.5%;--d:-4s"></span>
+    <div class="layer flies" id="flies"></div>
+    <div class="flies-front" id="flies-front"></div>
+    <div class="ui">
+      <img class="layer moldura" src="assets/frame.png" alt="">
+      <img class="layer pergaminho" src="assets/paper.png" alt="">
+      <span class="glow" id="glowL" style="left:12.3%;top:38%;animation-delay:-.7s"></span>
+      <span class="glow" id="glowR" style="left:88%;top:38%"></span>
+    </div>
+    <img class="medal" src="assets/icon-tools.png" alt="" onerror="this.remove()">
+    <section class="text" role="status" aria-live="polite">
+      <p class="eyebrow">Clareira · Bosque das Brasas</p>
+      <h1>Clareira em manutenção</h1>
+      <p class="lead">O bosque está recebendo novidades. Suas coisas estão guardadas e você volta sozinho quando o fogo estiver aceso de novo.</p>
+      <div class="loader" aria-hidden="true"><span class="orbit"><i></i><i></i><i></i></span><span class="rune"></span><span class="trail"></span></div>
+      <p class="msg" id="msg">Ajustando as trilhas…</p>
+      <p class="status" id="status">Verificando novamente em instantes…</p>
+    </section>
+  </div>
+</div>
+<section class="card" role="status" aria-live="polite">
+  <img class="logo" src="assets/logo-arvore.png" alt="" onerror="this.remove()">
+  <p class="eyebrow">Clareira · Bosque das Brasas</p>
+  <h1>Clareira em manutenção</h1>
+  <p class="lead">O bosque está recebendo novidades. Suas coisas estão guardadas e você volta sozinho quando o fogo estiver aceso de novo.</p>
+  <div class="loader" aria-hidden="true"><span class="orbit"><i></i><i></i><i></i></span><span class="rune"></span><span class="trail"></span></div>
+  <p class="msg" id="msg2">Ajustando as trilhas…</p>
+  <p class="status" id="status2">Verificando novamente em instantes…</p>
+</section>
+<script>
+(function () {
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+  function smooth(u) { return u * u * (3 - 2 * u); }
+
+  /* Vagalumes: trajetória suave (curva Catmull-Rom por quadro, sem linhas retas) com ondulação senoidal.
+     Profundidade: quanto mais para trás, menor e mais apagado; quanto mais para frente, maior e mais forte.
+     Cada um faz um circuito: surge do mato, gira em volta de uma lanterna ou sobe ao medalhão,
+     passeia em volta do pergaminho e da moldura (na frente e atrás), e some de novo no mato. */
+  var fliesBack = document.getElementById("flies"), fliesFront = document.getElementById("flies-front");
+  var LAMPS = [{ x: 23.6, y: 43.0 }, { x: 76.2, y: 43.0 }];   // centros das luzes (% do palco)
+  var COUNT = 10;
+  var DT = 0.5;                                                // segundos entre pontos do trajeto
+  function bushAt(side) { return { x: side < 0 ? rnd(3, 8) : rnd(92, 97), y: rnd(58, 76) }; }
+
+  function route(side, stops, f) {
+    var P = [];
+    function last() { return P[P.length - 1]; }
+    function push(x, y, front, a, dt) { P.push({ x: x, y: y, front: front, a: a, dt: dt }); }
+    // todos os pontos têm o mesmo intervalo de tempo (DT): assim a curva fica uniforme, sem arrancos
+    function travel(to, front, aTo, speed) {
+      var from = last(), dx = to.x - from.x, dy = to.y - from.y, dist = Math.sqrt(dx * dx + dy * dy);
+      var n = Math.max(2, Math.round(dist / (speed * f * DT))), j, t, aFrom = from.a;
+      for (j = 1; j <= n; j++) {
+        t = j / n;
+        push(from.x + dx * t, from.y + dy * t, front, aFrom + (aTo - aFrom) * t, DT);
+      }
+    }
+    function orbit(c, rx, ry, turns, speed) {
+      var circ = 2 * Math.PI * Math.sqrt((rx * rx + ry * ry) / 2);
+      var n = Math.max(8, Math.round(circ * turns / (speed * f * DT))), j, th;
+      for (j = 0; j < n * turns; j++) {
+        th = -Math.PI / 2 + (j % n) * 2 * Math.PI / n;
+        push(c.x + rx * Math.cos(th), c.y + ry * Math.sin(th), Math.sin(th) > 0, 0.9, DT);
+      }
+    }
+    function wander(box, count) {
+      var j, lp = last(), x = clamp(lp.x, box.x0, box.x1), y = clamp(lp.y, box.y0, box.y1);
+      for (j = 0; j < count; j++) {
+        x = clamp(x + rnd(-1.2, 1.2) * f, box.x0, box.x1); y = clamp(y + rnd(-0.8, 0.8) * f, box.y0, box.y1);
+        var pf = last().front; if (Math.random() < 0.15) pf = !pf;  // troca de camada é rara
+        push(x, y, pf, 0.9, DT);
+      }
+    }
+    var B = bushAt(side);
+    push(B.x, B.y, false, 0, DT);
+    var i, s, L;
+    for (i = 0; i < stops.length; i++) {
+      s = stops[i];
+      if (s === "lamp") {
+        L = LAMPS[side < 0 ? (i % 2) : 1 - (i % 2)];
+        travel({ x: L.x, y: L.y }, false, 0.9, 6);
+        orbit(L, 4.5, 2.5, 1 + Math.floor(Math.random() * 2), 4.5);
+      } else if (s === "top") {
+        travel({ x: rnd(38, 62), y: rnd(16, 22) }, true, 0.9, 5);
+        wander({ x0: 30, x1: 70, y0: 14, y1: 26 }, 6);
+      } else if (s === "frame") {
+        travel({ x: rnd(24, 76), y: rnd(44, 72) }, false, 0.9, 5);
+        wander({ x0: 22, x1: 80, y0: 40, y1: 80 }, 7);
+      }
+    }
+    var E = bushAt(Math.random() < 0.5 ? -1 : 1);
+    travel(E, false, 0, 5);
+    return P;
+  }
+
+  // Catmull-Rom: curva suave que passa pelos pontos
+  function cr(p0, p1, p2, p3, u) {
+    var u2 = u * u, u3 = u2 * u;
+    return 0.5 * (2 * p1 + (-p0 + p2) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u2 + (-p0 + 3 * p1 - 3 * p2 + p3) * u3);
+  }
+  function at(arr, j) { return arr[clamp(j, 0, arr.length - 1)]; }
+
+  // trajeto fechado para vagalumes do mato: passeia numa região e volta ao ponto inicial sem salto
+  function loopRoute(box, n, a, f, speed) {
+    var P = [], j, x = rnd(box.x0, box.x1), y = rnd(box.y0, box.y1), st, lp, dx, dy, m, t;
+    P.push({ x: x, y: y, front: false, a: a, dt: DT });
+    for (j = 0; j < n; j++) {
+      x = clamp(x + rnd(-1.4, 1.4) * f * speed, box.x0, box.x1);
+      y = clamp(y + rnd(-0.9, 0.9) * f * speed, box.y0, box.y1);
+      P.push({ x: x, y: y, front: false, a: a, dt: DT });
+    }
+    st = P[0]; lp = P[P.length - 1]; dx = st.x - lp.x; dy = st.y - lp.y;
+    m = Math.max(2, Math.round(Math.sqrt(dx * dx + dy * dy) / (1.0 * f * speed * DT)));
+    for (j = 1; j <= m; j++) { t = j / m; P.push({ x: lp.x + dx * t, y: lp.y + dy * t, front: false, a: a, dt: DT }); }
+    return P;
+  }
+  // trajetória senoidal fechada, bem suave: período = 12 / velocidade (segundos)
+  function sineRoute(box, speed, a) {
+    var period = 12 / speed, steps = Math.max(8, Math.round(period / DT)), P = [], k, t, th = 2 * Math.PI;
+    var cx = (box.x0 + box.x1) / 2, cy = (box.y0 + box.y1) / 2, ax = (box.x1 - box.x0) / 2, ay = (box.y1 - box.y0) / 2;
+    var p1 = rnd(0, 6.28), p2 = rnd(0, 6.28);
+    for (k = 0; k <= steps; k++) {
+      t = k / steps;
+      P.push({ x: cx + ax * Math.sin(th * t + p1), y: cy + ay * Math.sin(th * t + p2), front: false, a: a, dt: DT });
+    }
+    return P;
+  }
+  var FL = [];
+  // camada suave: média móvel das frentes/trás (troca em ~3 s, sem piscar)
+  function smoothFlags(P) {
+    var out = [], j, d, s, wsum, arr = P.map(function (p) { return p.front ? 1 : 0; });
+    for (j = 0; j < arr.length; j++) {
+      s = 0; wsum = 0;
+      for (d = -4; d <= 4; d++) { var wt = 5 - Math.abs(d); s += wt * at(arr, j + d); wsum += wt; }
+      out.push(s / wsum);
+    }
+    return out;
+  }
+  function firefly(i, opt) {
+    var f = opt ? rnd(opt.fmin, opt.fmax) : rnd(0.6, 1.2);
+    var pool = ["lamp", "frame", "top", "lamp", "frame"];
+    var stops = i < 4 ? ["top", "frame"] : [pool[Math.floor(rnd(0, pool.length))], pool[Math.floor(rnd(0, pool.length))]];
+    var P = opt ? sineRoute(opt.box, opt.speed, opt.a) : route(i % 2 ? 1 : -1, stops, f);
+    var T = 0, tm = [], j;
+    for (j = 0; j < P.length; j++) { tm.push(T); T += P[j].dt; }
+    var wb = document.createElement("div"); wb.className = "fx";
+    var db = document.createElement("span"); db.className = "dot";
+    wb.appendChild(db); fliesBack.appendChild(wb);
+    var wf = document.createElement("div"); wf.className = "fx front";
+    var df = document.createElement("span"); df.className = "dot";
+    wf.appendChild(df); fliesFront.appendChild(wf);
+    if (opt && opt.solid) { db.classList.add("solid"); df.classList.add("solid"); }
+    if (opt && opt.soft) { db.classList.add("soft"); df.classList.add("soft"); }
+    FL.push({ P: P, fs: smoothFlags(P), sm: opt ? opt.sm : 1, am: opt ? opt.am : 1, tm: tm, T: T, t0: performance.now() - rnd(0, T) * 1000, j: 0,
+      ph1: rnd(0, 6.28), ph2: rnd(0, 6.28), per1: rnd(3.4, 5.2), per2: rnd(2.7, 4.1),
+      wb: wb, db: db, wf: wf, df: df });
+  }
+
+  function frame(now) {
+    for (var q = 0; q < FL.length; q++) {
+      var F = FL[q], P = F.P;
+      var tt = ((now - F.t0) / 1000) % F.T; if (tt < 0) tt += F.T;
+      if (tt < F.tm[F.j]) F.j = 0;                           // recomeça o circuito
+      while (F.j < P.length - 1 && F.tm[F.j + 1] <= tt) F.j++;
+      var j = F.j, j1 = Math.min(j + 1, P.length - 1);
+      var seg = F.tm[j1] - F.tm[j]; var u = seg > 0 ? clamp((tt - F.tm[j]) / seg, 0, 1) : 0;
+      var p0 = at(P, j - 1), p1 = P[j], p2 = P[j1], p3 = at(P, j1 + 1);
+      var x = cr(p0.x, p1.x, p2.x, p3.x, u), y = cr(p0.y, p1.y, p2.y, p3.y, u);
+      var a = p1.a + (p2.a - p1.a) * u;
+      var w = F.fs[j] + (F.fs[j1] - F.fs[j]) * u; // 0 = atrás, 1 = na frente (suave)
+      // ondulação senoidal suave (não é linha reta)
+      x += 0.35 * Math.sin(tt * 2 * Math.PI / F.per1 + F.ph1);
+      y += 0.25 * Math.sin(tt * 2 * Math.PI / F.per2 + F.ph2);
+      // profundidade: perto (embaixo) é maior; atrás é menor; na frente ganha tamanho
+      var base = 0.6 + (clamp(y, 14, 92) - 14) / 78 * 0.9;
+      var s = base * (0.8 + 0.4 * w) * F.sm;
+      var opB = a * (1 - w) * 0.6 * F.am, opF = a * w * 0.85 * F.am;        // atrás mais apagado; na frente, luz forte mas não estourada
+      var tr = "translate(" + x.toFixed(2) + "%," + y.toFixed(2) + "%)";
+      F.wb.style.transform = tr; F.wf.style.transform = tr;
+      var dtr = "translate(-50%,-50%) scale(" + s.toFixed(3) + ")";
+      F.db.style.transform = dtr; F.df.style.transform = dtr;
+      F.db.style.opacity = opB.toFixed(3); F.df.style.opacity = opF.toFixed(3);
+    }
+    requestAnimationFrame(frame);
+  }
+  if (!reduce) {
+    for (var i = 0; i < COUNT; i++) firefly(i);
+    // ao longe, atrás do rio e dos pinheiros: muitos, menores e mais fracos, sempre se movendo
+    // faixa dos pinheiros, na terra firme atrás do rio: compactos, menores, um pouco mais fortes e lentos
+    // lá atrás, junto à base dos pinheiros, longe da água: compactos, menores, mais fortes e lentos
+    for (var k2 = 0; k2 < 8; k2++) firefly(100 + k2, { box: { x0: 82, x1: 96, y0: 33, y1: 40 }, n: 30, a: 0.9, speed: 0.4, fmin: 0.6, fmax: 0.9, sm: 0.35, am: 0.9, soft: true });
+    // um ou outro na pedra da direita, ainda lá atrás
+    for (var k4 = 0; k4 < 2; k4++) firefly(150 + k4, { box: { x0: 86, x1: 96, y0: 38, y1: 45 }, n: 30, a: 0.9, speed: 0.4, fmin: 0.6, fmax: 0.9, sm: 0.35, am: 0.9, soft: true });
+    // moita logo atrás do painel, perto do rio: quase parada, mexendo bem devagar
+    firefly(300, { box: { x0: 76, x1: 80, y0: 51, y1: 55 }, n: 24, a: 0.9, speed: 0.03, fmin: 0.6, fmax: 0.8, sm: 0.45, am: 1.0, solid: true });
+    // mais 3 nas moitas do rio, quase paradas
+    // marcação vermelha: um pouco mais longe, menores e mais fracos
+    for (var k5 = 0; k5 < 3; k5++) firefly(310 + k5, { box: { x0: 74 + k5 * 1.5, x1: 79 + k5 * 1.5, y0: 46, y1: 52 }, n: 24, a: 0.9, speed: 0.1, fmin: 0.6, fmax: 0.8, sm: 0.3, am: 0.7, solid: true });
+    // mato perto da gente, nas moitas laterais: um pouco mais forte e maior
+    for (var k3 = 0; k3 < 4; k3++) firefly(200 + k3, { box: k3 % 2 ? { x0: 78, x1: 96, y0: 55, y1: 78 } : { x0: 15, x1: 24, y0: 45, y1: 52 }, n: 24, a: 0.9, speed: 0.5, fmin: 0.5, fmax: 0.9, sm: 0.9, am: 0.9 });
+    requestAnimationFrame(frame);
+  }
+
+  var msgs = ["Ajustando as trilhas…", "Afiando as ferramentas…", "Reforjando o bosque…", "Acendendo as tochas…"];
+  var k = 0;
+  setInterval(function () {
+    k = (k + 1) % msgs.length;
+    ["msg", "msg2"].forEach(function (id) {
+      var m = document.getElementById(id); m.classList.add("fade");
+      setTimeout(function () { m.textContent = msgs[k]; m.classList.remove("fade"); }, 380);
+    });
+  }, 3200);
+  function setStatus(t) { document.getElementById("status").textContent = t; document.getElementById("status2").textContent = t; }
+  var sawMaint = false; // só recarrega depois de ter visto a manutenção (evita laço em página local)
+  function check() {
+    fetch(location.pathname + location.search, { cache: "no-store" }).then(function (r) {
+      var inMaint = !r.ok || !!r.headers.get("x-clareira-maintenance");
+      if (inMaint) sawMaint = true;
+      if (r.ok && !inMaint && sawMaint) {
+        setStatus("A clareira reabriu. Entrando…");
+        document.body.style.transition = "opacity .9s ease"; document.body.style.opacity = "0";
+        setTimeout(function () { location.reload(); }, reduce ? 0 : 950);
+      } else if (inMaint) setStatus("Ainda em manutenção · última verificação " + new Date().toLocaleTimeString("pt-BR"));
+      else setStatus("Verificando novamente em instantes…");
+    }).catch(function () { setStatus("Sem conexão com o bosque · tentando de novo…"); });
+  }
+  setInterval(check, 8000);
+})();
+</script>
+</body>
+</html>

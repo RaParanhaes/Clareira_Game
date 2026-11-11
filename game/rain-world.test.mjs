@@ -50,3 +50,9 @@ test('tree canopy takes drops and sometimes drips from its edge', () => {
   assert.ok(frames.some(f => f.drops.some(d => d.drip)), 'deve haver pingadas de copa');
   assert.ok(frames.some(f => f.splashes.some(p => p.kind === 'tree')), 'deve haver respingo na copa');
 });
+
+test('rain that lands on open ground makes splashes there', () => {
+  const frames = scan(s => rainFrame({ center: { x: 0, y: 0 }, count: 200, seconds: s, roofs: [], trees: [] }), 2);
+  const ground = frames.reduce((n, f) => n + f.splashes.filter(p => p.kind === 'ground').length, 0);
+  assert.ok(ground > 20, 'deve haver respingos de chão ao longo de 2 segundos');
+});

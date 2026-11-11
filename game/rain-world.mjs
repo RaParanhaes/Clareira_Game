@@ -67,13 +67,15 @@ export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], tree
     const hitPhase = 1 - hitZ / Z0;
     const SPLASH = Math.min(0.5, SPLASH_SECONDS / period);
     const RUNOFF = Math.min(0.9, RUNOFF_SECONDS / period);
+    // A gota que acabou de cair no chão (início do ciclo) faz um respingo no ponto.
+    if (hitKind === 'ground' && phase < SPLASH) {
+      splashes.push({ x, y, z: 0, t: phase / SPLASH, kind: 'ground' });
+    }
     if (phase < hitPhase) {
       drops.push({ x, y, z, phase });
     } else if (phase < hitPhase + SPLASH && hitKind !== 'ground') {
       splashes.push({ x, y, z: hitZ, t: (phase - hitPhase) / SPLASH, kind: hitKind });
       if (hitKind === 'roof') runoffFrom(runoffs, hitRoof, x, y, hitZ, (phase - hitPhase) / RUNOFF);
-    } else if (hitKind === 'ground' && phase < SPLASH) {
-      splashes.push({ x, y, z: 0, t: phase / SPLASH, kind: 'ground' });
     }
   }
   // Pingadas: uma parte das copas deixa cair gotas da borda, em ciclo próprio.
@@ -118,11 +120,23 @@ export function drawRainWorld(ctx, frame, project, style, slant = 0.1) {
   ctx.stroke();
   for (const s of splashes) {
     const p = project(s.x, s.y, s.z);
-    const radius = 1.5 + 4.5 * s.t;
-    ctx.globalAlpha = (1 - s.t) * 0.7;
-    ctx.beginPath();
-    ctx.ellipse(p.x, p.y, radius, radius * 0.45, 0, 0, Math.PI * 2);
-    ctx.stroke();
+    // Respingo de chão: dois anéis que se abrem em tempos diferentes, como água batendo.
+    const rings = s.kind === 'ground' ? [s.t, Math.max(0, s.t - 0.35)] : [s.t];
+    for (const t of rings) {
+      if (t <= 0 || t >= 1) continue;
+      const radius = (s.kind === 'ground' ? 2.5 : 1.5) + (s.kind === 'ground' ? 7 : 4.5) * t;
+      ctx.globalAlpha = (1 - t) * (s.kind === 'ground' ? 0.85 : 0.7);
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, radius, radius * 0.45, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    if (s.kind === 'ground' && s.t < 0.3) {
+      ctx.globalAlpha = (1 - s.t / 0.3) * 0.9;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y - 1, 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = style.color;
+      ctx.fill();
+    }
   }
   for (const r of runoffs) {
     const a = project(r.x0, r.y0, r.z), b = project(r.x1, r.y1, r.z);

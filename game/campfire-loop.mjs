@@ -1,8 +1,8 @@
-// Fogueira em laço: 15 quadros de pixel art (folha 5 x 3) com lenha, pedras e chama.
-// Substitui a sequência de 20 quadros; os quadros vão de brasas a fogo alto e voltam,
+// Fogueira em laço: 11 quadros de pixel art (folha 5 x 3), só os de fogo aceso com lenha, pedras e chama.
+// Substitui a sequência de 20 quadros; os quadros vão de fogo médio a alto e voltam,
 // então o laço é contínuo. Reduzir a resolução dos quadros deixa a animação mais leve.
 export const CAMPFIRE_LOOP_COLUMNS = 5;
-export const CAMPFIRE_LOOP_FRAME_COUNT = 15;
+export const CAMPFIRE_LOOP_FRAME_COUNT = 11;
 export const CAMPFIRE_LOOP_FRAME_WIDTH = 68;
 export const CAMPFIRE_LOOP_FRAME_HEIGHT = 72;
 export const CAMPFIRE_LOOP_SHEET_WIDTH = CAMPFIRE_LOOP_COLUMNS * CAMPFIRE_LOOP_FRAME_WIDTH;

@@ -17,7 +17,7 @@ export function showFramedNotice(notice = {}, doc = globalThis.document) {
   overlay.setAttribute('aria-modal', 'true');
   overlay.innerHTML = `
     <style>
-      .framed-notice{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;background:rgba(4,8,14,.55);transition:opacity .45s ease}
+      .framed-notice{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;background:rgba(4,8,14,.18);transition:opacity .45s ease}
       .framed-notice.hide{opacity:0;pointer-events:none}
       .framed-notice .fn-box{position:relative;width:min(88vw,130vh);aspect-ratio:3/2;color:#f3e7cf;font-family:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
       .framed-notice img{position:absolute;display:block;pointer-events:none;user-select:none}

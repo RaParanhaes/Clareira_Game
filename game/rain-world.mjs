@@ -45,40 +45,59 @@ export function rainDropCount(intensity, scale = 1) {
 // Monta os elementos visíveis de um instante: gotas em queda, respingos, filetes e pingadas.
 // center: { x, y } em tiles (a câmera). roofs: lista de roofs. trees: lista de { x, y, r }.
 // Devolve { drops, splashes, runoffs } com coordenadas do mundo (z em unidades de altura).
+// Células fixas no mundo: a chuva nasce de posições do mundo, não da câmera, então
+// ela não acompanha o personagem. Cada célula tem gotas sorteadas pelas suas coordenadas.
+const CELL = SPAN / 2;
+
+function dropsInCell(cx, cy, perCell) {
+  const out = [];
+  const seedBase = Math.imul(cx | 0, 73856093) ^ Math.imul(cy | 0, 19349663);
+  for (let i = 0; i < perCell; i++) {
+    const seed = (seedBase + Math.imul(i + 1, 83492791)) | 0;
+    out.push({
+      x: cx * CELL + hash(seed, 31) * CELL,
+      y: cy * CELL + hash(seed, 32) * CELL,
+      period: 0.85 + 0.3 * hash(seed, 33),
+      offset: hash(seed, 34),
+    });
+  }
+  return out;
+}
+
 export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], trees = [] }) {
   const drops = [], splashes = [], runoffs = [];
   const half = SPAN / 2;
-  for (let i = 0; i < count; i++) {
-    const bx = center.x + (hash(i, 31) - 0.5) * SPAN;
-    const by = center.y + (hash(i, 32) - 0.5) * SPAN;
-    const period = fall * (0.85 + 0.3 * hash(i, 33));
-    const phase = wrap1(seconds / period + hash(i, 34));
+  // Densidade: `count` gotas numa área de SPAN x SPAN; cada célula tem a mesma densidade.
+  const perCell = Math.max(1, Math.round(count * (CELL * CELL) / (SPAN * SPAN)));
+  const x0 = Math.floor((center.x - half) / CELL), x1 = Math.floor((center.x + half) / CELL);
+  const y0 = Math.floor((center.y - half) / CELL), y1 = Math.floor((center.y + half) / CELL);
+  for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) for (const d of dropsInCell(cx, cy, perCell)) {
+    const { x, y } = d;
+    const period = fall * d.period;
+    const phase = wrap1(seconds / period + d.offset);
     const z = Z0 * (1 - phase);
-    const x = bx, y = by;
     // Obstáculo mais alto sob a gota: o primeiro que ela atinge ao cair.
-    let hitZ = 0, hitKind = 'ground', hitRoof = null;
+    let hitZ = 0, hitKind = 'ground';
     for (const roof of roofs) {
       const h = roofHeightAt(roof, x, y);
-      if (h !== null && h > hitZ && h < Z0) { hitZ = h; hitKind = 'roof'; hitRoof = roof; }
+      if (h !== null && h > hitZ && h < Z0) { hitZ = h; hitKind = 'roof'; }
     }
     for (const tree of trees) {
       const dx = x - tree.x, dy = y - tree.y;
       if (dx * dx + dy * dy < (tree.r || 0.6) * (tree.r || 0.6) * 0.81 && TREE_TOP > hitZ && TREE_TOP < Z0) {
-        hitZ = TREE_TOP; hitKind = 'tree'; hitRoof = null;
+        hitZ = TREE_TOP; hitKind = 'tree';
       }
     }
     const hitPhase = 1 - hitZ / Z0;
     const SPLASH = Math.min(0.5, SPLASH_SECONDS / period);
-    const RUNOFF = Math.min(0.9, RUNOFF_SECONDS / period);
-    // A gota que acabou de cair no chão (início do ciclo) faz um respingo no ponto.
+    // Telhado: a gota some ao bater, sem respingo circular (o escorrimento é desenhado à parte).
     if (hitKind === 'ground' && phase < SPLASH) {
       splashes.push({ x, y, z: 0, t: phase / SPLASH, kind: 'ground' });
     }
-    if (phase < hitPhase) {
-      drops.push({ x, y, z, phase });
-    } else if (phase < hitPhase + SPLASH && hitKind !== 'ground') {
-      splashes.push({ x, y, z: hitZ, t: (phase - hitPhase) / SPLASH, kind: hitKind });
+    if (hitKind === 'tree' && phase >= hitPhase && phase < hitPhase + SPLASH) {
+      splashes.push({ x, y, z: hitZ, t: (phase - hitPhase) / SPLASH, kind: 'tree' });
     }
+    if (phase < hitPhase) drops.push({ x, y, z, phase });
   }
   // Córregos: vários pontos do telhado soltam água que desce pelo caimento até a beirada,
   // em ciclos próprios. Com muitos pontos por telhado, o escorrimento fica contínuo.

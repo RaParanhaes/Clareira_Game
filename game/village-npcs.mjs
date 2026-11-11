@@ -46,7 +46,9 @@ function gatheringSpot(index) {
   return { x: SPAWN_CAMPFIRE.x + Math.cos(angle) * GATHERING_RADIUS, y: SPAWN_CAMPFIRE.y + Math.sin(angle) * GATHERING_RADIUS };
 }
 
-export function villageActorsFor({ dimensionId='surface', location='clearing', now=Date.now(), theme='forest', bounds=null }={}) {
+// `live` maps a villager id to its walking position on the server. Villagers who are
+// sitting at the campfire at night keep their fire seats; the others use `live` when given.
+export function villageActorsFor({ dimensionId='surface', location='clearing', now=Date.now(), theme='forest', bounds=null, live=null }={}) {
   if (location!=='clearing'||dimensionId!=='surface') return [];
   const { hours } = getGameDayState(now,{theme,dimensionId});
   const gathering = hours>=VILLAGE_NPC_GATHER_START_HOUR && hours<VILLAGE_NPC_GATHER_END_HOUR;
@@ -54,7 +56,8 @@ export function villageActorsFor({ dimensionId='surface', location='clearing', n
   const actors=DAY_ROSTER.flatMap((npc,index)=>{
     if (indoors && VILLAGE_NPC_INDOORS[npc.id]) return [];
     const seated=gathering;
-    const position=seated?gatheringSpot(index):{x:npc.x,y:npc.y};
+    const walking=live?.get(npc.id);
+    const position=seated?gatheringSpot(index):walking?{x:walking.x,y:walking.y}:{x:npc.x,y:npc.y};
     return [{
       id:npc.id,name:npc.name,roleId:npc.roleId,
       x:position.x,y:position.y,z:0,vx:0,vy:0,moving:false,running:0,crouching:0,

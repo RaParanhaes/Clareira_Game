@@ -109,7 +109,7 @@ def preflight():
     ensure_state()
     required = [
         "ROOT_POLICY.md", "AGENTS.md", "DELIVERY_PLAN.md", "GAME_BRIEF.md",
-        "ART_DIRECTION.md", "memory/STATUS.md", ".agents/skills/clareira-delivery/SKILL.md",
+        "ART_DIRECTION.md", "memory/STATUS.md",
     ]
     git_dir = run_local(["git", "rev-parse", "--git-dir"])
     branch_result = run_local(["git", "branch", "--format=%(refname:short)"])

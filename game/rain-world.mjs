@@ -78,10 +78,14 @@ export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], tree
     const z = Z0 * (1 - phase);
     // Obstáculo mais alto sob a gota: o primeiro que ela atinge ao cair.
     let hitZ = 0, hitKind = 'ground';
+    let covered = false;
     for (const roof of roofs) {
       const h = roofHeightAt(roof, x, y);
+      if (h !== null) covered = true;
       if (h !== null && h > hitZ && h < Z0) { hitZ = h; hitKind = 'roof'; }
     }
+    // Sobre um telhado a chuva não aparece: o telhado cobre a gota (o escorrimento é desenhado à parte).
+    if (covered) continue;
     for (const tree of trees) {
       const dx = x - tree.x, dy = y - tree.y;
       if (dx * dx + dy * dy < (tree.r || 0.6) * (tree.r || 0.6) * 0.81 && TREE_TOP > hitZ && TREE_TOP < Z0) {

@@ -380,7 +380,9 @@ export function createPrototypeServer({
   stateDirectory = process.env.STATE_DIRECTORY || path.join(os.tmpdir(), 'clareira-dev'),
   allowedOrigin = 'https://vmi3579939.contaboserver.net',
   resolveSession,
-  arrivalTutorialEnabled = true,
+  // Off: new players are born in the village, without the arrival tutorial or the
+  // breu sequence. Set to true to bring the tutorial back (its code is kept).
+  arrivalTutorialEnabled = false,
   resourceRespawnMs = 240_000,
   ambientCampfire = true,
   campfireLifecycleIntervalMs = 5_000,

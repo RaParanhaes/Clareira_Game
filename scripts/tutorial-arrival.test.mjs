@@ -32,7 +32,7 @@ function waitFor(socket, predicate, description, timeout=6000) {
 
 test('novatos recebem Breus planos e privados e só deixam a instância pelo fluxo de tutorial', async t => {
   const stateDirectory=await mkdtemp(path.join(os.tmpdir(),'clareira-arrival-test-'));
-  const server=createPrototypeServer({host:'127.0.0.1',port:0,stateDirectory,allowedOrigin:ORIGIN,
+  const server=createPrototypeServer({host:'127.0.0.1',port:0,stateDirectory,allowedOrigin:ORIGIN,arrivalTutorialEnabled:true,
     resolveSession:token=>profiles.has(token)?{profile:profiles.get(token)}:null});
   t.after(async()=>{await server.close();await rm(stateDirectory,{recursive:true,force:true});});
   const address=await server.listen();
@@ -80,7 +80,7 @@ test('novatos recebem Breus planos e privados e só deixam a instância pelo flu
 
 test('approaching the unique fire starts movement guidance and walking into darkness opens the forest transit', async t => {
   const stateDirectory=await mkdtemp(path.join(os.tmpdir(),'clareira-arrival-guide-test-'));
-  const server=createPrototypeServer({host:'127.0.0.1',port:0,stateDirectory,allowedOrigin:ORIGIN,
+  const server=createPrototypeServer({host:'127.0.0.1',port:0,stateDirectory,allowedOrigin:ORIGIN,arrivalTutorialEnabled:true,
     resolveSession:token=>profiles.has(token)?{profile:profiles.get(token)}:null});
   t.after(async()=>{await server.close();await rm(stateDirectory,{recursive:true,force:true});});
   const address=await server.listen();
@@ -106,7 +106,7 @@ test('approaching the unique fire starts movement guidance and walking into dark
 
 test('tutorial progresses through movement, chat and a changed appearance', async t => {
   const stateDirectory=await mkdtemp(path.join(os.tmpdir(),'clareira-arrival-steps-test-'));
-  const server=createPrototypeServer({host:'127.0.0.1',port:0,stateDirectory,allowedOrigin:ORIGIN,
+  const server=createPrototypeServer({host:'127.0.0.1',port:0,stateDirectory,allowedOrigin:ORIGIN,arrivalTutorialEnabled:true,
     resolveSession:token=>profiles.has(token)?{profile:profiles.get(token)}:null});
   t.after(async()=>{await server.close();await rm(stateDirectory,{recursive:true,force:true});});
   const address=await server.listen(),player=connect(address,'arrival-a');
@@ -147,7 +147,7 @@ test('tutorial progresses through movement, chat and a changed appearance', asyn
 
 test('o atalho pela escuridão só é possível depois que o jogador sai da área iluminada', async t => {
   const stateDirectory=await mkdtemp(path.join(os.tmpdir(),'clareira-arrival-dark-exit-'));
-  const server=createPrototypeServer({host:'127.0.0.1',port:0,stateDirectory,allowedOrigin:ORIGIN,
+  const server=createPrototypeServer({host:'127.0.0.1',port:0,stateDirectory,allowedOrigin:ORIGIN,arrivalTutorialEnabled:true,
     resolveSession:token=>profiles.has(token)?{profile:profiles.get(token)}:null});
   t.after(async()=>{await server.close();await rm(stateDirectory,{recursive:true,force:true});});
   const address=await server.listen(),player=connect(address,'arrival-a');

@@ -155,6 +155,7 @@ import { applySkyToDay, effectiveWeatherAt, skyTimestamp } from './world-overrid
 import { createStaffSky } from './staff-sky-ui.mjs';
 import { drawWeatherSky, rainStyleFor } from './weather-renderer.mjs';
 import { rainFrame, rainDropCount, drawRainWorld } from './rain-world.mjs';
+import { showFramedNotice } from './framed-notice.mjs';
 
 const canvas = document.querySelector('#world');
 let ctx = canvas.getContext('2d', { alpha: false });
@@ -2211,6 +2212,7 @@ function connect() {
       return;
     }
     if (message.type === 'mapExploration') { mergeMapExploration(message); return; }
+    if (message.type === 'aviso') showFramedNotice(message);
     if (message.type === 'notice') {
       if(message.action==='roomFurniture'&&Number.isSafeInteger(message.requestId)){
         const restored=roomFurniturePrediction.acknowledge(message.requestId,message.result==='accepted');

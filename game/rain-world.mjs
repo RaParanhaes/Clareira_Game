@@ -10,7 +10,8 @@
 const Z0 = 4.6;        // altura inicial da gota, em unidades de altura da cena
 const SPAN = 22;       // lado do quadrado de gotas em volta da câmera (tiles)
 const SPLASH_SECONDS = 0.22; // tempo em que o respingo fica visível
-const RUNOFF_SECONDS = 0.6;  // tempo em que o filete escorre pelo telhado
+const RUNOFF_SECONDS = 1.1;  // tempo em que o filete escorre pelo telhado até a beirada
+const EAVE_DRIP_CHANCE = 0.8; // parte dos telhados que pinga da beirada
 const TREE_TOP = 3.2;  // altura padrão da copa, em unidades de altura da cena
 const DRIP_CHANCE = 0.3;
 
@@ -67,6 +68,10 @@ export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], tree
     const hitPhase = 1 - hitZ / Z0;
     const SPLASH = Math.min(0.5, SPLASH_SECONDS / period);
     const RUNOFF = Math.min(0.9, RUNOFF_SECONDS / period);
+    // O filete escorre pelo telhado durante todo o tempo RUNOFF, não só no respingo.
+    if (hitKind === 'roof' && phase >= hitPhase && phase < hitPhase + RUNOFF) {
+      runoffFrom(runoffs, hitRoof, x, y, hitZ, (phase - hitPhase) / RUNOFF);
+    }
     // A gota que acabou de cair no chão (início do ciclo) faz um respingo no ponto.
     if (hitKind === 'ground' && phase < SPLASH) {
       splashes.push({ x, y, z: 0, t: phase / SPLASH, kind: 'ground' });
@@ -75,8 +80,22 @@ export function rainFrame({ center, count, seconds, fall = 0.9, roofs = [], tree
       drops.push({ x, y, z, phase });
     } else if (phase < hitPhase + SPLASH && hitKind !== 'ground') {
       splashes.push({ x, y, z: hitZ, t: (phase - hitPhase) / SPLASH, kind: hitKind });
-      if (hitKind === 'roof') runoffFrom(runoffs, hitRoof, x, y, hitZ, (phase - hitPhase) / RUNOFF);
     }
+  }
+  // Pingadas da beirada: a água que escorreu do telhado pinga da borda, em ciclo próprio.
+  for (let k = 0; k < roofs.length; k++) {
+    const roof = roofs[k];
+    if (hash(k, 51) > EAVE_DRIP_CHANCE) continue;
+    const alongY = roof.axis !== 'x';
+    const period = 0.9 + 0.9 * hash(k, 52);
+    const phase = wrap1(seconds / period + hash(k, 53));
+    const side = hash(k, 54) < 0.5 ? 0 : 1;
+    const along = hash(k, 55);
+    let x, y;
+    if (alongY) { x = side ? roof.x2 : roof.x1; y = roof.y1 + (roof.y2 - roof.y1) * along; }
+    else { y = side ? roof.y2 : roof.y1; x = roof.x1 + (roof.x2 - roof.x1) * along; }
+    if (Math.abs(x - center.x) > half || Math.abs(y - center.y) > half) continue;
+    drops.push({ x, y, z: roof.base * (1 - phase), phase, drip: true, eave: true });
   }
   // Pingadas: uma parte das copas deixa cair gotas da borda, em ciclo próprio.
   for (let j = 0; j < trees.length; j++) {
@@ -99,7 +118,8 @@ function runoffFrom(out, roof, x, y, z, progress) {
   let dx = 0, dy = 0, len;
   if (alongY) { dx = x < (roof.x1 + roof.x2) / 2 ? -1 : 1; len = Math.abs(dx > 0 ? roof.x2 - x : x - roof.x1); }
   else { dy = y < (roof.y1 + roof.y2) / 2 ? -1 : 1; len = Math.abs(dy > 0 ? roof.y2 - y : y - roof.y1); }
-  const reach = Math.min(len, 1.6) * progress;
+  // O filete desce até a beirada real do telhado.
+  const reach = len * progress;
   out.push({ x0: x, y0: y, z, x1: x + dx * reach, y1: y + dy * reach, alpha: 1 - progress * 0.5 });
 }
 

@@ -56,3 +56,14 @@ test('rain that lands on open ground makes splashes there', () => {
   const ground = frames.reduce((n, f) => n + f.splashes.filter(p => p.kind === 'ground').length, 0);
   assert.ok(ground > 20, 'deve haver respingos de chão ao longo de 2 segundos');
 });
+
+test('runoff reaches the real eave of the roof', () => {
+  const frames = scan(s => rainFrame({ center: { x: 5, y: 3 }, count: 400, seconds: s, roofs: [roof] }));
+  const longest = frames.flatMap(f => f.runoffs).reduce((best, r) => Math.max(best, Math.hypot(r.x1 - r.x0, r.y1 - r.y0)), 0);
+  assert.ok(longest > 1.6, 'o filete deve chegar à beirada, não parar em um traço curto');
+});
+
+test('roofs drip from their eaves', () => {
+  const frames = scan(s => rainFrame({ center: { x: 5, y: 3 }, count: 40, seconds: s, roofs: [roof] }));
+  assert.ok(frames.some(f => f.drops.some(d => d.eave)), 'deve haver pingadas da beirada');
+});

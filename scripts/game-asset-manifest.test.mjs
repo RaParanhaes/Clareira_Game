@@ -51,3 +51,9 @@ test('source furniture renders and review boards stay outside the game download;
     'art/buildings/medieval-cottage-3d/frames/iso-rot0-post-right.png',
   ]) assert.equal(isRuntimeGameAsset(file), true, file);
 });
+
+test('notice design templates stay out of the runtime download', () => {
+  assert.equal(isRuntimeGameAsset('avisos-modelos/assets/paper.png'), false);
+  assert.equal(isRuntimeGameAsset('avisos-modelos/noticias.html'), false);
+  assert.equal(isRuntimeGameAsset('art/aviso/paper.png'), true);
+});

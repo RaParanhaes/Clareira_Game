@@ -9,6 +9,7 @@ import { FIRE_RADIUS, FIRE_JUMP_CLEARANCE_HEIGHT, canMovePastFires } from './obs
 import { contentById } from './content-catalog.mjs';
 import {isNaturalAccess, TERRAIN_BOUNDS} from './natural-terrain.mjs';
 import {locomotion} from './locomotion.mjs';
+import { VILLAGE_SUPPLY_ANCHORS, VILLAGE_SUPPLY_JITTER } from './village-supplies.mjs';
 import {flightStep} from './flight-prototype.mjs';
 import { movementSpeedMultiplier } from './progression.mjs';
 import { canTraverseSurface,surfaceHeight } from './elevation.mjs';
@@ -407,7 +408,58 @@ function generateWorldChunk(cx, cy) {
     const id = `resource-${cx}-${cy}-g${definition.generationVersion}-${slot}`;
     resources.push({ id, kind, x, y });
   }
+  if (surfaceDimension) addVillageSupplies(cx, cy, definition, resources);
   return { trees, resources };
+}
+
+// Cada ponto tem id fixo: coletar e reaparecer seguem a mesma regra dos demais recursos do chunk.
+function villageSupplyTreeBlocked(x, y) {
+  if (SOLID_TREES.some(tree => Math.hypot(tree.x - x, tree.y - y) < 1.1)) return true;
+  for (const sampler of TREE_SAMPLERS) {
+    const gx0 = Math.floor(x / sampler.step), gy0 = Math.floor(y / sampler.step);
+    for (let gy = gy0 - 1; gy <= gy0 + 1; gy += 1) for (let gx = gx0 - 1; gx <= gx0 + 1; gx += 1) {
+      const candidate = treeCandidate(gx, gy, sampler.step, sampler.salt);
+      if (Math.hypot(candidate.x - x, candidate.y - y) < 1.1
+          && cachedProceduralTreeAllowed(candidate, gx, gy, sampler, true)) return true;
+    }
+  }
+  return false;
+}
+// Objetos vindos de edições do mundo (árvores, pedras e recursos do mapa) também impedem o ponto.
+function villageSupplyEditBlocked(x, y) {
+  const near = { left: x - 1, right: x + 1, top: y - 1, bottom: y + 1 };
+  return worldTreesInBounds(near).some(tree => Math.hypot(tree.x - x, tree.y - y) < 1)
+    || worldRocksInBounds(near).some(rock => Math.hypot(rock.x - x, rock.y - y) < 1)
+    || worldResourcesInBounds(near).some(resource => Math.hypot(resource.x - x, resource.y - y) < 1);
+}
+function villageSupplyBlocked(x, y) {
+  return isPathTile(x, y) || worldWaterAt(x, y) || waterPlantExcludedAt(x, y, WORLD_WATER_OPTIONS)
+    || waterBankDepthAt(x, y, WORLD_WATER_OPTIONS, RESOURCE_BANK_CLEARANCE) > 0
+    || [RECEPTION_BUILDING, ...VILLAGE_BUILDINGS].some(building => x > building.bounds.left - 1.2 && x < building.bounds.right + 1.2
+      && y > building.bounds.top - 1.2 && y < building.bounds.bottom + 1.2)
+    || villageSupplyEditBlocked(x, y)
+    || villageSupplyTreeBlocked(x, y);
+}
+// A posição de cada tentativa só depende da semente, do ponto e do número da tentativa, e o id leva
+// a tentativa: um id nunca muda de lugar, mesmo que a geometria do mundo mude durante a recuperação.
+function addVillageSupplies(cx, cy, definition, resources) {
+  const left = cx * WORLD_CHUNK_SIZE, top = cy * WORLD_CHUNK_SIZE;
+  VILLAGE_SUPPLY_ANCHORS.forEach((anchor, index) => {
+    const baseX = atDimensionOrigin(anchor.x), baseY = atDimensionOrigin(anchor.y);
+    // Teste barato: o ponto nunca sai de base ± folga, então os demais chunks saem aqui.
+    if (baseX + VILLAGE_SUPPLY_JITTER < left || baseX - VILLAGE_SUPPLY_JITTER >= left + WORLD_CHUNK_SIZE
+        || baseY + VILLAGE_SUPPLY_JITTER < top || baseY - VILLAGE_SUPPLY_JITTER >= top + WORLD_CHUNK_SIZE) return;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const seed = Math.imul(index + 101, 2654435761) ^ Math.imul(attempt + 7, 374761393) ^ activeWorldSeed;
+      const jitter = attempt === 5 ? 0 : VILLAGE_SUPPLY_JITTER;
+      const x = baseX + (chunkRandom(seed ^ 0x165667b1) * 2 - 1) * jitter;
+      const y = baseY + (chunkRandom(seed ^ 0x27d4eb2d) * 2 - 1) * jitter;
+      if (villageSupplyBlocked(x, y)) continue;
+      if (Math.floor(x / WORLD_CHUNK_SIZE) === cx && Math.floor(y / WORLD_CHUNK_SIZE) === cy)
+        resources.push({ id: `resource-village-${index}-t${attempt}-g${definition.generationVersion}`, kind: anchor.kind, x, y });
+      return;
+    }
+  });
 }
 let worldChunkCaches = new WeakMap();
 const worldChunkCachesByGeometry = new Map();
@@ -671,8 +723,12 @@ export function findSpawnPosition(occupiedPositions = []) {
     }
   }
 
+  // Recursos gerados (inclui os soltos perto da vila) também ficam fora da chegada.
+  const nearbyResources = isSurfaceDimension()
+    ? getResourcesInBounds({ left: SPAWN.x - 18, right: SPAWN.x + 18, top: SPAWN.y - 18, bottom: SPAWN.y + 18 })
+    : [];
   const isClear = position => canOccupy(position)
-    && (!isSurfaceDimension() || RESOURCE_NODES.every(resource => Math.hypot(position.x - resource.x, position.y - resource.y) >= 1.25))
+    && nearbyResources.every(resource => Math.hypot(position.x - resource.x, position.y - resource.y) >= 1.25)
     && occupied.every(other => avatarsHaveClearance(position, other));
   const clear = candidates.find(isClear);
   if (clear) return clear;

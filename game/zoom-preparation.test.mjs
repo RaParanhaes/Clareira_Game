@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';import {runInNewContext} from 'node:vm';
+import {createRevealOnce,finishStuckReveal} from './scene-loading.mjs';
 const source=readFileSync(new URL('./main.js',import.meta.url),'utf8');
 const helpers=source.slice(source.indexOf('function getVisibleWorldBounds('),source.indexOf('function terrainChunksWithMovementMargin('));
 const projection=source.slice(source.indexOf('function point('),source.indexOf('\n}',source.indexOf('function point('))+2);
@@ -26,7 +27,7 @@ test('destination readiness is acknowledged only after a complete drawn frame',(
   setTimeout:(callback,delay)=>timers.push({callback,delay}),
   requestAnimationFrame:callback=>callbacks.push(callback),loadingProgress:{complete:id=>events.push(id)},markInitialLoadingComplete:()=>false,
   hideSceneLoading:()=>events.push('revealed'),scheduleDimensionVisualWarmup(){},scheduleAvatarAnimationWarmup(){},
-  roomTransition:{active:false},send:message=>events.push(message.type),canvas:{focus(){}},ui:{connection:{}},
+  overlayRelease:{arm(){},cancel(){}},createRevealOnce,finishStuckReveal,roomTransition:{active:false},send:message=>events.push(message.type),canvas:{focus(){}},ui:{connection:{}},
  };
  runInNewContext(`${reveal};revealLoadedScene();`,context);
  assert.deepEqual(events,[]);
@@ -48,7 +49,7 @@ test('optional lighting cannot deadlock entry while the authoritative scene stil
   paintSceneLightmaps:()=>false,processLightmapQueue(){},updateLoadingDesign(){},updateDimensionTravel(){},resizeCanvas(){},
   draw:()=>frameReady,setTimeout(){},requestAnimationFrame:callback=>callbacks.push(callback),
   loadingProgress:{complete:id=>events.push(id)},markInitialLoadingComplete:()=>false,hideSceneLoading:()=>events.push('revealed'),
-  scheduleDimensionVisualWarmup(){},scheduleAvatarAnimationWarmup(){},roomTransition:{active:false},send(){},canvas:{focus(){}},ui:{connection:{}}};
+  overlayRelease:{arm(){},cancel(){}},createRevealOnce,finishStuckReveal,scheduleDimensionVisualWarmup(){},scheduleAvatarAnimationWarmup(){},roomTransition:{active:false},send(){},canvas:{focus(){}},ui:{connection:{}}};
  runInNewContext(`${reveal};revealLoadedScene();`,context);
  assert.equal(context.sceneReady,false);
  now=1501;callbacks.shift()();

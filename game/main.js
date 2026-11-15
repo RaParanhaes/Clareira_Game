@@ -39,7 +39,7 @@ import { compareSceneDepth } from './depth-order.mjs';
 import { contentById } from './content-catalog.mjs';
 import { MEDIEVAL_FURNITURE, MEDIEVAL_FURNITURE_CATEGORIES } from './medieval-furniture.mjs';
 import { mergeQueuedState } from './state-inbox.mjs';
-import { createSceneReadiness } from './scene-loading.mjs';
+import { createOverlayReleaseGuard, createRevealOnce, createSceneReadiness, finishStuckReveal, sceneInputReady } from './scene-loading.mjs';
 import { calculateInitialMiniProgress, createLoadingProgress, initialLoadingMiniStage } from './loading-progress.mjs';
 import {getNaturalPatches,NATURAL_PATCHES,TERRAIN_BOUNDS} from './natural-terrain.mjs';
 import {buildWorldMapDetailFeatures,initialForestMapBounds} from './initial-forest-map-features.mjs';
@@ -158,6 +158,8 @@ import { createStaffSky } from './staff-sky-ui.mjs';
 import { drawWeatherSky, rainStyleFor } from './weather-renderer.mjs';
 import { rainFrame, rainDropCount, drawRainWorld } from './rain-world.mjs';
 import { showFramedNotice } from './framed-notice.mjs';
+import { createCraftingGuideView } from './crafting-guide-ui.mjs';
+import { workKeyAction } from './crafting-guide.mjs';
 
 const canvas = document.querySelector('#world');
 let ctx = canvas.getContext('2d', { alpha: false });
@@ -1637,6 +1639,7 @@ function beginSceneLoading(text, { fade = false, genericTitle = false, showOverl
   sceneProgressRetry = null;
   lastProgressSignature = null;
   ++loadingGeneration; sceneReady = false; snapshotReady = false;
+  overlayRelease.cancel();
   lightingRevealStartedAt=null;
   assetScene = null; avatarAssetVariant = null; assetsReady = false;
   loadingProgress = null;
@@ -1739,6 +1742,7 @@ function markInitialLoadingComplete() {
 }
 function hideSceneLoading({ worldReady = true } = {}) {
   clearSceneProgressWatchdog();
+  overlayRelease.cancel();
   document.documentElement.classList.remove('cache-verifying');
   if (worldReady) {
     markInitialLoadingComplete();
@@ -1747,6 +1751,20 @@ function hideSceneLoading({ worldReady = true } = {}) {
   loadingScreen.hidden = true;
   ui.shell.inert = false; ui.shell.removeAttribute('aria-busy');
 }
+// A ready scene must not stay behind the overlay forever: if a reveal step never
+// settles, release the overlay and the controls together after this limit.
+let activeReveal = null;
+const overlayRelease = createOverlayReleaseGuard({
+  limitMs: 4000,
+  onRelease: ({ limitMs }) => {
+    if (!sceneReady || loadingScreen.hidden) return;
+    console.warn(`[clareira] overlay de carga ainda visível ${limitMs} ms após a cena ficar pronta; liberando controles.`,
+      { phase: loadingScreen.dataset.phase, context: loadingScreen.dataset.context, stage: loadingScreen.dataset.loadingStage || null });
+    // Same finalization as the normal reveal, run at most once for this generation.
+    if (activeReveal?.generation === loadingGeneration) activeReveal.force();
+    else hideSceneLoading();
+  },
+});
 let lightingRevealScheduled=false, lightingRevealStartedAt=null;
 function revealLoadedScene() {
   if (!authenticated || !snapshotReady || !assetsReady || !predictionReady || sceneReady) return;
@@ -1770,19 +1788,14 @@ function revealLoadedScene() {
     return;
   }
   sceneReady = true; updateLoadingDesign();
+  overlayRelease.arm();
   void teleportEffects.prepare().then(ready=>{teleportEffectReady=ready;updateDimensionTravel(dimensionList,worldDimensionId);if(arrivalTravelPending)requestArrivalTravel();});
   lastFrame = 0; accumulator = 0; lastCameraFrame = 0;
   resizeCanvas(); draw(1);
   const generation = loadingGeneration;
-  requestAnimationFrame(function revealReadyFrame() {
+  let initialCompletionSeen = false;
+  const revealFinish = initialCompletion => {
     if (!sceneReady || generation !== loadingGeneration) return;
-    if(!draw(1)){requestAnimationFrame(revealReadyFrame);return;}
-    loadingProgress?.complete('first-frame');
-    const finish=()=>{
-      if(!sceneReady||generation!==loadingGeneration)return;
-      const initialCompletion=markInitialLoadingComplete();
-      const reveal=()=>{
-        if(!sceneReady||generation!==loadingGeneration)return;
         const enteringArrival = initialCompletion && worldLocation === 'clearing' && worldDimensionId.startsWith('arrival-');
         if (enteringArrival && arrivalWordmark) {
           const source = document.querySelector('.loading-layout .loading-wordmark');
@@ -1810,7 +1823,25 @@ function revealLoadedScene() {
         if(transitId)send({type:'dimensionTransitReady',transitId});
         canvas.focus({preventScroll:true});
         ui.connection.textContent='Você chegou';
-      };
+  };
+  const revealOnce = createRevealOnce(revealFinish);
+  // Overlay deadline: run the same finalization once, even if the normal reveal never settles.
+  activeReveal = {
+    generation,
+    force: () => {
+      if (revealOnce.finished || !sceneReady || generation !== loadingGeneration) return;
+      finishStuckReveal({ transition: roomTransition, reveal: revealOnce, initialCompletion: initialCompletionSeen || markInitialLoadingComplete() });
+    },
+  };
+  requestAnimationFrame(function revealReadyFrame() {
+    if (!sceneReady || generation !== loadingGeneration) return;
+    if(!draw(1)){requestAnimationFrame(revealReadyFrame);return;}
+    loadingProgress?.complete('first-frame');
+    const finish=()=>{
+      if(!sceneReady||generation!==loadingGeneration||revealOnce.finished)return;
+      const initialCompletion=markInitialLoadingComplete();
+      initialCompletionSeen = initialCompletion || initialCompletionSeen;
+      const reveal=()=>revealOnce.run(initialCompletion);
       // Keep both progress bars visibly complete before revealing the world.
       if(initialCompletion){
         const settling = pendingMiniSceneTransition?.promise || Promise.resolve();
@@ -3275,9 +3306,17 @@ function renderXpPotionRecipes() {
   }
 }
 
+let craftHintDismissedStage = '';
+const craftingGuideView = createCraftingGuideView({
+  hint: document.querySelector('#craft-hint'), panel: document.querySelector('#crafting-guide'),
+  onOpen: () => openInventory(),
+  onCraft: name => { closeInventory(); action(name); },
+  onDismiss: () => { craftHintDismissedStage = craftingGuideView.guideFor(localInventory).stage; craftingGuideView.update(localInventory, { dismissedStage: craftHintDismissedStage }); },
+});
 let inventoryHudRenderKey='';
 function renderInventory(forcePanel = false) {
   if (!ui.quickbar || !ui.inventoryGrid) return;
+  craftingGuideView.update(localInventory, { dismissedStage: craftHintDismissedStage, canCraft: worldLocation === 'clearing' });
   const hudKey=JSON.stringify([localInventory,inventorySelectionIndex,inventoryDragSource]);
   if(!forcePanel&&!ui.inventoryDialog.open&&hudKey===inventoryHudRenderKey){
     // Cooldowns depend on time; inventory, recipes and slot DOM do not.
@@ -4305,8 +4344,8 @@ function action(name) {
     sendPlayerCommand({ type:'action', name:'work' });
     return;
   }
-  if (name === 'craftPickaxe') {
-    sendPlayerCommand({ type:'action', name:'craftPickaxe' });
+  if (name === 'craftAxe' || name === 'craftPickaxe') {
+    sendPlayerCommand({ type:'action', name });
     return;
   }
   if (name === 'upgradeAxe' || name === 'upgradePickaxe') {
@@ -8320,11 +8359,13 @@ function isTyping(target) { return target instanceof HTMLInputElement || target 
 function normalizeHeldKey(key) { return /^[a-z]$/i.test(key) ? key.toLowerCase() : key; }
 
 window.addEventListener('keydown', event => {
+  const worldInputReady = sceneInputReady({ sceneReady, overlayHidden: loadingScreen.hidden,
+    roomFade: loadingScreen.dataset.roomTransition === 'true' });
   const movementKey = movementKeyForEvent(event);
   if (movementKey && dimensionTransitMovementLocked()) { event.preventDefault(); return; }
   const interactive = isInteractiveKeyboardTarget(event.target);
-  if ((event.key==='n'||event.key==='N')&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&sceneReady&&!panels.isOpen&&!isTextEntryTarget(event.target)&&worldLocation==='clearing') {event.preventDefault();openWorldMap();return;}
-  if (!sceneReady || panels.isOpen || isTextEntryTarget(event.target)) return;
+  if ((event.key==='n'||event.key==='N')&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&worldInputReady&&!panels.isOpen&&!isTextEntryTarget(event.target)&&worldLocation==='clearing') {event.preventDefault();openWorldMap();return;}
+  if (!worldInputReady || panels.isOpen || isTextEntryTarget(event.target)) return;
   if (movementKey ? !canHandleMovementKey(event) : interactive) return;
   const shiftAbilityMatch = event.shiftKey ? /^(?:Digit|Numpad)([1-4])$/.exec(event.code || '') : null;
   if (shiftAbilityMatch) {
@@ -8357,7 +8398,7 @@ window.addEventListener('keydown', event => {
   if (key === 'v' || key === 'V') action('visit-nearest');
   if (key === 'f' || key === 'F') action('fire');
   if (key === 'g' || key === 'G') action('share');
-  if (key === 'h' || key === 'H') action('work');
+  if (key === 'h' || key === 'H') action(workKeyAction(localInventory));
   if (key === 'p' || key === 'P') action('craftPickaxe');
   if (key === 'u' || key === 'U') action('upgradeAxe');
   if (key === 'y' || key === 'Y') action('upgradePickaxe');

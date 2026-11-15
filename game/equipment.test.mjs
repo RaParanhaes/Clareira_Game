@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ARMOR_SPECS, GEAR_PRICES, WEAPON_SPECS, armorDefense, weaponDamage } from './equipment.mjs';
-import { equipItem, gearPurchaseCheck, purchaseGear, unequipItem } from './equipment-actions.mjs';
+import { equipItem, gearPurchasePending, gearPurchaseCheck, purchaseGear, unequipItem } from './equipment-actions.mjs';
 import { INVENTORY_STACK_LIMITS, addInventoryItem, createInventory, inventoryFromRows, inventoryRows, inventorySnapshot, restoreInventory } from './inventory.mjs';
 import { huntWildlifeTarget } from './wildlife-hunt.mjs';
 import { currencyValue, walletFromValue } from './lodging-catalog.mjs';
@@ -110,6 +110,23 @@ test('purchaseGear delivers and charges once; a crash charges nothing and remove
   const poor = { accountId: 'c', inventory: createInventory() };
   const refused = await purchaseGear({ player: poor, itemId: 'shortSword', debitAndSave: fakeStore(10).debitAndSave });
   assert.deepEqual([refused.ok, refused.message, poor.inventory.shortSword], [false, 'Saldo insuficiente.', 0]);
+});
+
+test('wearing the item during a pending purchase with a failed debit takes it back from the equipment slot', async () => {
+  const player = { accountId: 'e', inventory: createInventory() };
+  const result = await purchaseGear({ player, itemId: 'leatherJerkin', debitAndSave: async () => {
+    assert.equal(gearPurchasePending(player, 'equipItem'), true, 'o servidor recusa vestir enquanto a compra espera');
+    assert.equal(gearPurchasePending(player, 'moveInventorySlot'), true);
+    assert.equal(gearPurchasePending(player, 'lodgeSell'), true);
+    assert.equal(gearPurchasePending(player, 'castAbility'), false);
+    assert.equal(equipItem(player.inventory, 'leatherJerkin').ok, true, 'caso extremo: vestiu mesmo assim');
+    throw new Error('Débito recusado.');
+  } });
+  assert.equal(result.ok, false);
+  assert.equal(player.inventory.equipment.body, null, 'o gibão não sai de graça');
+  assert.equal(armorDefense(player.inventory), 0);
+  assert.equal(player.inventory.leatherJerkin, 0);
+  assert.equal(gearPurchasePending(player, 'equipItem'), false, 'pendência termina com a compra');
 });
 
 test('a second purchase while the first is in flight is refused as already owned', async () => {

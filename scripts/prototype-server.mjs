@@ -20,7 +20,7 @@ import {
   removeInventoryItem, restoreInventory, selectedInventoryItem, STONE_AXE_DURABILITY, STONE_PICKAXE_DURABILITY,
 } from '../game/inventory.mjs';
 import { GEAR_LABELS, weaponDamageFor } from '../game/equipment.mjs';
-import { equipItem, unequipItem, purchaseGear } from '../game/equipment-actions.mjs';
+import { equipItem, unequipItem, purchaseGear, gearPurchasePending } from '../game/equipment-actions.mjs';
 import { AXE_TOOL_SPECS, AXE_TOOL_IDS, PICKAXE_TOOL_SPECS, PICKAXE_TOOL_IDS, axeToolFor, axeUpgradeFor, pickaxeToolFor, pickaxeUpgradeFor } from '../game/tool-progression.mjs';
 import { RESOURCE_CONTRACTS, resourceContractBoard, resourceContractDayKey } from '../game/resource-contracts.mjs';
 import {normalizeAppearance} from '../game/appearance.mjs';
@@ -2194,6 +2194,7 @@ export function createPrototypeServer({
         broadcast(false);return;
       }
       if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'chestMove', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeBuyGear', 'equipItem', 'unequipItem', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew', 'setSkyOverride', 'clearSkyOverrides'].includes(message.name)) return;
+      if (gearPurchasePending(player, message.name)) { notice(socket, 'Aguarde a compra terminar antes de mexer nesse item.'); return; }
       if (message.name === 'allocateAttribute') {
         const key = typeof message.attribute === 'string' ? message.attribute : '';
         if (!ATTRIBUTE_KEYS.includes(key)) { notice(socket, 'Esse atributo não existe.'); return; }

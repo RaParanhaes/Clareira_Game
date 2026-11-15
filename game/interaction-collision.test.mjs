@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FIRE_RADIUS } from './obstacle-collision.mjs';
 import {
-  canOccupy, CLEARING_DOOR, findWalkPath, PLAYER_RADIUS, RESOURCE_NODES, SHELTER_BOUNDS, SHELTER_WALL_CLEARANCE, SOLID_TREES, SPAWN_CAMPFIRE, hasClearInteractionPath,
+  canOccupy, CLEARING_DOOR, findWalkPath, getResourcesInBounds, nearestCollectible, PLAYER_RADIUS, RESOURCE_NODES, SHELTER_BOUNDS, SHELTER_WALL_CLEARANCE, SOLID_TREES, SPAWN_CAMPFIRE, hasClearInteractionPath,
 } from './world.mjs';
 
 test('interaction reaches a tree itself but cannot pass through it to a second target or entity', () => {
@@ -73,4 +73,20 @@ test('a resource beside the campfire can be collected from a safe reachable edge
   assert.ok(distance < FIRE_RADIUS + PLAYER_RADIUS + 1.2,
     'the closest resource is reachable from outside the fire collider');
   assert.equal(hasClearInteractionPath(from, resource, { fires: [SPAWN_CAMPFIRE] }), true);
+});
+
+test('um recurso gerado de verdade perto da fogueira é coletável de uma borda segura', () => {
+  const distanceToFire = resource => Math.hypot(resource.x - SPAWN_CAMPFIRE.x, resource.y - SPAWN_CAMPFIRE.y);
+  const generated = getResourcesInBounds({
+    left: SPAWN_CAMPFIRE.x - 12, right: SPAWN_CAMPFIRE.x + 12, top: SPAWN_CAMPFIRE.y - 12, bottom: SPAWN_CAMPFIRE.y + 12,
+  }).filter(resource => canOccupy(resource)).sort((a, b) => distanceToFire(a) - distanceToFire(b))[0];
+  assert.ok(generated, 'há recurso gerado utilizável perto da fogueira');
+  const d = distanceToFire(generated);
+  const from = {
+    x: generated.x - (generated.x - SPAWN_CAMPFIRE.x) / d * 0.5,
+    y: generated.y - (generated.y - SPAWN_CAMPFIRE.y) / d * 0.5,
+  };
+  assert.equal(canOccupy(from), true);
+  assert.equal(hasClearInteractionPath(from, generated, { fires: [SPAWN_CAMPFIRE] }), true);
+  assert.equal(nearestCollectible(from, [generated], {}, 1.2, [SPAWN_CAMPFIRE])?.id, generated.id);
 });

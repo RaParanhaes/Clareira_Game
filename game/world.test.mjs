@@ -146,11 +146,14 @@ test('o personagem para no raio físico do animal terrestre, pode se afastar e a
 });
 
 test('distribui jogadores em posições livres e separadas perto da fogueira', () => {
+  // Recursos gerados na área do spawn (não há nós autorais): a distância mínima vale para eles.
+  const spawnAreaResources = getResourcesInBounds({ left: SPAWN_CAMPFIRE.x - 12, right: SPAWN_CAMPFIRE.x + 12, top: SPAWN_CAMPFIRE.y - 12, bottom: SPAWN_CAMPFIRE.y + 12 });
+  assert.ok(spawnAreaResources.length > 0, 'há recursos gerados perto do spawn');
   const positions = [];
   for (let index = 0; index < 12; index += 1) {
     const next = findSpawnPosition(positions);
     assert.ok(canOccupy(next));
-    assert.ok(RESOURCE_NODES.every(resource => Math.hypot(next.x - resource.x, next.y - resource.y) >= 1.25));
+    assert.ok(spawnAreaResources.every(resource => Math.hypot(next.x - resource.x, next.y - resource.y) >= 1.25));
     assert.ok(positions.every(other => {
       const dx = next.x - other.x;
       const dy = next.y - other.y;
@@ -162,13 +165,13 @@ test('distribui jogadores em posições livres e separadas perto da fogueira', (
 });
 
 test('coleta prioriza o recurso alcançável mais próximo', () => {
-  // RESOURCE_NODES é vazio: os recursos vêm do mundo gerado por chunks. Usa-se um par fixo aqui.
-  const resources = [
-    { id: 'branch-east', kind: 'wood', ...surfacePosition(11.7, 5.6) },
-    { id: 'stone-west', kind: 'stone', ...surfacePosition(3, 3) },
-  ];
-  assert.equal(nearestResource(surfacePosition(11.7, 5.5), resources)?.id, 'branch-east');
-  assert.equal(nearestResource(surfacePosition(8, 8), resources), null);
+  // RESOURCE_NODES é vazio: dois recursos fixos, ambos ao alcance, a distâncias diferentes.
+  const origin = surfacePosition(11.7, 5.5);
+  const near = { id: 'branch-near', kind: 'wood', ...surfacePosition(11.7 + 0.3, 5.5) };
+  const far = { id: 'stone-far', kind: 'stone', ...surfacePosition(11.7 - 0.8, 5.5) };
+  assert.equal(nearestResource(origin, [near, far])?.id, 'branch-near');
+  assert.equal(nearestResource(origin, [far, near])?.id, 'branch-near');
+  assert.equal(nearestResource(surfacePosition(8, 8), [near, far]), null);
 });
 
 test('coleta e brilho priorizam material da fogueira que o objetivo ainda pede', () => {
@@ -295,7 +298,7 @@ test('abrigo bloqueia seu volume e o espaço da fogueira sem fogo permanece cami
   const exit={x:CLEARING_DOOR.x,y:CLEARING_DOOR.y+.5};
   assert.equal(canOccupy(exit),true);
   assert.ok(findWalkPath(exit,{x:8.2,y:12.3}).length>1);
-  const distant=getResourcesInBounds({left:840,right:1000,top:840,bottom:1000}).find(node=>canOccupy(node));
+  const distant=getResourcesInBounds({left:840,right:880,top:840,bottom:880}).find(node=>canOccupy(node));
   assert.ok(distant,'há coleta utilizável além do mapa anterior');
   assert.ok(findWalkPath({x:8.2,y:12.3},distant).length>1);
   assert.equal(canOccupy({x:WORLD_SIZE+.1,y:20}),false);
@@ -303,14 +306,14 @@ test('abrigo bloqueia seu volume e o espaço da fogueira sem fogo permanece cami
 
 test('o mundo expandido gera coleta alcançável além da antiga borda e consulta objetos por chunks', () => {
   assert.ok(WORLD_SIZE >= 670);
-  const distant = getResourcesInBounds({left:840,right:1000,top:840,bottom:1000})[0];
+  const distant = getResourcesInBounds({left:840,right:880,top:840,bottom:880})[0];
   assert.ok(distant, 'há recurso gerado no novo território');
   assert.ok(canOccupy(distant), 'o recurso distante é alcançável');
   const bounds = { left: distant.x - 1, right: distant.x + 1, top: distant.y - 1, bottom: distant.y + 1 };
   assert.ok(getResourcesInBounds(bounds).some(node => node.id === distant.id));
   assert.ok(getSolidTreesInBounds(bounds).every(tree => tree.x >= bounds.left && tree.x <= bounds.right
     && tree.y >= bounds.top && tree.y <= bounds.bottom));
-  const region={left:840,right:1000,top:840,bottom:1000};
+  const region={left:840,right:880,top:840,bottom:880};
   const treesBefore=getSolidTreesInBounds(region).map(({x,y,r,index})=>({x,y,r,index}));
   const resourcesBefore=getResourcesInBounds(region);
   for(let cy=0;cy<12;cy++)for(let cx=0;cx<12;cx++)getSolidTreesInBounds({left:cx*16,right:cx*16+15,top:cy*16,bottom:cy*16+15});

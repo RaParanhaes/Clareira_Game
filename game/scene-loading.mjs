@@ -1,3 +1,10 @@
+// Controls wait for the real loading overlay to leave. The room fade reuses the same
+// overlay element, but it is not a loading screen: the room transition already covers
+// the scene, so keys must not wait for it.
+export function sceneInputReady({ sceneReady, overlayHidden, roomFade = false }) {
+  return sceneReady === true && (overlayHidden === true || roomFade === true);
+}
+
 // A compact snapshot may omit unchanged collections, but a new connection needs all of them.
 export function createSceneReadiness() {
   let collections = new Set();
@@ -19,4 +26,43 @@ export function createSceneReadiness() {
       return playerReady && collections.size === 3;
     },
   };
+}
+
+// Releases a loading overlay that outlives a ready scene (a reveal step that never settles).
+export function createOverlayReleaseGuard({ limitMs, onRelease, schedule = setTimeout, cancel = clearTimeout }) {
+  let timer = null;
+  const clear = () => {
+    if (timer !== null) cancel(timer);
+    timer = null;
+  };
+  return {
+    arm() {
+      clear();
+      timer = schedule(() => { timer = null; onRelease({ limitMs }); }, limitMs);
+    },
+    cancel: clear,
+    get armed() { return timer !== null; },
+  };
+}
+
+// Runs the reveal finalization exactly once. A late reveal that arrives after a
+// forced release only sees that it already ran and returns without repeating it.
+export function createRevealOnce(run) {
+  let finished = false;
+  return {
+    get finished() { return finished; },
+    run(...args) {
+      if (finished) return false;
+      finished = true;
+      run(...args);
+      return true;
+    },
+  };
+}
+
+// Deadline path: clear a room transition that never settled (so movement is not
+// blocked behind it), then run the same once-only finalization as the normal reveal.
+export function finishStuckReveal({ transition, reveal, initialCompletion }) {
+  transition?.cancel?.();
+  return reveal.run(initialCompletion);
 }

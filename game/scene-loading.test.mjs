@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSceneReadiness } from './scene-loading.mjs';
+import { createOverlayReleaseGuard, createRevealOnce, createSceneReadiness, finishStuckReveal, sceneInputReady } from './scene-loading.mjs';
 const self = { id:'me', x:8, y:15, location:'clearing', appearance:{skin:3} };
 const full = {type:'state', players:[self], resources:[], fires:[{x:8,y:14}], roomFurniture:[]};
 test('welcome and a self-less snapshot cannot reveal placeholder avatar', () => {
@@ -27,4 +27,89 @@ test('compact motion preserves already received metadata; reconnect and actor ch
  gate.reset();assert.equal(gate.accept({type:'state',players:[{id:'me',x:9,y:15}]},'me'),false);
  assert.equal(gate.accept(full,'me'),true);
  assert.equal(gate.accept({type:'state',players:[{id:'me',x:9,y:15,appearance:null}]},'me'),false);
+});
+
+test('world controls wait for the loading overlay to leave, not only for sceneReady', () => {
+ // Scene is ready while the overlay still covers the screen: keys must not reach the world yet.
+ assert.equal(sceneInputReady({ sceneReady: true, overlayHidden: false }), false);
+ assert.equal(sceneInputReady({ sceneReady: false, overlayHidden: true }), false);
+ assert.equal(sceneInputReady({ sceneReady: false, overlayHidden: false }), false);
+ // Released together: the overlay hides in the same step that controls are enabled.
+ assert.equal(sceneInputReady({ sceneReady: true, overlayHidden: true }), true);
+});
+
+test('a ready scene whose overlay never leaves is released after the limit', () => {
+ const timers = []; const cancelled = []; const state = { sceneReady: true, overlayHidden: false }; let releasedAt = null;
+ const guard = createOverlayReleaseGuard({
+  limitMs: 4000,
+  schedule: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
+  cancel: id => cancelled.push(id),
+  onRelease: ({ limitMs }) => { releasedAt = limitMs; state.overlayHidden = true; },
+ });
+ guard.arm();
+ assert.equal(timers[0].ms, 4000);
+ assert.equal(sceneInputReady(state), false);
+ // The transition never resolves: the timer fires and releases overlay and controls together.
+ timers[0].fn();
+ assert.equal(releasedAt, 4000);
+ assert.equal(sceneInputReady(state), true);
+ assert.equal(guard.armed, false);
+});
+
+test('a guard cancelled before its limit does not release the overlay', () => {
+ const timers = []; const cancelled = []; let released = false;
+ const guard = createOverlayReleaseGuard({
+  limitMs: 4000,
+  schedule: (fn) => { timers.push(fn); return timers.length; },
+  cancel: id => cancelled.push(id),
+  onRelease: () => { released = true; },
+ });
+ guard.arm(); assert.equal(guard.armed, true);
+ guard.cancel();
+ assert.deepEqual(cancelled, [1]);
+ assert.equal(guard.armed, false);
+ assert.equal(released, false);
+});
+
+test('a reveal that never settles is finalized once by the deadline', () => {
+ const calls = [];
+ const reveal = createRevealOnce(initialCompletion => calls.push(initialCompletion));
+ // Deadline fires while the normal reveal is still waiting: the same finalization runs once.
+ assert.equal(reveal.run(true), true);
+ // The stuck transition never resolves, so no other path calls it again.
+ assert.deepEqual(calls, [true]);
+ assert.equal(reveal.finished, true);
+});
+
+test('a late reveal after the deadline does not finalize again or skip the initial arrival', () => {
+ const calls = [];
+ const reveal = createRevealOnce(initialCompletion => calls.push(initialCompletion));
+ reveal.run(true); // forced at the deadline, with the initial arrival
+ // The delayed reveal arrives later with initialCompletion=false (already marked by the forced path).
+ assert.equal(reveal.run(false), false);
+ assert.deepEqual(calls, [true], 'finalization ran once, keeping the arrival');
+});
+
+test('deadline clears a room transition that never settles so movement is accepted again', () => {
+ const calls = [];
+ const transition = { active: true, cancel() { this.active = false; } };
+ const reveal = createRevealOnce(initialCompletion => calls.push(initialCompletion));
+ // The stuck room transition blocks movement while active.
+ const movementAccepted = () => !transition.active;
+ assert.equal(movementAccepted(), false);
+ finishStuckReveal({ transition, reveal, initialCompletion: true });
+ assert.equal(transition.active, false);
+ assert.equal(movementAccepted(), true);
+ assert.deepEqual(calls, [true]);
+ // A late room transition resolution does not run the reveal again.
+ finishStuckReveal({ transition, reveal, initialCompletion: false });
+ assert.deepEqual(calls, [true]);
+});
+
+test('the room fade does not hold controls, but a real loading overlay still does', () => {
+ // Entering a room reuses the overlay for the fade while the scene is already ready.
+ assert.equal(sceneInputReady({ sceneReady: true, overlayHidden: false, roomFade: true }), true);
+ // A real loading overlay (first load or world reload) keeps controls held.
+ assert.equal(sceneInputReady({ sceneReady: true, overlayHidden: false, roomFade: false }), false);
+ assert.equal(sceneInputReady({ sceneReady: false, overlayHidden: false, roomFade: true }), false);
 });

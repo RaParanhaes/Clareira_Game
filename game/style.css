@@ -1430,3 +1430,35 @@ dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header
 #appearance-dialog[open],#lodging-dialog[open]{box-shadow:0 0 0 2px var(--iron),0 0 0 4px var(--brass),0 0 0 6px var(--iron),0 26px 64px #000c}
 .top-actions .ico,.destination-map-button .ico{width:1.25em;height:1.25em}
 .top-actions .icon-button{white-space:nowrap}
+
+/* Guia de fabricação (feat/ui-guia-fabricacao): aviso "Próximo passo" no mundo e receitas no Inventário. */
+.craft-hint{position:absolute;z-index:4;left:50%;bottom:136px;transform:translateX(-50%);display:flex;align-items:stretch;max-width:min(520px,calc(100vw - 32px));border:2px solid #51371f;border-top-color:#b1824b;border-left-color:#96683c;background:#2b2b24ee;color:var(--clareira-parchment,#f3e5c6);box-shadow:0 3px 0 #17120d,0 6px 12px #050907a0;pointer-events:auto}
+.craft-hint[hidden],body[data-location="room"] .craft-hint{display:none}
+.craft-hint-open{display:grid;gap:1px;min-width:0;padding:5px 9px;border:0;background:transparent;color:inherit;font:600 12px/1.35 'Trebuchet MS',system-ui,sans-serif;text-align:left;cursor:pointer}
+.craft-hint-label{color:var(--clareira-ember,#f2c877);font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.craft-hint-text{overflow-wrap:anywhere}
+.craft-hint-close{flex:none;width:26px;border:0;border-left:1px solid #51371f;background:#3a2a1a;color:var(--clareira-ember,#f2c877);font:700 16px/1 'Trebuchet MS',system-ui,sans-serif;cursor:pointer}
+.craft-hint-open:focus-visible,.craft-hint-close:focus-visible{outline:2px solid var(--clareira-parchment,#f3e5c6);outline-offset:-2px}
+.crafting-guide{margin:9px 0 12px;padding:8px 10px;border:1px solid #69754b;border-left:4px solid var(--clareira-ember,#f2c877);background:#303a2b;color:#e6dfc2}
+.crafting-guide h3{margin:0 0 2px;color:var(--clareira-ember,#f2c877);font:700 10px/1.2 'Trebuchet MS',system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.crafting-guide-next p{margin:0;font-size:13px;line-height:1.4}
+.crafting-guide-recipes{margin-top:7px}
+.crafting-guide-recipes summary{cursor:pointer;color:var(--clareira-leaf,#9fc38d);font:700 11px/1.4 'Trebuchet MS',system-ui,sans-serif}
+.craft-recipe-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:7px 0 0;padding:0;list-style:none}
+.craft-recipe{display:grid;gap:4px;align-content:start;padding:7px 8px;border:1px solid #d5bb8030;background:#232a22}
+.craft-recipe.is-ready{border-color:var(--clareira-ember,#f2c877)}
+.craft-recipe.is-owned{opacity:.7}
+.craft-recipe-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px}
+.craft-recipe-head kbd{padding:0 5px;border:1px solid #d5bb8070;background:#3a2a1a;color:var(--clareira-parchment,#f3e5c6);font:700 10px/1.5 'Trebuchet MS',system-ui,sans-serif}
+.craft-recipe-state{margin-left:auto;color:var(--clareira-leaf,#9fc38d);font-size:10px}
+.craft-recipe-materials{display:flex;flex-wrap:wrap;gap:4px;margin:0}
+.craft-material{padding:1px 6px;border:1px solid #d5bb8030;background:#3a2f26;color:#e0cfa8;font-size:11px}
+.craft-material.is-ok{border-color:#83956a;background:#2f4430;color:#d5e8c4}
+.craft-recipe-note{color:#b9b79c;font-size:10px;line-height:1.4}
+.craft-recipe-button{justify-self:start;min-height:32px;padding:4px 12px;border:2px solid #d0a466;border-right-color:#4d351f;border-bottom-color:#4d351f;background:#765232;color:#fff0ce;font:700 11px/1 'Trebuchet MS',system-ui,sans-serif;cursor:pointer}
+@media(max-width:720px){
+  .craft-hint{left:8px;right:auto;bottom:auto;top:112px;transform:none;max-width:min(214px,calc(100vw - 190px))}
+  .craft-hint-open{padding:4px 7px;font-size:11px}
+  .craft-recipe-list{grid-template-columns:minmax(0,1fr)}
+  .crafting-guide-next p{font-size:12px}
+}

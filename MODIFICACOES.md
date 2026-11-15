@@ -10,3 +10,4 @@ Uma linha por área. Atualizado a cada integração. O histórico completo está
 | 2026-11-09 | Mundo: sol e clima (verão) | 2540108 | Sol escaldante de verão mais quente e menos branco: força do brilho de 1,5 para 0,6, com tom âmbar | `~/clareira-evidencias/2026-11-09-sol-verao/` |
 | 2026-11-09 | Mundo: véu de inverno | 34f3965 | Véu azul de inverno mais suave: opacidade de 0,24 para 0,12 | `~/clareira-evidencias/2026-11-09-inverno-suave/` |
 | 2026-11-09 | Mundo: noite com sol escaldante | 8eb3879 | Brilho do sol escaldante não aparece mais à noite (antes clareava a cena) | `~/clareira-evidencias/2026-11-09-noite-sol/` |
+| 2026-11-15 | Interface: guia de fabricação | este commit | Aviso "Próximo passo" no mundo e seção "Receitas" no Inventário ensinam machado (H) e picareta (P) de pedra, com contagens de materiais | `~/clareira-evidencias/2026-11-15-ui-guia-fabricacao/` |

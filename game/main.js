@@ -156,6 +156,7 @@ import { createStaffSky } from './staff-sky-ui.mjs';
 import { drawWeatherSky, rainStyleFor } from './weather-renderer.mjs';
 import { rainFrame, rainDropCount, drawRainWorld } from './rain-world.mjs';
 import { showFramedNotice } from './framed-notice.mjs';
+import { createCraftingGuideView } from './crafting-guide-ui.mjs';
 
 const canvas = document.querySelector('#world');
 let ctx = canvas.getContext('2d', { alpha: false });
@@ -3268,9 +3269,17 @@ function renderXpPotionRecipes() {
   }
 }
 
+let craftHintDismissedStage = '';
+const craftingGuideView = createCraftingGuideView({
+  hint: document.querySelector('#craft-hint'), panel: document.querySelector('#crafting-guide'),
+  onOpen: () => openInventory(),
+  onCraft: name => { closeInventory(); action(name); },
+  onDismiss: () => { craftHintDismissedStage = craftingGuideView.guideFor(localInventory).stage; craftingGuideView.update(localInventory, { dismissedStage: craftHintDismissedStage }); },
+});
 let inventoryHudRenderKey='';
 function renderInventory(forcePanel = false) {
   if (!ui.quickbar || !ui.inventoryGrid) return;
+  craftingGuideView.update(localInventory, { dismissedStage: craftHintDismissedStage });
   const hudKey=JSON.stringify([localInventory,inventorySelectionIndex,inventoryDragSource]);
   if(!forcePanel&&!ui.inventoryDialog.open&&hudKey===inventoryHudRenderKey){
     // Cooldowns depend on time; inventory, recipes and slot DOM do not.

@@ -8,9 +8,8 @@ import path from 'node:path';
 import WebSocket from 'ws';
 import {
   DIMENSION_COORDINATE_OFFSET, getResourcesInBounds, ROOM_SPAWN, SPAWN, SPAWN_CAMPFIRE, WORLD_COORDINATE_VERSION,
-  WORLD_RESOURCE_GENERATION_VERSION, WORLD_SIZE, hasTreeCollision,
+  WORLD_RESOURCE_GENERATION_VERSION, WORLD_SIZE, canOccupy,
 } from '../game/world.mjs';
-import { VILLAGE_BUILDINGS } from '../game/village-buildings.mjs';
 import { waterStateAt, WATER_WADING_DEPTH } from '../game/waterways.mjs';
 import { createPrototypeServer } from './prototype-server.mjs';
 import { createAccountStore, saveAccountProgress } from './account-store.mjs';
@@ -34,27 +33,25 @@ const TEST_ORIGIN = 'https://test.clareira.invalid';
 const TEST_COOKIE = 'clareira_session=test-session-token';
 const surfaceCoord = value => value + DIMENSION_COORDINATE_OFFSET;
 const surfacePosition = (x, y) => ({ x: surfaceCoord(x), y: surfaceCoord(y) });
-// Os recursos agora são gerados proceduralmente (RESOURCE_NODES está vazio). O alvo é a madeira mais próxima do spawn
-// com caminho reto livre de prédios e árvores; o jogador anda ~3,2 unidades/s, então o prazo dos testes é de 30 s.
-const southBranch = (() => {
+// Os recursos agora são gerados proceduralmente (RESOURCE_NODES está vazio) e a geração depende da definição de mundo que o
+// servidor aplica ao subir; por isso o alvo só pode ser calculado depois de room.listen(). A madeira mais próxima do spawn fica
+// a dezenas de unidades, então o teste põe o jogador a 3 unidades dela pela posição salva em vez de depender de uma caminhada longa.
+let southBranch;
+async function placeNearSouthBranch(stateDirectory, ...profileIds) {
   const radius = 80;
-  const blockedBy = (x, y) => VILLAGE_BUILDINGS.some(building => building.bounds
-    && x >= building.bounds.left - 0.6 && x <= building.bounds.right + 0.6
-    && y >= building.bounds.top - 0.6 && y <= building.bounds.bottom + 0.6);
-  const clearPath = target => {
-    const length = Math.hypot(target.x - SPAWN.x, target.y - SPAWN.y);
-    for (let d = 0; d <= length; d += 0.5) {
-      const x = SPAWN.x + (target.x - SPAWN.x) * d / length, y = SPAWN.y + (target.y - SPAWN.y) * d / length;
-      if (blockedBy(x, y) || hasTreeCollision({ x, y }, 0.6)) return false;
-    }
-    return true;
-  };
-  const wood = getResourcesInBounds({ left: SPAWN.x - radius, top: SPAWN.y - radius, right: SPAWN.x + radius, bottom: SPAWN.y + radius })
-    .filter(resource => resource.kind === 'wood' && Math.hypot(resource.x - SPAWN.x, resource.y - SPAWN.y) <= 60 && clearPath(resource))
-    .sort((a, b) => Math.hypot(a.x - SPAWN.x, a.y - SPAWN.y) - Math.hypot(b.x - SPAWN.x, b.y - SPAWN.y));
-  assert.ok(wood[0], 'há madeira com caminho livre perto do spawn para o teste de coleta');
-  return wood[0];
-})();
+  southBranch = getResourcesInBounds({ left: SPAWN.x - radius, top: SPAWN.y - radius, right: SPAWN.x + radius, bottom: SPAWN.y + radius })
+    .filter(resource => resource.kind === 'wood')
+    .sort((a, b) => Math.hypot(a.x - SPAWN.x, a.y - SPAWN.y) - Math.hypot(b.x - SPAWN.x, b.y - SPAWN.y))[0];
+  assert.ok(southBranch, 'há madeira gerada perto do spawn para o teste de coleta');
+  const start = [[-1, 0], [0, 1], [0, -1], [1, 0], [1, 1], [-1, -1], [1, -1], [-1, 1]].map(([dx, dy]) => {
+    const length = Math.hypot(dx, dy), at = step => ({ x: southBranch.x + dx / length * step, y: southBranch.y + dy / length * step });
+    return [0.5, 1, 1.5, 2, 2.5, 3].every(step => canOccupy(at(step))) ? at(3) : null;
+  }).find(Boolean);
+  assert.ok(start, 'há um ponto livre a 3 unidades da madeira do teste');
+  const store = createJsonPlayerLocationStore(stateDirectory);
+  for (const profileId of profileIds) await store.savePlayerLocation(profileId, {
+    location: 'clearing', dimensionId: 'surface', x: start.x, y: start.y, worldVersion: WORLD_COORDINATE_VERSION });
+}
 const directionToward = (from, target) => {
   const dx = target.x - from.x, dy = target.y - from.y;
   const length = Math.hypot(dx, dy) || 1;
@@ -706,8 +703,10 @@ test('ações e gestos no intervalo curto recebem aviso em vez de desaparecer', 
 
 test('coleta recusada pelo intervalo devolve o pedido para encerrar o gesto do cliente', async t => {
   let clock = 10_000;
-  const room = createTestServer(t, { ambientCampfire: false, port: 0, allowedOrigin: TEST_ORIGIN, resolveSession: testIdentity, now: () => clock });
+  const stateDirectory = await mkdtemp(path.join(os.tmpdir(), 'clareira-south-branch-'));
+  const room = createTestServer(t, { ambientCampfire: false, port: 0, stateDirectory, allowedOrigin: TEST_ORIGIN, resolveSession: testIdentity, now: () => clock });
   const address = await room.listen();
+  await placeNearSouthBranch(stateDirectory, 'e04d06d9-b215-4d08-b4b9-894dd63477cc');
   t.after(() => room.close());
   const clockTicker = setInterval(() => { clock += 100; }, 20);
   t.after(() => clearInterval(clockTicker));
@@ -1145,6 +1144,7 @@ test('movement permits a nearby pickup and an unaffordable fire explains its cos
   const stateDirectory = await mkdtemp(path.join(os.tmpdir(), 'clareira-room-pickup-fire-'));
   const room = createTestServer(t, { ambientCampfire: false, port: 0, stateDirectory, allowedOrigin: TEST_ORIGIN, resolveSession: testIdentity });
   const address = await room.listen();
+  await placeNearSouthBranch(stateDirectory, 'e04d06d9-b215-4d08-b4b9-894dd63477cc');
   t.after(() => room.close());
   const player = openTestPlayer(address);
   t.after(() => player.terminate());
@@ -1166,7 +1166,7 @@ test('movement permits a nearby pickup and an unaffordable fire explains its cos
   const collectedState = waitFor(player, message => message.type === 'state' && message.players.find(item => item.id === id)?.inventory.wood === 1, 2500, 'inventory snapshot');
   player.send(JSON.stringify({ type: 'join', name: 'Testador' }));
   const collected = await collectedState;
-  assert.equal(collected.resources.some(resource => resource.id === 'branch-south'), false);
+  assert.equal(collected.resources.some(resource => resource.id === southBranch.id), false);
   await new Promise(resolve => setTimeout(resolve, 260));
   const unaffordable = waitFor(player, message => message.type === 'notice' && message.text.includes('20 gravetos + 10 pedras'), 2500, 'fire cost notice');
   player.send(JSON.stringify({ type: 'action', name: 'fire' }));
@@ -1299,13 +1299,16 @@ test('room allows a second fire when the player carries materials and is far fro
 });
 
 test('collected resource returns to the shared world after its respawn interval', async t => {
+  const stateDirectory = await mkdtemp(path.join(os.tmpdir(), 'clareira-south-branch-'));
   const room = createTestServer(t, { ambientCampfire: false,
     port: 0,
+    stateDirectory,
     allowedOrigin: TEST_ORIGIN,
     resolveSession: testIdentity,
     resourceRespawnMs: 120,
   });
   const address = await room.listen();
+  await placeNearSouthBranch(stateDirectory, 'e04d06d9-b215-4d08-b4b9-894dd63477cc');
   t.after(() => room.close());
   const player = openTestPlayer(address);
   t.after(() => player.terminate());
@@ -1321,7 +1324,7 @@ test('collected resource returns to the shared world after its respawn interval'
   }, 15000, 'player beside the south branch');
   player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
 
-  const absent = waitFor(player, message => message.type === 'state' && !message.resources.some(resource => resource.id === 'branch-south'), 15000, 'shared branch removal');
+  const absent = waitFor(player, message => message.type === 'state' && !message.resources.some(resource => resource.id === southBranch.id), 15000, 'shared branch removal');
   const requestId = 17;
   const picked = waitFor(player, message => message.type === 'notice' && message.action === 'collect'
     && message.requestId === requestId && message.result === 'collected', 2500, 'branch pickup');
@@ -1332,18 +1335,20 @@ test('collected resource returns to the shared world after its respawn interval'
   assert.equal(pickupNotice.result, 'collected');
   assert.deepEqual(pickupNotice.resource, southBranch);
   const absentSnapshot = await absent;
-  assert.ok(!absentSnapshot.resources.some(resource => resource.id === 'branch-south'));
+  assert.ok(!absentSnapshot.resources.some(resource => resource.id === southBranch.id));
   const collectedSnapshot = await waitFor(player, message => message.type === 'state'
     && message.players.find(item => item.id === id)?.inventory.wood === 1, 15000, 'saved pickup inventory');
   assert.equal(collectedSnapshot.players.find(item => item.id === id)?.inventory.wood, 1);
 
-  const returned = await waitFor(player, message => message.type === 'state' && message.resources.some(resource => resource.id === 'branch-south'), 2500, 'shared branch respawn');
-  assert.ok(returned.resources.some(resource => resource.id === 'branch-south'));
+  const returned = await waitFor(player, message => message.type === 'state' && message.resources.some(resource => resource.id === southBranch.id), 2500, 'shared branch respawn');
+  assert.ok(returned.resources.some(resource => resource.id === southBranch.id));
 });
 
 test('player gets a clear notice when someone else takes the nearby resource', async t => {
+  const stateDirectory = await mkdtemp(path.join(os.tmpdir(), 'clareira-south-branch-'));
   const room = createTestServer(t, { ambientCampfire: false,
     port: 0,
+    stateDirectory,
     allowedOrigin: TEST_ORIGIN,
     resolveSession: async token => {
       if (!['gatherer-one', 'gatherer-two'].includes(token)) return null;
@@ -1351,6 +1356,7 @@ test('player gets a clear notice when someone else takes the nearby resource', a
     },
   });
   const address = await room.listen();
+  await placeNearSouthBranch(stateDirectory, 'gatherer-one', 'gatherer-two');
   t.after(() => room.close());
   const first = openTestPlayer(address, 'gatherer-one');
   const second = openTestPlayer(address, 'gatherer-two');
@@ -1388,11 +1394,11 @@ test('player gets a clear notice when someone else takes the nearby resource', a
 
   const picked = waitFor(first, message => message.type === 'notice' && message.text === 'Você encontrou graveto seco.', 15000, 'first gatherer pickup');
   const removed = waitFor(second, message => message.type === 'state'
-    && !message.resources.some(resource => resource.id === 'branch-south')
+    && !message.resources.some(resource => resource.id === southBranch.id)
     && message.players.find(player => player.id === firstId)?.emote === 'gather', 2500, 'branch removal and gather gesture for second gatherer');
   first.send(JSON.stringify({ type: 'action', name: 'collect', requestId: 23 }));
   const [pickup, sharedGather] = await Promise.all([picked, removed]);
-  assert.equal(pickup.resource?.id, 'branch-south');
+  assert.equal(pickup.resource?.id, southBranch.id);
 
   const clearNotice = waitFor(second, message => message.type === 'notice' && message.requestId === 24, 2500, 'second gatherer collection result');
   second.send(JSON.stringify({ type: 'action', name: 'collect', requestId: 24 }));
@@ -1702,6 +1708,7 @@ test('registered account identity and saved inventory are restored in the multip
   const created = await accounts.register({ username: 'bosqueuser', displayName: 'Pessoa da Mata', password: 'senha-segura-de-teste' });
   const room = createTestServer(t, { ambientCampfire: false, port: 0, stateDirectory, allowedOrigin: TEST_ORIGIN });
   const address = await room.listen();
+  await placeNearSouthBranch(stateDirectory, created.profile.id);
   t.after(() => room.close());
   const player = new WebSocket(`ws://127.0.0.1:${address.port}/room`, {
     headers: { origin: TEST_ORIGIN, cookie: `clareira_session=${created.token}` },

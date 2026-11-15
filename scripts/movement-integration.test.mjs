@@ -5,7 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import WebSocket from 'ws';
 import { createPrototypeServer } from './prototype-server.mjs';
-import { SPAWN, SPAWN_CAMPFIRE, RESOURCE_NODES, CLEARING_DOOR, getRoomLayout, findWalkPath, canOccupy, stepPlayer } from '../game/world.mjs';
+import { SPAWN, SPAWN_CAMPFIRE, WORLD_COORDINATE_VERSION, CLEARING_DOOR, getResourcesInBounds, getRoomLayout, findWalkPath, canOccupy, stepPlayer } from '../game/world.mjs';
+import { createJsonPlayerLocationStore } from './player-location-store.mjs';
 import { reconcilePrediction } from '../game/prediction.mjs';
 
 test('servidor confirma passos simulados; repetir pacotes não duplica movimento; chegada tem fogo e recursos',async t=>{
@@ -109,6 +110,17 @@ test('uma única coleta usa a posição prevista antes do tick e registra a tran
     tickIntervalMs: 500, snapshotIntervalMs: 100,
     resolveSession: () => ({ profile: { id: profileId, guest: true, displayName: 'Teste', inventory: {} } }) });
   const address = await room.listen(); t.after(() => room.close());
+  // Recursos são gerados (RESOURCE_NODES está vazio) e dependem do mundo que o servidor aplica ao subir: o alvo é a madeira gerada
+  // mais próxima do spawn, e o jogador começa a 2,2 unidades dela, pela posição salva, para os 24 passos o deixarem ao alcance.
+  const target = getResourcesInBounds({ left: SPAWN.x - 80, top: SPAWN.y - 80, right: SPAWN.x + 80, bottom: SPAWN.y + 80 })
+    .filter(resource => resource.kind === 'wood')
+    .sort((a, b) => Math.hypot(a.x - SPAWN.x, a.y - SPAWN.y) - Math.hypot(b.x - SPAWN.x, b.y - SPAWN.y))[0];
+  assert.ok(target, 'há madeira gerada perto do spawn');
+  const start = [[-1, 0], [0, 1], [0, -1], [1, 0]].map(([dx, dy]) => ({ x: target.x + dx * 2.2, y: target.y + dy * 2.2 }))
+    .find(point => [0.4, 0.8, 1.2, 1.6, 2, 2.2].every(step => canOccupy({ x: target.x + (point.x - target.x) * step / 2.2, y: target.y + (point.y - target.y) * step / 2.2 })));
+  assert.ok(start, 'há ponto livre a 2,2 unidades da madeira');
+  await createJsonPlayerLocationStore(stateDirectory).savePlayerLocation(profileId, {
+    location: 'clearing', dimensionId: 'surface', x: start.x, y: start.y, worldVersion: WORLD_COORDINATE_VERSION });
   const socket = new WebSocket(`ws://127.0.0.1:${address.port}/room`, { headers: { origin } });
   t.after(() => socket.terminate());
   let latest;
@@ -133,7 +145,6 @@ test('uma única coleta usa a posição prevista antes do tick e registra a tran
     collection.push(waiter);
   });
   const initial = await waitFor(stateWaiters, state => state.players.length === 1, latest);
-  const target = RESOURCE_NODES.find(resource => resource.id === 'dry-leaves-start');
   const dx = target.x - initial.players[0].x, dy = target.y - initial.players[0].y, length = Math.hypot(dx, dy);
   const commands = Array.from({ length: 24 }, (_, index) => ({ seq: index + 1, x: dx / length, y: dy / length, motion: true }));
   socket.send(JSON.stringify({ type: 'input', location: 'clearing', commands: commands.slice(0, 12) }));
@@ -142,7 +153,7 @@ test('uma única coleta usa a posição prevista antes do tick e registra a tran
 
   const collected = await waitFor(noticeWaiters, message => message.action === 'collect' && message.requestId === 41 && message.result === 'collected');
   assert.equal(collected.resource.id, target.id);
-  const final = await waitFor(stateWaiters, state => state.players[0]?.inputSeq === 24 && state.players[0]?.inventory.leaves === 1, latest);
+  const final = await waitFor(stateWaiters, state => state.players[0]?.inputSeq === 24 && state.players[0]?.inventory.wood === 1, latest);
   assert.ok(Math.hypot(final.players[0].x - target.x, final.players[0].y - target.y) < 1.2,
     'server applies the movement commands ordered before the collection');
 
@@ -155,6 +166,6 @@ test('uma única coleta usa a posição prevista antes do tick e registra a tran
   assert.deepEqual(event.objectProperties, { x: target.x, y: target.y });
   assert.equal(event.transfer.from.type, 'ground');
   assert.equal(event.transfer.to.type, 'inventory');
-  assert.equal(event.transfer.to.itemId, 'leaves');
+  assert.equal(event.transfer.to.itemId, 'wood');
   assert.equal(event.transfer.to.quantity, 1);
 });

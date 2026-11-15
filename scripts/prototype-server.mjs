@@ -71,7 +71,7 @@ import {
   campfireFlameStrength, campfireRemainingMs,
 } from '../game/campfire-life.mjs';
 import {
-  applyDamage, createVitals, damageFromAttack, downedRefusal, isDowned, maxHealth, regenStep, releaseAnimalsFromPlayer, vitalsSnapshot,
+  applyDamage, createVitals, damageFromAttack, dimensionTravelCancelledDetails, downedRefusal, isDowned, maxHealth, regenStep, releaseAnimalsFromPlayer, vitalsSnapshot,
 } from '../game/vitals.mjs';
 
 function wildlifeOutsideVillage(position,dimensionId,padding=4) {
@@ -1097,7 +1097,11 @@ export function createPrototypeServer({
       player.position.vx = 0; player.position.vy = 0; player.sitting = false; player.emote = null;
       // Uma viagem já iniciada é cancelada: caído, o jogador não troca de dimensão.
       const pendingTransit = activeDimensionTransits.get(player.pendingDimensionTransitId);
-      if (pendingTransit) removeDimensionTransit(pendingTransit);
+      if (pendingTransit) {
+        removeDimensionTransit(pendingTransit);
+        // O cliente desfaz a tela de viagem com a mesma resposta de uma viagem recusada.
+        notice(player.socket, 'A viagem foi interrompida.', 'soft', dimensionTravelCancelledDetails(pendingTransit.id));
+      }
       delete player.pendingDimensionTransitId;
       releaseAnimalsFromPlayer(wildlifeFor(player.dimensionId || 'surface').values(), player.id, event.animalId, at);
     }

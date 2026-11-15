@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  applyDamage, createVitals, downedRefusal, releaseAnimalsFromPlayer, damageFromAttack, faintOutcome, isDowned, maxHealth, regenStep, vitalsSnapshot,
+  applyDamage, createVitals, dimensionTravelCancelledDetails, downedRefusal, releaseAnimalsFromPlayer, damageFromAttack, faintOutcome, isDowned, maxHealth, regenStep, vitalsSnapshot,
 } from './vitals.mjs';
 import { createVitalsHud, vitalsHudState, wakeText } from './vitals-hud.mjs';
 import { WILDLIFE_BY_ID } from './wildlife.mjs';
@@ -133,4 +133,14 @@ test('HUD no DOM mostra o texto de desmaio e de despertar', () => {
   assert.equal(parts['.vitals-label'].textContent, '21/42');
   parts['.vitals-note'].listeners.animationend();
   assert.equal(parts['.vitals-note'].hidden, true);
+});
+
+test('viagem cancelada no desmaio usa a resposta de recusa que o cliente já trata', async () => {
+  const details = dimensionTravelCancelledDetails('t1');
+  assert.equal(details.action, 'dimensionTravel');
+  assert.equal(details.result, 'rejected');
+  assert.equal(details.transitId, 't1');
+  const { readFile } = await import('node:fs/promises');
+  const client = await readFile(new URL('./main.js', import.meta.url), 'utf8');
+  assert.match(client, /message\.result === 'rejected' && message\.cancelled === true[\s\S]{0,400}teleportEffects\.clear\(\)/);
 });

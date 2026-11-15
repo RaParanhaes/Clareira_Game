@@ -63,6 +63,9 @@ export function downedRefusal(message, vitals, now) {
   };
 }
 
+// Resposta enviada ao cliente quando o desmaio cancela uma viagem já iniciada: o cliente a trata como recusa e desfaz a tela de viagem.
+export const dimensionTravelCancelledDetails = transitId => ({ action: 'dimensionTravel', result: 'rejected', cancelled: true, transitId });
+
 // No desmaio só perdem o alvo o agressor e os animais provocados por este jogador; os provocados por outros seguem.
 export function releaseAnimalsFromPlayer(animals, playerId, attackerId, now) {
   for (const animal of animals) {

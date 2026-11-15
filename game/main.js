@@ -2234,6 +2234,10 @@ function connect() {
       }
       if(message.arrivalReady===true){arrivalTravelPending=true;if(teleportTravelReady())requestArrivalTravel();}
       if (typeof message.text === 'string') placePanel.notice(message.text);
+      if(message.action === 'dimensionTravel' && message.result === 'rejected' && message.cancelled === true){
+        // Viagem já aceita e interrompida pelo servidor (desmaio): desfaz a tela de viagem e destrava o jogador.
+        dimensionTravelRequestPending=false;dimensionRequestStartedAt=0;pendingDimensionTravelRequestId=null;dimensionTravelStarting=false;teleportEffects.clear();updateDimensionTravel(dimensionList,worldDimensionId);
+      }
       if(dimensionTravelRequestPending && message.action === 'dimensionTravel' && message.result === 'rejected'){
         dimensionTravelRequestPending=false;dimensionRequestStartedAt=0;pendingDimensionTravelRequestId=null;dimensionTravelStarting=false;teleportEffects.cancelLocal();updateDimensionTravel(dimensionList,worldDimensionId);
         if(message.action==='dimensionTravel'&&message.result==='rejected'&&worldDimensionId.startsWith('arrival-')&&!arrivalTutorial?.completed)arrivalDepartureAsked=false;

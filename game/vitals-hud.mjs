@@ -43,6 +43,7 @@ export function createVitalsHud(root) {
       }
       if (state.message) {
         // O recolhimento do aviso é uma animação CSS (.is-timed); caído, o aviso fica até acordar.
+        note.textContent = state.message;
         note.hidden = false;
         note.classList.remove('is-timed');
         if (!state.downed) requestAnimationFrame(() => note.classList.add('is-timed'));

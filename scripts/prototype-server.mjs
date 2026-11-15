@@ -1095,6 +1095,10 @@ export function createPrototypeServer({
     if (result.fainted) {
       player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq; player.moving = false;
       player.position.vx = 0; player.position.vy = 0; player.sitting = false; player.emote = null;
+      // Uma viagem já iniciada é cancelada: caído, o jogador não troca de dimensão.
+      const pendingTransit = activeDimensionTransits.get(player.pendingDimensionTransitId);
+      if (pendingTransit) removeDimensionTransit(pendingTransit);
+      delete player.pendingDimensionTransitId;
       releaseAnimalsFromPlayer(wildlifeFor(player.dimensionId || 'surface').values(), player.id, event.animalId, at);
     }
     return result.damage;
@@ -2076,6 +2080,7 @@ export function createPrototypeServer({
         const transferTimer = setTimeout(() => {
           dimensionTransitTimers.delete(transit.id);
           if (activeDimensionTransits.get(transit.id) !== transit || player.pendingDimensionTransitId !== transit.id
+              || isPlayerDowned(player)
               || !peers.has(socket) || socket.readyState !== WebSocket.OPEN) return;
           player.dimensionId = targetDimension.id;
           player.arrivalTutorial = isPersonalArrivalDimensionId(targetDimension.id) ? { phase: 'welcome', step: 0, completed: false } : null;

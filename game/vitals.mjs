@@ -48,15 +48,18 @@ export function applyDamage(vitals, damage, now, max) {
   return { damage, fainted: true };
 }
 
-export const DOWNED_BLOCKED_MESSAGES = ['action', 'dimensionTravel', 'roomWarm'];
+// Caído, só passa o que é seguro e necessário: ping, chat de texto, pedido de snapshot (view), reconexão,
+// movimento (o servidor o zera) e telemetria. Todo o resto é recusado, inclusive tipos novos.
+export const DOWNED_ALLOWED_MESSAGES = ['join', 'clockPing', 'chat', 'view', 'recoverMovement', 'input',
+  'clientDiagnostics', 'performanceMetrics', 'objectCatalogReady'];
 export const DOWNED_NOTICE = 'Você ainda está se recompondo…';
 
-// Ponto único de recusa: caído, nenhuma ação, viagem de dimensão, visita a quarto ou teleporte passa.
+// Ponto único de recusa para quem está caído.
 export function downedRefusal(message, vitals, now) {
-  if (!isDowned(vitals, now) || !DOWNED_BLOCKED_MESSAGES.includes(message?.type)) return null;
+  if (!isDowned(vitals, now) || DOWNED_ALLOWED_MESSAGES.includes(message?.type)) return null;
   return {
     text: DOWNED_NOTICE,
-    details: message.type === 'dimensionTravel' ? { action: 'dimensionTravel', requestId: message.requestId, result: 'rejected' } : null,
+    details: message?.type === 'dimensionTravel' ? { action: 'dimensionTravel', requestId: message.requestId, result: 'rejected' } : null,
   };
 }
 

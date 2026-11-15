@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   applyDamage, createVitals, downedRefusal, releaseAnimalsFromPlayer, damageFromAttack, faintOutcome, isDowned, maxHealth, regenStep, vitalsSnapshot,
 } from './vitals.mjs';
-import { vitalsHudState, wakeText } from './vitals-hud.mjs';
+import { createVitalsHud, vitalsHudState, wakeText } from './vitals-hud.mjs';
 import { WILDLIFE_BY_ID } from './wildlife.mjs';
 
 test('vida máxima cresce com o nível', () => {
@@ -93,7 +93,8 @@ test('caído, toda ação, viagem de dimensão e visita a quarto são recusadas 
   const travel = downedRefusal({ type: 'dimensionTravel', requestId: 7 }, vitals, 1000);
   assert.deepEqual(travel.details, { action: 'dimensionTravel', requestId: 7, result: 'rejected' });
   assert.ok(downedRefusal({ type: 'roomWarm', buildingId: 'a' }, vitals, 1000));
-  assert.equal(downedRefusal({ type: 'input' }, vitals, 1000), null, 'movimento já é zerado pelo servidor');
+  for (const type of ['emote', 'appearance', 'tipo-novo']) assert.ok(downedRefusal({ type }, vitals, 1000), type);
+  for (const type of ['clockPing', 'chat', 'view', 'recoverMovement', 'join', 'input']) assert.equal(downedRefusal({ type }, vitals, 1000), null, type);
   assert.equal(downedRefusal({ type: 'action', name: 'gather' }, vitals, 5000), null, 'acordado, volta a agir');
   assert.equal(downedRefusal({ type: 'action' }, null, 1000), null);
 });
@@ -106,4 +107,30 @@ test('desmaio solta só o agressor e os provocados por este jogador', () => {
   assert.deepEqual([mine.provokedUntil, mine.state], [0, 'explorando']);
   assert.deepEqual([other.provokedUntil, other.state], [9000, 'atacando']);
   assert.equal(attacker.state, 'explorando');
+});
+
+function fakeElement() {
+  const classes = new Set();
+  const listeners = {};
+  return { hidden: true, textContent: '', style: {}, listeners, attrs: {},
+    classList: { add: c => classes.add(c), remove: c => classes.delete(c), toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)), has: c => classes.has(c) },
+    addEventListener(name, fn) { listeners[name] = fn; }, setAttribute(k, v) { this.attrs[k] = v; } };
+}
+
+test('HUD no DOM mostra o texto de desmaio e de despertar', () => {
+  globalThis.requestAnimationFrame = fn => { fn(); return 1; };
+  globalThis.cancelAnimationFrame = () => {};
+  const parts = { '.vitals-fill': fakeElement(), '.vitals-label': fakeElement(), '.vitals-note': fakeElement() };
+  const root = { ...fakeElement(), querySelector: selector => parts[selector] };
+  const hud = createVitalsHud(root);
+  hud.update({ hp: 42, max: 42 });
+  assert.equal(parts['.vitals-note'].hidden, true);
+  hud.update({ hp: 21, max: 42, downedMs: 3000 });
+  assert.equal(parts['.vitals-note'].hidden, false);
+  assert.match(parts['.vitals-note'].textContent, /desmaiou/);
+  hud.update({ hp: 21, max: 42 }, { dimensionId: 'surface' });
+  assert.match(parts['.vitals-note'].textContent, /acordou na vila/);
+  assert.equal(parts['.vitals-label'].textContent, '21/42');
+  parts['.vitals-note'].listeners.animationend();
+  assert.equal(parts['.vitals-note'].hidden, true);
 });

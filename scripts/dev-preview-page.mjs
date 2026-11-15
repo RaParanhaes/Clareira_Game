@@ -99,7 +99,7 @@ function securityHeaders() {
     'x-content-type-options': 'nosniff',
     'x-frame-options': 'DENY',
     'referrer-policy': 'no-referrer',
-    'content-security-policy': "default-src 'self'; script-src 'self'; style-src 'self' 'sha256-YUHv8rVFryIyJfa0aqYCJoEeXQjriH3yQMxqzL+QTGo='; connect-src 'self' wss:; img-src 'self' data:; media-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    'content-security-policy': "default-src 'self'; script-src 'self'; style-src 'self' 'sha256-MG9GXd2sngTiQuQK0q2zr913cqywlXP/0U6psmKNnX0='; connect-src 'self' wss:; img-src 'self' data:; media-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
   };
 }
 

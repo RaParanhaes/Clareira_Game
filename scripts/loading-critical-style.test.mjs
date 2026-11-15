@@ -18,3 +18,14 @@ test('loading fallback stays synchronized with its stylesheet and CSP', async ()
   const hash = createHash('sha256').update(inline).digest('base64');
   assert.ok(server.includes(`'sha256-${hash}'`), 'CSP permits exactly the current inline styles');
 });
+
+test('loading markup carries no style attributes blocked by style-src', async () => {
+  const [html, js] = await Promise.all([
+    readFile(new URL('../game/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../game/main.js', import.meta.url), 'utf8'),
+  ]);
+  // The CSP allows only the hashed <style> block; style="" attributes are violations.
+  const markup = html.replace(/<style id="loading-critical-css">[\s\S]*?<\/style>/, '');
+  assert.doesNotMatch(markup, /\sstyle\s*=/u, 'index.html has no inline style attribute');
+  assert.doesNotMatch(js, /setAttribute\(\s*['"]style['"]/u, 'main.js does not set style attributes');
+});

@@ -1430,3 +1430,4 @@ dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header
 #appearance-dialog[open],#lodging-dialog[open]{box-shadow:0 0 0 2px var(--iron),0 0 0 4px var(--brass),0 0 0 6px var(--iron),0 26px 64px #000c}
 .top-actions .ico,.destination-map-button .ico{width:1.25em;height:1.25em}
 .top-actions .icon-button{white-space:nowrap}
+.icon-sprite{position:absolute}

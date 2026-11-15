@@ -146,13 +146,33 @@ test('after the commit only the item is added on top of changes made while waiti
   assert.equal(player.inventory.stone, 7);
   assert.equal(player.inventory.shortSword, 1);
   assert.equal(currencyValue(player.inventory), 500);
-  let refunded = 0;
+  const fillBag = holder => { for (let i = 0; i < 27; i += 1) addInventoryItem(holder.inventory, 'knife', 1); };
+  let saved = null;
   const full = { accountId: 'g', inventory: createInventory() };
-  const lost = await purchaseGear({ player: full, itemId: 'shortSword', refund: async price => { refunded = price; return walletFromValue(2000); },
-    debitAndSave: async () => { for (let i = 0; i < 27; i += 1) addInventoryItem(full.inventory, 'knife', 1); return walletFromValue(500); } });
-  assert.deepEqual([lost.ok, refunded], [false, 1500]);
+  const lost = await purchaseGear({ player: full, itemId: 'shortSword',
+    refundAndSave: async (price, live) => { saved = live; return walletFromValue(2000); },
+    debitAndSave: async () => { fillBag(full); return walletFromValue(500); } });
+  assert.deepEqual([lost.ok, lost.refunded], [false, true]);
+  assert.equal(saved.slots.some(stack => stack?.itemId === 'shortSword'), false, 'o salvo do estorno não tem o item');
   assert.equal(full.inventory.shortSword, 0);
   assert.equal(currencyValue(full.inventory), 2000);
+
+  // Estorno falha com a mochila cheia: a armadura fica vestida no corpo e a mensagem não diz que devolveu.
+  const stuck = { accountId: 'h', inventory: createInventory() };
+  const failed = await purchaseGear({ player: stuck, itemId: 'leatherJerkin',
+    refundAndSave: async () => { throw new Error('Banco fora do ar.'); },
+    debitAndSave: async () => { fillBag(stuck); return walletFromValue(800); } });
+  assert.deepEqual([failed.ok, failed.refunded, failed.kept], [false, false, true]);
+  assert.doesNotMatch(failed.message, /devolvido/);
+  assert.equal(stuck.inventory.equipment.body, 'leatherJerkin');
+  assert.equal(currencyValue(stuck.inventory), 800);
+
+  // Estorno falha com espaço livre: o item volta para a mochila viva.
+  const roomy = { accountId: 'i', inventory: createInventory({ slots: [{ itemId: 'shortSword', quantity: 1 }] }) };
+  const again = await purchaseGear({ player: roomy, itemId: 'leatherJerkin', refundAndSave: async () => { throw new Error('x'); },
+    debitAndSave: async () => { roomy.inventory.equipment = { body: 'leatherJerkin' }; return walletFromValue(1); } });
+  assert.equal(again.ok, false);
+  assert.equal(again.refunded, false);
 });
 
 test('a second purchase while the first is in flight is refused as already owned', async () => {

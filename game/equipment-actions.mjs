@@ -41,7 +41,15 @@ const buying = new WeakSet();
 // (`debitAndSave(price, inventoryAfter, inventoryBefore)`) e só depois do commit o item (apenas o delta)
 // entra no jogador vivo. Enquanto espera, o jogador não tem o item. Uma compra por vez por jogador.
 // O JSON só serve a testes e migração: a queda entre salvar e debitar fica aceita (CLAUDE.md).
-export async function purchaseGear({ player, itemId, debitAndSave, refund }) {
+// Estorno falhou: o salvo já tem o item, então o vivo também fica com ele (mochila ou corpo).
+function keepGear(inventory, itemId) {
+  if (canAddInventoryItems(inventory, { [itemId]: 1 }) && !ownsGear(inventory, itemId)) { addInventoryItem(inventory, itemId, 1); return; }
+  if (isArmor(itemId) && !ownsGear(inventory, itemId) && !inventory.equipment?.[ARMOR_SPECS[itemId].slot]) {
+    inventory.equipment = { ...inventory.equipment, [ARMOR_SPECS[itemId].slot]: itemId };
+  }
+}
+
+export async function purchaseGear({ player, itemId, debitAndSave, refundAndSave }) {
   if (buying.has(player)) return { ok: false, message: 'Aguarde a compra anterior terminar.' };
   const check = gearPurchaseCheck(player.inventory, itemId);
   if (!check.ok) return check;
@@ -56,12 +64,18 @@ export async function purchaseGear({ player, itemId, debitAndSave, refund }) {
     catch (error) { return { ok: false, message: error.message || 'Não consegui concluir a compra; nada foi cobrado.' }; }
     for (const key of CURRENCY_KEYS) player.inventory[key] = wallet[key] || 0;
     if (!canAddInventoryItems(player.inventory, { [itemId]: 1 }) || ownsGear(player.inventory, itemId)) {
-      // A mochila mudou durante a espera e não cabe mais o item: devolve o valor.
-      if (refund) {
-        const refunded = await refund(price).catch(() => null);
-        if (refunded) for (const key of CURRENCY_KEYS) player.inventory[key] = refunded[key] || 0;
+      // A mochila mudou durante a espera e o item não cabe mais. O estorno grava, numa só operação,
+      // o crédito e a mochila VIVA (sem o item), para o salvo e o vivo convergirem.
+      try {
+        const refunded = await refundAndSave(price, inventorySnapshot(player.inventory));
+        for (const key of CURRENCY_KEYS) player.inventory[key] = refunded[key] || 0;
+        return { ok: false, refunded: true, message: 'A mochila mudou durante a compra; o pagamento foi devolvido.' };
+      } catch (error) {
+        process.stderr.write(`Could not refund gear purchase: ${error.message}\n`);
+        keepGear(player.inventory, itemId);
+        return { ok: false, refunded: false, kept: ownsGear(player.inventory, itemId),
+          message: 'Não consegui devolver o pagamento; o item ficou com você.' };
       }
-      return { ok: false, message: 'A mochila mudou durante a compra; o pagamento foi devolvido.' };
     }
     addInventoryItem(player.inventory, itemId, 1);
     return { ok: true, price, message: `Compra concluída: ${GEAR_LABELS[itemId].toLowerCase()} por ${formatCoins(price)}.` };

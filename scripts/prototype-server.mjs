@@ -2806,7 +2806,12 @@ export function createPrototypeServer({
           const next = previous.catch(() => {}).then(() => storage.debitWalletAndSaveProgress(player.accountId, price, after, before));
           progressWrites.set(player.accountId, next);
           return next;
-        }, refund: price => storage.creditWallet(player.accountId, price) });
+        }, refundAndSave: (price, live) => {
+          const previous = progressWrites.get(player.accountId) || Promise.resolve();
+          const next = previous.catch(() => {}).then(() => storage.creditWalletAndSaveProgress(player.accountId, price, live));
+          progressWrites.set(player.accountId, next);
+          return next;
+        } });
         notice(socket, result.message, result.ok ? 'chime' : undefined);
         if (result.ok) broadcast(false);
         return;

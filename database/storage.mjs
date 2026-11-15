@@ -46,6 +46,12 @@ export function createStorageAdapter({
           throw error;
         }
       },
+      // JSON: credita primeiro e grava depois (uma queda no meio favorece o jogador; aceito, JSON só serve a testes).
+      creditWalletAndSaveProgress: async (accountId, amount, inventory) => {
+        const wallet = await accounts.creditWallet(accountId, amount);
+        await saveAccountProgress(directory, accountId, inventory);
+        return wallet;
+      },
       loadRoom: accountId => loadAccountRoom(directory, accountId),
       saveRoom: (accountId, furniture) => saveAccountRoom(directory, accountId, furniture),
       loadAppearance: accountId => loadAppearance(directory, accountId),

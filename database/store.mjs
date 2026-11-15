@@ -517,6 +517,25 @@ export function createPostgresStore(pool) {
       });
     },
 
+    // Estorno atômico: credita a carteira e grava a mochila viva (sem o item) na mesma transação.
+    async creditWalletAndSaveProgress(profileId, amount, inventory) {
+      if (typeof profileId !== 'string' || !/^[0-9a-f-]{36}$/i.test(profileId)
+          || !Number.isSafeInteger(amount) || amount < 1 || amount > 999_999) {
+        throw Object.assign(new Error('Este estorno não pôde ser concluído.'), { status: 400 });
+      }
+      const values = validateInventory(inventory);
+      return withTransaction(pool, async client => {
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', ['lodging-profile', profileId]);
+        const wallet = await loadInventory(client, profileId);
+        const nextValue = currencyValue(wallet) + amount;
+        if (nextValue > MAX_WALLET_VALUE) throw Object.assign(new Error('A carteira atingiu o limite técnico de armazenamento.'), { status: 409 });
+        const nextWallet = walletFromValue(nextValue);
+        await storeWallet(client, profileId, nextWallet);
+        await writeProgress(client, profileId, values);
+        return nextWallet;
+      });
+    },
+
     async saveProgressAndDiscoverDimension(accountId, inventory, dimensionId, discoverySource = 'knowledge') {
       if (typeof accountId !== 'string' || !/^[0-9a-f-]{36}$/i.test(accountId)) return false;
       if (typeof dimensionId !== 'string' || !/^[a-z0-9][a-z0-9-]{0,47}$/u.test(dimensionId)

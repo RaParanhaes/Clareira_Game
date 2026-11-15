@@ -312,37 +312,3 @@ test('o mundo expandido gera coleta alcançável além da antiga borda e consult
   assert.deepEqual(getSolidTreesInBounds(region).map(({x,y,r,index})=>({x,y,r,index})),treesBefore);
   assert.deepEqual(getResourcesInBounds(region),resourcesBefore,'chunks descarregados são recriados sem alterar o mundo');
 });
-
-test('pedras e gravetos soltos ficam a poucos passos do ponto de chegada, com qualquer semente',()=>{
- const origin=getWorldDefinition();
- const exit=surfacePosition(41.5,15);
- try {
-  for(const seed of [origin.seed,1234567,987654321,4000000000]){
-   applyWorldDefinition({...origin,seed});
-   const R=12,box={left:SPAWN.x-R,right:SPAWN.x+R,top:SPAWN.y-R,bottom:SPAWN.y+R};
-   const near=getResourcesInBounds(box).filter(r=>Math.hypot(r.x-SPAWN.x,r.y-SPAWN.y)<=R&&r.id.startsWith('resource-village-'));
-   const stones=near.filter(r=>r.kind==='stone'),sticks=near.filter(r=>r.kind==='wood');
-   assert.ok(stones.length>=4,`semente ${seed}: ao menos 4 pedras em ${R} tiles (achou ${stones.length})`);
-   assert.ok(sticks.length>=2,`semente ${seed}: ao menos 2 gravetos em ${R} tiles (achou ${sticks.length})`);
-   for(const item of [...stones,...sticks]){
-    assert.equal(isPathTile(item.x,item.y),false,`${item.id} fora do piso da trilha`);
-    assert.equal(canOccupy({x:item.x,y:item.y},PLAYER_RADIUS),true,`${item.id} em chão livre`);
-    assert.ok(getSolidTreesInBounds({left:item.x-1,right:item.x+1,top:item.y-1,bottom:item.y+1}).every(t=>Math.hypot(t.x-item.x,t.y-item.y)>=1),`${item.id} longe de árvores`);
-    assert.ok(item.id.startsWith('resource-village-'),'id fixo, para reaparecer pela regra comum');
-   }
-   assert.ok(stones.every(s=>Math.hypot(s.x-CLEARING_DOOR.x,s.y-CLEARING_DOOR.y)>1.5),'pedras não bloqueiam a porta da recepção');
-   const toExit=findWalkPath(SPAWN,exit);
-   assert.ok(Array.isArray(toExit)&&toExit.length>0,`semente ${seed}: caminho do ponto de chegada até a saída da vila`);
-   assert.ok(toExit.every(p=>canOccupy(p,PLAYER_RADIUS)),'caminho sem colisão');
-   for(const stone of stones){
-    const walk=findWalkPath(SPAWN,stone);
-    assert.ok(Array.isArray(walk)&&walk.length>0,`${stone.id} é alcançável a pé`);
-   }
-  }
-  applyWorldDefinition({...origin,seed:1234567});
-  const idsA=getResourcesInBounds({left:SPAWN.x-12,right:SPAWN.x+12,top:SPAWN.y-12,bottom:SPAWN.y+12}).filter(r=>r.id.startsWith('resource-village-')).map(r=>r.id).sort();
-  applyWorldDefinition(origin);
-  const idsB=getResourcesInBounds({left:SPAWN.x-12,right:SPAWN.x+12,top:SPAWN.y-12,bottom:SPAWN.y+12}).filter(r=>r.id.startsWith('resource-village-')).map(r=>r.id).sort();
-  assert.deepEqual(idsA,idsB,'ids estáveis entre sementes');
- } finally { applyWorldDefinition(origin); }
-});

@@ -9,7 +9,6 @@ import { FIRE_RADIUS, FIRE_JUMP_CLEARANCE_HEIGHT, canMovePastFires } from './obs
 import { contentById } from './content-catalog.mjs';
 import {isNaturalAccess, TERRAIN_BOUNDS} from './natural-terrain.mjs';
 import {locomotion} from './locomotion.mjs';
-import { VILLAGE_SUPPLY_ANCHORS, VILLAGE_SUPPLY_JITTER } from './village-supplies.mjs';
 import {flightStep} from './flight-prototype.mjs';
 import { movementSpeedMultiplier } from './progression.mjs';
 import { canTraverseSurface,surfaceHeight } from './elevation.mjs';
@@ -408,44 +407,7 @@ function generateWorldChunk(cx, cy) {
     const id = `resource-${cx}-${cy}-g${definition.generationVersion}-${slot}`;
     resources.push({ id, kind, x, y });
   }
-  if (surfaceDimension) addVillageSupplies(cx, cy, definition, resources);
   return { trees, resources };
-}
-
-// Cada ponto tem id fixo: coletar e reaparecer seguem a mesma regra dos demais recursos do chunk.
-function villageSupplyTreeBlocked(x, y) {
-  if (SOLID_TREES.some(tree => Math.hypot(tree.x - x, tree.y - y) < 1.1)) return true;
-  for (const sampler of TREE_SAMPLERS) {
-    const gx0 = Math.floor(x / sampler.step), gy0 = Math.floor(y / sampler.step);
-    for (let gy = gy0 - 1; gy <= gy0 + 1; gy += 1) for (let gx = gx0 - 1; gx <= gx0 + 1; gx += 1) {
-      const candidate = treeCandidate(gx, gy, sampler.step, sampler.salt);
-      if (Math.hypot(candidate.x - x, candidate.y - y) < 1.1
-          && cachedProceduralTreeAllowed(candidate, gx, gy, sampler, true)) return true;
-    }
-  }
-  return false;
-}
-function villageSupplyBlocked(x, y) {
-  return isPathTile(x, y) || worldWaterAt(x, y)
-    || waterBankDepthAt(x, y, WORLD_WATER_OPTIONS, RESOURCE_BANK_CLEARANCE) > 0
-    || [RECEPTION_BUILDING, ...VILLAGE_BUILDINGS].some(building => x > building.bounds.left - 1.2 && x < building.bounds.right + 1.2
-      && y > building.bounds.top - 1.2 && y < building.bounds.bottom + 1.2)
-    || villageSupplyTreeBlocked(x, y);
-}
-function addVillageSupplies(cx, cy, definition, resources) {
-  VILLAGE_SUPPLY_ANCHORS.forEach((anchor, index) => {
-    const baseX = atDimensionOrigin(anchor.x), baseY = atDimensionOrigin(anchor.y);
-    for (let attempt = 0; attempt < 6; attempt += 1) {
-      const seed = Math.imul(index + 101, 2654435761) ^ Math.imul(attempt + 7, 374761393) ^ activeWorldSeed;
-      const jitter = attempt === 5 ? 0 : VILLAGE_SUPPLY_JITTER;
-      const x = baseX + (chunkRandom(seed ^ 0x165667b1) * 2 - 1) * jitter;
-      const y = baseY + (chunkRandom(seed ^ 0x27d4eb2d) * 2 - 1) * jitter;
-      if (villageSupplyBlocked(x, y)) continue;
-      if (Math.floor(x / WORLD_CHUNK_SIZE) === cx && Math.floor(y / WORLD_CHUNK_SIZE) === cy)
-        resources.push({ id: `resource-village-${index}-g${definition.generationVersion}`, kind: anchor.kind, x, y });
-      return;
-    }
-  });
 }
 let worldChunkCaches = new WeakMap();
 const worldChunkCachesByGeometry = new Map();

@@ -4,6 +4,7 @@ Uma linha por área. Atualizado a cada integração. O histórico completo está
 
 | Data | Área | Hash | Resumo | Evidências |
 |---|---|---|---|---|
+| 2026-11-15 | Mundo: pedras perto da vila | ver `git log` (commit "mundo: pedras soltas perto da vila para o primeiro machado") | 6 pedras e 4 gravetos soltos num anel rente às trilhas do ponto de chegada, determinísticos por semente, com ids fixos que reaparecem pela regra comum | `~/clareira-evidencias/2026-11-15-world-pedras-perto-da-vila/` |
 | 2026-11-15 | Interface: carga e CSP | c81ed85, d7402c8, 09fc833 | Sem estilo inline bloqueado pela CSP na carga; teclas só liberadas quando a tela de carga sai; modelos de aviso fora do download de runtime | `~/clareira-evidencias/2026-11-15-ui-carga-e-csp/` |
 | 2026-11-09 | Mundo: móveis do quarto | ver `git log` (commit "mundo: móveis predefinidos") | Predefinidos dos quartos privados são móveis movíveis e giráveis, mas não retiráveis | `logs/2026-11-09-world-moveis-predefinidos/` (na VPS) |
 | 2026-11-09 | Servidor: construção do quarto | ver `git log` (commit "servidor: predefinidos") | Recusa de remoção de predefinido; limite de 12 conta só os móveis colocados | idem |

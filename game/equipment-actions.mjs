@@ -35,38 +35,35 @@ export function gearPurchaseCheck(inventory, itemId) {
 // Compra atômica: `debitAndSave(price, inventoryAfter, inventoryBefore)` debita a carteira e grava o
 // inventário (com o item) numa só operação do store. Se falhar, nada foi cobrado e só o item
 // comprado sai da memória; o resto do inventário (mudanças concorrentes) não é tocado.
-// Ações que mexem no inventário e ficam recusadas enquanto uma compra espera confirmação.
-export const GEAR_PENDING_BLOCKED_ACTIONS = Object.freeze(['equipItem', 'unequipItem', 'moveToHotbar', 'moveInventorySlot',
-  'selectHotbar', 'chestMove', 'share', 'lodgeSell', 'lodgeBuyGear', 'placeFurniture']);
-export function gearPurchasePending(player, actionName) {
-  return Boolean(player?.pendingGear) && GEAR_PENDING_BLOCKED_ACTIONS.includes(actionName);
-}
+const buying = new WeakSet();
 
-// Remove o item comprado onde ele estiver (mochila ou espaço de equipamento).
-function takeBackGear(inventory, itemId) {
-  if (removeInventoryItem(inventory, itemId, 1)) return;
-  for (const [slot, worn] of Object.entries(inventory.equipment || {})) {
-    if (worn === itemId) inventory.equipment = { ...inventory.equipment, [slot]: null };
-  }
-}
-
-export async function purchaseGear({ player, itemId, debitAndSave }) {
-  if (player.pendingGear) return { ok: false, message: 'Aguarde a compra anterior terminar.' };
+// Compra atômica sem item fantasma: a mochila nova é montada num CLONE, gravada junto com o débito
+// (`debitAndSave(price, inventoryAfter, inventoryBefore)`) e só depois do commit o item (apenas o delta)
+// entra no jogador vivo. Enquanto espera, o jogador não tem o item. Uma compra por vez por jogador.
+// O JSON só serve a testes e migração: a queda entre salvar e debitar fica aceita (CLAUDE.md).
+export async function purchaseGear({ player, itemId, debitAndSave, refund }) {
+  if (buying.has(player)) return { ok: false, message: 'Aguarde a compra anterior terminar.' };
   const check = gearPurchaseCheck(player.inventory, itemId);
   if (!check.ok) return check;
   const price = check.price;
-  // O JSON só serve a testes e migração: a queda entre salvar e debitar fica aceita (CLAUDE.md).
-  addInventoryItem(player.inventory, itemId, 1);
-  player.pendingGear = itemId;
-  const after = inventorySnapshot(player.inventory);
-  const without = createInventory(after);
-  removeInventoryItem(without, itemId, 1);
+  buying.add(player);
   try {
-    const wallet = await debitAndSave(price, after, inventorySnapshot(without));
+    const before = inventorySnapshot(player.inventory);
+    const clone = createInventory(before);
+    addInventoryItem(clone, itemId, 1);
+    let wallet;
+    try { wallet = await debitAndSave(price, inventorySnapshot(clone), before); }
+    catch (error) { return { ok: false, message: error.message || 'Não consegui concluir a compra; nada foi cobrado.' }; }
     for (const key of CURRENCY_KEYS) player.inventory[key] = wallet[key] || 0;
+    if (!canAddInventoryItems(player.inventory, { [itemId]: 1 }) || ownsGear(player.inventory, itemId)) {
+      // A mochila mudou durante a espera e não cabe mais o item: devolve o valor.
+      if (refund) {
+        const refunded = await refund(price).catch(() => null);
+        if (refunded) for (const key of CURRENCY_KEYS) player.inventory[key] = refunded[key] || 0;
+      }
+      return { ok: false, message: 'A mochila mudou durante a compra; o pagamento foi devolvido.' };
+    }
+    addInventoryItem(player.inventory, itemId, 1);
     return { ok: true, price, message: `Compra concluída: ${GEAR_LABELS[itemId].toLowerCase()} por ${formatCoins(price)}.` };
-  } catch (error) {
-    takeBackGear(player.inventory, itemId);
-    return { ok: false, message: error.message || 'Não consegui concluir a compra; nada foi cobrado.' };
-  } finally { player.pendingGear = null; }
+  } finally { buying.delete(player); }
 }

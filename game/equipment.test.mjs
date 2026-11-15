@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ARMOR_SPECS, GEAR_PRICES, WEAPON_SPECS, armorDefense, weaponDamage } from './equipment.mjs';
-import { equipItem, gearPurchasePending, gearPurchaseCheck, purchaseGear, unequipItem } from './equipment-actions.mjs';
+import { equipItem, gearPurchaseCheck, purchaseGear, unequipItem } from './equipment-actions.mjs';
 import { INVENTORY_STACK_LIMITS, addInventoryItem, createInventory, inventoryFromRows, inventoryRows, inventorySnapshot, restoreInventory } from './inventory.mjs';
 import { huntWildlifeTarget } from './wildlife-hunt.mjs';
 import { currencyValue, walletFromValue } from './lodging-catalog.mjs';
@@ -112,21 +112,47 @@ test('purchaseGear delivers and charges once; a crash charges nothing and remove
   assert.deepEqual([refused.ok, refused.message, poor.inventory.shortSword], [false, 'Saldo insuficiente.', 0]);
 });
 
-test('wearing the item during a pending purchase with a failed debit takes it back from the equipment slot', async () => {
-  const player = { accountId: 'e', inventory: createInventory() };
-  const result = await purchaseGear({ player, itemId: 'leatherJerkin', debitAndSave: async () => {
-    assert.equal(gearPurchasePending(player, 'equipItem'), true, 'o servidor recusa vestir enquanto a compra espera');
-    assert.equal(gearPurchasePending(player, 'moveInventorySlot'), true);
-    assert.equal(gearPurchasePending(player, 'lodgeSell'), true);
-    assert.equal(gearPurchasePending(player, 'castAbility'), false);
-    assert.equal(equipItem(player.inventory, 'leatherJerkin').ok, true, 'caso extremo: vestiu mesmo assim');
+test('while a purchase is pending the player does not have the item and hunting uses the current weapon', async () => {
+  const player = { accountId: 'e', position: { x: 0, y: 0 }, dimensionId: 'surface',
+    inventory: createInventory({ slots: [{ itemId: 'knife', quantity: 1 }], selectedSlot: 1 }) };
+  const { WILDLIFE_BY_ID } = await import('./wildlife.mjs');
+  const animal = { id: 'w9', speciesId: [...WILDLIFE_BY_ID.keys()][0], dimensionId: 'surface', x: 0.5, y: 0, health: 50, sheltered: false };
+  let during;
+  const result = await purchaseGear({ player, itemId: 'shortSword', debitAndSave: async () => {
+    during = { sword: player.inventory.shortSword, selected: player.inventory.slots[player.inventory.selectedSlot]?.itemId ?? null };
+    assert.equal(equipItem(player.inventory, 'shortSword').ok, false);
+    player.inventory.selectedSlot = 0;
+    const hit = await huntWildlifeTarget({ player, animal, population: new Map([[animal.id, animal]]) });
+    during.damage = hit.damage;
     throw new Error('Débito recusado.');
   } });
   assert.equal(result.ok, false);
-  assert.equal(player.inventory.equipment.body, null, 'o gibão não sai de graça');
-  assert.equal(armorDefense(player.inventory), 0);
-  assert.equal(player.inventory.leatherJerkin, 0);
-  assert.equal(gearPurchasePending(player, 'equipItem'), false, 'pendência termina com a compra');
+  assert.equal(during.sword, 0, 'sem o item durante a espera');
+  assert.equal(during.selected, null, 'o item não ocupou o espaço rápido selecionado');
+  assert.equal(during.damage, 1, 'a caça usa a faca, não a espada');
+  assert.equal(player.inventory.shortSword, 0);
+  assert.equal(currencyValue(player.inventory), 0);
+});
+
+test('after the commit only the item is added on top of changes made while waiting', async () => {
+  const player = { accountId: 'f', inventory: createInventory({ slots: [{ itemId: 'knife', quantity: 1 }] }) };
+  const result = await purchaseGear({ player, itemId: 'shortSword', debitAndSave: async (price, after, before) => {
+    assert.equal(after.slots.some(stack => stack?.itemId === 'shortSword'), true);
+    assert.equal(before.slots.some(stack => stack?.itemId === 'shortSword'), false);
+    addInventoryItem(player.inventory, 'stone', 7);
+    return walletFromValue(500);
+  } });
+  assert.equal(result.ok, true);
+  assert.equal(player.inventory.stone, 7);
+  assert.equal(player.inventory.shortSword, 1);
+  assert.equal(currencyValue(player.inventory), 500);
+  let refunded = 0;
+  const full = { accountId: 'g', inventory: createInventory() };
+  const lost = await purchaseGear({ player: full, itemId: 'shortSword', refund: async price => { refunded = price; return walletFromValue(2000); },
+    debitAndSave: async () => { for (let i = 0; i < 27; i += 1) addInventoryItem(full.inventory, 'knife', 1); return walletFromValue(500); } });
+  assert.deepEqual([lost.ok, refunded], [false, 1500]);
+  assert.equal(full.inventory.shortSword, 0);
+  assert.equal(currencyValue(full.inventory), 2000);
 });
 
 test('a second purchase while the first is in flight is refused as already owned', async () => {

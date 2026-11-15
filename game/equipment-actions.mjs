@@ -12,7 +12,19 @@ export function equipItem(inventory, itemId) {
   removeInventoryItem(inventory, itemId, 1);
   if (previous) addInventoryItem(inventory, previous, 1);
   inventory.equipment = { ...inventory.equipment, [slot]: itemId };
-  return { ok: true, itemId, slot };
+  return { ok: true, itemId, slot, previous };
+}
+
+// Desfaz só o delta de um equipItem/unequipItem já aplicado ao inventário vivo.
+export function revertEquipChange(inventory, result, equipping) {
+  if (equipping) {
+    removeInventoryItem(inventory, result.previous, 1);
+    addInventoryItem(inventory, result.itemId, 1);
+    inventory.equipment = { ...inventory.equipment, [result.slot]: result.previous || null };
+  } else {
+    removeInventoryItem(inventory, result.itemId, 1);
+    inventory.equipment = { ...inventory.equipment, [result.slot]: result.itemId };
+  }
 }
 
 export function unequipItem(inventory, slot) {

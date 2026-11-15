@@ -20,7 +20,7 @@ import {
   removeInventoryItem, restoreInventory, selectedInventoryItem, STONE_AXE_DURABILITY, STONE_PICKAXE_DURABILITY,
 } from '../game/inventory.mjs';
 import { GEAR_LABELS, weaponDamageFor } from '../game/equipment.mjs';
-import { equipItem, unequipItem, purchaseGear } from '../game/equipment-actions.mjs';
+import { equipItem, unequipItem, purchaseGear, revertEquipChange } from '../game/equipment-actions.mjs';
 import { AXE_TOOL_SPECS, AXE_TOOL_IDS, PICKAXE_TOOL_SPECS, PICKAXE_TOOL_IDS, axeToolFor, axeUpgradeFor, pickaxeToolFor, pickaxeUpgradeFor } from '../game/tool-progression.mjs';
 import { RESOURCE_CONTRACTS, resourceContractBoard, resourceContractDayKey } from '../game/resource-contracts.mjs';
 import {normalizeAppearance} from '../game/appearance.mjs';
@@ -883,9 +883,9 @@ export function createPrototypeServer({
     const profileId = player.accountId;
     if (!profileId || !storage.settleNpcSale) return Promise.reject(new Error('O mercado persistente não está disponível.'));
     const previous = progressWrites.get(profileId) || Promise.resolve();
-    const inventoryAfter = inventorySnapshot(player.inventory);
+    // A fotografia é tirada quando o trabalho roda, não ao enfileirar.
     const next = previous.catch(() => {}).then(() => storage.settleNpcSale({
-      profileId, itemId, quantity, inventoryAfter, governmentId:marketGovernmentId,
+      profileId, itemId, quantity, inventoryAfter:inventorySnapshot(player.inventory), governmentId:marketGovernmentId,
     }));
     progressWrites.set(profileId, next);
     return next.catch(error => {
@@ -2348,25 +2348,18 @@ export function createPrototypeServer({
         return;
       }
       if (message.name === 'equipItem' || message.name === 'unequipItem') {
-        const before = inventorySnapshot(player.inventory);
-        const candidate = createInventory(before);
         const equipping = message.name === 'equipItem';
-        const result = equipping ? equipItem(candidate, typeof message.itemId === 'string' ? message.itemId : '')
-          : unequipItem(candidate, typeof message.slot === 'string' ? message.slot : '');
+        const result = equipping ? equipItem(player.inventory, typeof message.itemId === 'string' ? message.itemId : '')
+          : unequipItem(player.inventory, typeof message.slot === 'string' ? message.slot : '');
         if (!result.ok) {
           notice(socket, result.reason === 'bag-full' ? 'A mochila está cheia; libere um espaço antes de guardar o equipamento.'
             : equipping ? 'Esse item não pode ser vestido.' : 'Não há nada vestido nesse espaço.');
           return;
         }
         const label = GEAR_LABELS[result.itemId] || 'Equipamento';
-        try {
-          await persistPlayer({ ...player, inventory: candidate });
-          if (JSON.stringify(inventorySnapshot(player.inventory)) !== JSON.stringify(before)) {
-            await persistPlayer(player);
-            notice(socket, 'O Inventário mudou durante a troca. Tente novamente.'); return;
-          }
-          player.inventory = candidate;
-        } catch { notice(socket, 'Não consegui salvar o equipamento. Tente novamente.'); return; }
+        // Aplica ao vivo e enfileira "grave o estado atual"; se falhar, desfaz só este delta.
+        try { await persistPlayer(player); }
+        catch { revertEquipChange(player.inventory, result, equipping); notice(socket, 'Não consegui salvar o equipamento. Tente novamente.'); return; }
         notice(socket, equipping ? `${label} vestido.` : `${label} guardado na mochila.`, 'soft');
         broadcast(false);
         return;
@@ -2374,21 +2367,16 @@ export function createPrototypeServer({
       if (INVENTORY_ACTIONS.has(message.name)) {
         const seq = message.inventorySeq;
         if (seq !== undefined && (!Number.isSafeInteger(seq) || seq <= (player.inventorySeq || 0))) return;
-        const before = inventorySnapshot(player.inventory);
-        const candidate = createInventory(before);
-        if (applyInventoryCommand(candidate, message)) {
-          try {
-            // Keep snapshots authoritative while the durable write is pending.
-            await persistPlayer({ ...player, inventory: candidate });
-            if (JSON.stringify(inventorySnapshot(player.inventory)) === JSON.stringify(before)) {
-              player.inventory = candidate;
-            } else {
-              // Another player may have transferred items while this write was
-              // in flight. Preserve that live inventory and reject this swap.
-              await persistPlayer(player);
-              notice(socket, 'O Inventário mudou durante a troca. Tente mover o item novamente.');
-            }
-          } catch { notice(socket, 'Não consegui salvar a alteração do Inventário.'); }
+        // Aplica ao vivo e enfileira "grave o estado atual" (fotografado quando roda, não aqui).
+        const slotsBefore = player.inventory.slots.slice(), selectedBefore = player.inventory.selectedSlot;
+        if (applyInventoryCommand(player.inventory, message)) {
+          const appliedSlots = JSON.stringify(player.inventory.slots);
+          try { await persistPlayer(player); }
+          catch {
+            // Desfaz só a troca, e só se nada mais mexeu nos espaços nesse meio-tempo.
+            if (JSON.stringify(player.inventory.slots) === appliedSlots) { player.inventory.slots = slotsBefore; player.inventory.selectedSlot = selectedBefore; }
+            notice(socket, 'Não consegui salvar a alteração do Inventário.');
+          }
         }
         if (seq !== undefined) player.inventorySeq = seq;
         broadcast(false);
@@ -3390,16 +3378,15 @@ export function createPrototypeServer({
           : resource.kind === 'leaves' ? 'maço de folhas secas' : resource.kind === 'vines' ? 'cipó'
             : resource.kind === 'apples' ? 'maçã' : 'frutinha';
         if (typeof storage.saveWorldAndProgressAndRecordInteraction === 'function') {
-          const candidateInventory = createInventory(beforeInventory);
-          addInventoryItem(candidateInventory, resource.kind, quantity);
+          // O item entra no vivo antes; a gravação fotografa o vivo quando roda. Falhou: sai só este item.
+          addInventoryItem(player.inventory, resource.kind, quantity);
           try {
-            const saved = await persistWorldCollection(player, updated, currentDefinition.revision, interaction, candidateInventory);
-            restoreInventory(player.inventory, inventorySnapshot(candidateInventory));
+            const saved = await persistWorldCollection(player, updated, currentDefinition.revision, interaction, player.inventory);
             worldDefinitions.set(player.dimensionId, saved);
             activeWorldRevision = -1;
             activateWorld(player.dimensionId);
           } catch (error) {
-            restoreInventory(player.inventory, beforeInventory);
+            removeInventoryItem(player.inventory, resource.kind, quantity);
             resourcesForDimension.collected.delete(resource.id);
             if (error.status === 409) {
               const latest = normalizeWorldDefinition(await storage.loadWorld(player.dimensionId));

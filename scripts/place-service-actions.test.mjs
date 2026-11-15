@@ -170,3 +170,36 @@ test('server sells and equips gear at the exchange, persists it, and refuses dup
     await action('unequipItem', { slot: 'body' }, 'Não há nada vestido');
   } finally { socket?.terminate(); if (room) await room.close(); await rm(directory, { recursive: true, force: true }); }
 });
+
+test('a sale and an equip sent during a gear purchase never erase the bought item from the saved inventory', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'clareira-gear-race-'));
+  const accounts = createAccountStore({ directory });
+  const locations = createJsonPlayerLocationStore(directory);
+  const origin = 'https://gear-race.clareira.invalid';
+  let room, socket;
+  try {
+    const account = await accounts.register({ username: 'GearRace', password: 'gear-race-test-password' });
+    await accounts.creditWallet(account.profile.id, 3000);
+    await saveAccountProgress(directory, account.profile.id, { slots: [{ itemId: 'knife', quantity: 1 }, { itemId: 'wood', quantity: 40 }, { itemId: 'leatherJerkin', quantity: 1 }], selectedSlot: 0 });
+    const layout = getRoomLayout('lobby', 'arrival');
+    const point = placeServicePoints({ location: 'room', roomKind: 'lobby', roomBuildingId: 'arrival' }, layout).find(p => p.id === 'exchange');
+    await locations.savePlayerLocation(account.profile.id, { location: 'room', dimensionId: 'surface', x: point.x, y: point.y, roomKey: 'lobby:arrival', worldVersion: WORLD_COORDINATE_VERSION });
+    let clock = Date.now();
+    room = createPrototypeServer({ port: 0, stateDirectory: directory, ambientCampfire: false, allowedOrigin: origin, now: () => clock });
+    const address = await room.listen();
+    socket = new WebSocket(`ws://127.0.0.1:${address.port}/room`, { headers: { origin, cookie: `clareira_session=${account.token}` } });
+    await waitFor(socket, m => m.type === 'state');
+    const notices = [];
+    socket.on('message', raw => { const m = JSON.parse(raw); if (m.type === 'notice') notices.push(m.text); });
+    const send = async (name, fields) => { clock += 1000; socket.send(JSON.stringify({ type: 'action', name, ...fields })); await new Promise(resolve => setTimeout(resolve, 15)); };
+    await send('lodgeBuyGear', { itemId: 'shortSword' });
+    await send('lodgeSell', { item: 'wood', quantity: 5 });
+    await send('equipItem', { itemId: 'leatherJerkin' });
+    for (let i = 0; i < 50 && notices.length < 3; i += 1) await new Promise(resolve => setTimeout(resolve, 100));
+    assert.equal(notices.length, 3, notices.join(' | '));
+    const saved = (await accounts.getSession(account.token)).profile.inventory;
+    assert.equal(saved.shortSword, 1, 'a espada comprada continua salva');
+    assert.equal(saved.wood, 35, 'a venda foi salva');
+    assert.deepEqual(saved.equipment, { body: 'leatherJerkin' }, 'o gibão vestido foi salvo: ' + notices.join(' | '));
+  } finally { socket?.terminate(); if (room) await room.close(); await rm(directory, { recursive: true, force: true }); }
+});

@@ -1,3 +1,8 @@
+// Controls are released only when the loading overlay is gone; sceneReady alone is not enough.
+export function sceneInputReady({ sceneReady, overlayHidden }) {
+  return sceneReady === true && overlayHidden === true;
+}
+
 // A compact snapshot may omit unchanged collections, but a new connection needs all of them.
 export function createSceneReadiness() {
   let collections = new Set();

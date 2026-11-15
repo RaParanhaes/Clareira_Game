@@ -39,7 +39,7 @@ import { compareSceneDepth } from './depth-order.mjs';
 import { contentById } from './content-catalog.mjs';
 import { MEDIEVAL_FURNITURE, MEDIEVAL_FURNITURE_CATEGORIES } from './medieval-furniture.mjs';
 import { mergeQueuedState } from './state-inbox.mjs';
-import { createSceneReadiness } from './scene-loading.mjs';
+import { createSceneReadiness, sceneInputReady } from './scene-loading.mjs';
 import { calculateInitialMiniProgress, createLoadingProgress, initialLoadingMiniStage } from './loading-progress.mjs';
 import {getNaturalPatches,NATURAL_PATCHES,TERRAIN_BOUNDS} from './natural-terrain.mjs';
 import {buildWorldMapDetailFeatures,initialForestMapBounds} from './initial-forest-map-features.mjs';
@@ -8312,11 +8312,12 @@ function isTyping(target) { return target instanceof HTMLInputElement || target 
 function normalizeHeldKey(key) { return /^[a-z]$/i.test(key) ? key.toLowerCase() : key; }
 
 window.addEventListener('keydown', event => {
+  const worldInputReady = sceneInputReady({ sceneReady, overlayHidden: loadingScreen.hidden });
   const movementKey = movementKeyForEvent(event);
   if (movementKey && dimensionTransitMovementLocked()) { event.preventDefault(); return; }
   const interactive = isInteractiveKeyboardTarget(event.target);
-  if ((event.key==='n'||event.key==='N')&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&sceneReady&&!panels.isOpen&&!isTextEntryTarget(event.target)&&worldLocation==='clearing') {event.preventDefault();openWorldMap();return;}
-  if (!sceneReady || panels.isOpen || isTextEntryTarget(event.target)) return;
+  if ((event.key==='n'||event.key==='N')&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&worldInputReady&&!panels.isOpen&&!isTextEntryTarget(event.target)&&worldLocation==='clearing') {event.preventDefault();openWorldMap();return;}
+  if (!worldInputReady || panels.isOpen || isTextEntryTarget(event.target)) return;
   if (movementKey ? !canHandleMovementKey(event) : interactive) return;
   const shiftAbilityMatch = event.shiftKey ? /^(?:Digit|Numpad)([1-4])$/.exec(event.code || '') : null;
   if (shiftAbilityMatch) {

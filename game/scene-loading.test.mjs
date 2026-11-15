@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSceneReadiness } from './scene-loading.mjs';
+import { createSceneReadiness, sceneInputReady } from './scene-loading.mjs';
 const self = { id:'me', x:8, y:15, location:'clearing', appearance:{skin:3} };
 const full = {type:'state', players:[self], resources:[], fires:[{x:8,y:14}], roomFurniture:[]};
 test('welcome and a self-less snapshot cannot reveal placeholder avatar', () => {
@@ -27,4 +27,13 @@ test('compact motion preserves already received metadata; reconnect and actor ch
  gate.reset();assert.equal(gate.accept({type:'state',players:[{id:'me',x:9,y:15}]},'me'),false);
  assert.equal(gate.accept(full,'me'),true);
  assert.equal(gate.accept({type:'state',players:[{id:'me',x:9,y:15,appearance:null}]},'me'),false);
+});
+
+test('world controls wait for the loading overlay to leave, not only for sceneReady', () => {
+ // Scene is ready while the overlay still covers the screen: keys must not reach the world yet.
+ assert.equal(sceneInputReady({ sceneReady: true, overlayHidden: false }), false);
+ assert.equal(sceneInputReady({ sceneReady: false, overlayHidden: true }), false);
+ assert.equal(sceneInputReady({ sceneReady: false, overlayHidden: false }), false);
+ // Released together: the overlay hides in the same step that controls are enabled.
+ assert.equal(sceneInputReady({ sceneReady: true, overlayHidden: true }), true);
 });

@@ -2801,7 +2801,12 @@ export function createPrototypeServer({
         }
         if (!player.accountId) { notice(socket, 'Entre com uma conta para pagar e guardar um equipamento.'); return; }
         const itemId = typeof message.itemId === 'string' ? message.itemId : '';
-        const result = await purchaseGear({ player, itemId, storage, persist: persistPlayer });
+        const result = await purchaseGear({ player, itemId, debitAndSave: (price, after, before) => {
+          const previous = progressWrites.get(player.accountId) || Promise.resolve();
+          const next = previous.catch(() => {}).then(() => storage.debitWalletAndSaveProgress(player.accountId, price, after, before));
+          progressWrites.set(player.accountId, next);
+          return next;
+        } });
         notice(socket, result.message, result.ok ? 'chime' : undefined);
         if (result.ok) broadcast(false);
         return;

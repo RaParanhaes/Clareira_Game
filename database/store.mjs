@@ -498,6 +498,25 @@ export function createPostgresStore(pool) {
       await withTransaction(pool, client => writeProgress(client, accountId, values));
     },
 
+    // Débito e item numa só transação: ou a carteira e o inventário mudam juntos, ou nada muda.
+    async debitWalletAndSaveProgress(profileId, amount, inventory) {
+      if (typeof profileId !== 'string' || !/^[0-9a-f-]{36}$/i.test(profileId)
+          || !Number.isSafeInteger(amount) || amount < 1 || amount > 999_999) {
+        throw Object.assign(new Error('Esta compra não pôde ser concluída.'), { status: 400 });
+      }
+      const values = validateInventory(inventory);
+      return withTransaction(pool, async client => {
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', ['lodging-profile', profileId]);
+        const wallet = await loadInventory(client, profileId);
+        const balance = currencyValue(wallet);
+        if (balance < amount) throw Object.assign(new Error(`Faltam ${formatCoins(amount - balance)} para esta compra.`), { status: 402 });
+        const nextWallet = walletFromValue(balance - amount);
+        await storeWallet(client, profileId, nextWallet);
+        await writeProgress(client, profileId, values);
+        return nextWallet;
+      });
+    },
+
     async saveProgressAndDiscoverDimension(accountId, inventory, dimensionId, discoverySource = 'knowledge') {
       if (typeof accountId !== 'string' || !/^[0-9a-f-]{36}$/i.test(accountId)) return false;
       if (typeof dimensionId !== 'string' || !/^[a-z0-9][a-z0-9-]{0,47}$/u.test(dimensionId)

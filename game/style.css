@@ -403,12 +403,12 @@ body.in-world{height:100svh;overflow:hidden;background:#0b141d}
 #inventory-detail-meta{display:block;margin-top:5px;color:#c2ceae;font-size:9px;line-height:1.35}
 .inventory-detail-use{min-height:61px;margin:13px 0;color:#d0d5c2;font-size:11px;line-height:1.5}
 .equipment-slots{display:grid;gap:6px}
-.equipment-slot{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 10px;border:1px solid #c5a76c44;border-radius:9px 4px 9px 4px;background:#1a2a2b99;color:#f0e6c8}
-.equipment-slot-icon{flex:none;width:30px;height:30px;border:1px dashed #c5a76c55;border-radius:7px;background:#0c1a1a66}
+.equipment-slot{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 10px;border:1px solid var(--clareira-edge);border-radius:9px 4px 9px 4px;background:color-mix(in srgb,var(--clareira-surface) 70%,transparent);color:var(--clareira-parchment)}
+.equipment-slot-icon{flex:none;width:30px;height:30px;border:1px dashed var(--clareira-edge);border-radius:7px;background:color-mix(in srgb,var(--clareira-ink) 40%,transparent)}
 .equipment-slot span{display:grid;flex:1;min-width:0;font-size:11px}
-.equipment-slot small{color:#cdbf98}
-.equipment-slot button{min-height:36px;padding:4px 12px;border:1px solid #e6c47c;border-radius:8px;background:linear-gradient(135deg,#bd8b4d,#83613d);color:#fff0c5;font-size:10px;font-weight:800;cursor:pointer}
-.equipment-slot button:focus-visible{outline:2px solid #fff0c5;outline-offset:2px}
+.equipment-slot small{color:color-mix(in srgb,var(--clareira-parchment) 70%,transparent)}
+.equipment-slot button{min-height:36px;padding:4px 12px;border:1px solid var(--clareira-ember);border-radius:8px;background:linear-gradient(135deg,var(--clareira-ember),var(--clareira-afterglow));color:var(--clareira-ink);font-size:10px;font-weight:800;cursor:pointer}
+.equipment-slot button:focus-visible{outline:2px solid var(--clareira-parchment);outline-offset:2px}
 .inventory-equip{width:100%;min-height:40px;padding:8px;border:1px solid #e6c47c;border-radius:8px;background:linear-gradient(135deg,#bd8b4d,#83613d);color:#fff0c5;font-size:10px;font-weight:800;cursor:pointer;box-shadow:inset 0 1px #fff4,0 3px #322819}
 .inventory-equip:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
 .inventory-equip:focus-visible{outline:2px solid #fff0c5;outline-offset:2px}

@@ -1,5 +1,5 @@
 import { ARMOR_SPECS, GEAR_LABELS, GEAR_PRICES, isArmor, ownsGear } from './equipment.mjs';
-import { addInventoryItem, canAddInventoryItems, inventorySnapshot, removeInventoryItem, restoreInventory } from './inventory.mjs';
+import { addInventoryItem, canAddInventoryItems, createInventory, inventorySnapshot, removeInventoryItem } from './inventory.mjs';
 import { CURRENCY_KEYS, formatCoins } from './lodging-catalog.mjs';
 
 // Mutam o inventário recebido e devolvem { ok, reason?, itemId? }. O chamador
@@ -32,30 +32,23 @@ export function gearPurchaseCheck(inventory, itemId) {
   return { ok: true, price: GEAR_PRICES[itemId] };
 }
 
-// Compra com débito na carteira, gravação e estorno se a gravação falhar
-// (mesmo padrão de lodgeBuyTool). Devolve { ok, message, refunded? }.
-export async function purchaseGear({ player, itemId, storage, persist }) {
+// Compra atômica: `debitAndSave(price, inventoryAfter, inventoryBefore)` debita a carteira e grava o
+// inventário (com o item) numa só operação do store. Se falhar, nada foi cobrado e só o item
+// comprado sai da memória; o resto do inventário (mudanças concorrentes) não é tocado.
+export async function purchaseGear({ player, itemId, debitAndSave }) {
   const check = gearPurchaseCheck(player.inventory, itemId);
   if (!check.ok) return check;
   const price = check.price;
-  let wallet;
-  try { wallet = await storage.debitWallet(player.accountId, price); }
-  catch (error) { return { ok: false, message: error.message || 'Não consegui concluir a compra.' }; }
-  const before = inventorySnapshot(player.inventory);
   addInventoryItem(player.inventory, itemId, 1);
-  for (const key of CURRENCY_KEYS) player.inventory[key] = wallet[key] || 0;
+  const after = inventorySnapshot(player.inventory);
+  const without = createInventory(after);
+  removeInventoryItem(without, itemId, 1);
   try {
-    await persist(player);
+    const wallet = await debitAndSave(price, after, inventorySnapshot(without));
+    for (const key of CURRENCY_KEYS) player.inventory[key] = wallet[key] || 0;
     return { ok: true, price, message: `Compra concluída: ${GEAR_LABELS[itemId].toLowerCase()} por ${formatCoins(price)}.` };
   } catch (error) {
-    restoreInventory(player.inventory, before);
-    let refunded = false;
-    try {
-      const wallet2 = await storage.creditWallet(player.accountId, price);
-      for (const key of CURRENCY_KEYS) player.inventory[key] = wallet2[key] || 0;
-      await persist(player);
-      refunded = true;
-    } catch (refundError) { process.stderr.write(`Could not refund failed gear purchase: ${refundError.message}\n`); }
-    return { ok: false, refunded, message: error.message || 'Não consegui salvar o equipamento; o pagamento foi devolvido.' };
+    removeInventoryItem(player.inventory, itemId, 1);
+    return { ok: false, message: error.message || 'Não consegui concluir a compra; nada foi cobrado.' };
   }
 }

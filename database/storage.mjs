@@ -36,6 +36,16 @@ export function createStorageAdapter({
         await saveAccountProgress(directory, accountId, inventory);
         return interactions.recordInteraction(event);
       },
+      // JSON usa dois arquivos: grava o inventário com o item primeiro e debita depois;
+      // se o débito falhar, regrava o inventário anterior. Uma queda no meio nunca cobra sem entregar.
+      debitWalletAndSaveProgress: async (accountId, amount, inventoryAfter, inventoryBefore) => {
+        await saveAccountProgress(directory, accountId, inventoryAfter);
+        try { return await accounts.debitWallet(accountId, amount); }
+        catch (error) {
+          if (inventoryBefore) await saveAccountProgress(directory, accountId, inventoryBefore).catch(() => {});
+          throw error;
+        }
+      },
       loadRoom: accountId => loadAccountRoom(directory, accountId),
       saveRoom: (accountId, furniture) => saveAccountRoom(directory, accountId, furniture),
       loadAppearance: accountId => loadAppearance(directory, accountId),

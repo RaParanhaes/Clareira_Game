@@ -67,35 +67,85 @@ test('purchase check blocks duplicates, including worn items, and unknown goods'
   assert.equal(gearPurchaseCheck(createInventory({ slots: [{ itemId: 'shortSword', quantity: 1 }] }), 'shortSword').ok, false);
 });
 
-function fakeStorage(balance) {
-  const state = { balance, debits: 0, credits: 0 };
-  return Object.assign(state, {
-    async debitWallet(_id, amount) { if (state.balance < amount) throw new Error('Saldo insuficiente.'); state.balance -= amount; state.debits++; return walletFromValue(state.balance); },
-    async creditWallet(_id, amount) { state.balance += amount; state.credits++; return walletFromValue(state.balance); },
-  });
+// Armazenamento falso com a mesma garantia do store: débito e inventário mudam juntos ou nada muda.
+function fakeStore(balance, { failSaveOnce = false } = {}) {
+  const state = { balance, saved: null, failSaveOnce };
+  state.debitAndSave = async (price, after) => {
+    if (state.balance < price) throw new Error('Saldo insuficiente.');
+    if (state.failSaveOnce) { state.failSaveOnce = false; throw new Error('Queda simulada entre débito e gravação.'); }
+    state.balance -= price; state.saved = after;
+    return walletFromValue(state.balance);
+  };
+  return state;
 }
 
-test('purchaseGear debits, saves and delivers; a failed save refunds and removes the item', async () => {
-  const storage = fakeStorage(2000);
+test('purchaseGear delivers and charges once; a crash charges nothing and removes only the bought item', async () => {
+  const store = fakeStore(2000);
   const player = { accountId: 'a', inventory: createInventory() };
-  const bought = await purchaseGear({ player, itemId: 'leatherJerkin', storage, persist: async () => {} });
+  const bought = await purchaseGear({ player, itemId: 'leatherJerkin', debitAndSave: store.debitAndSave });
   assert.equal(bought.ok, true);
   assert.match(bought.message, /gibão de couro/);
   assert.equal(player.inventory.leatherJerkin, 1);
   assert.equal(currencyValue(player.inventory), 800);
+  assert.equal(store.saved.slots.some(stack => stack?.itemId === 'leatherJerkin'), true);
 
-  const failing = fakeStorage(2000), buyer = { accountId: 'b', inventory: createInventory() };
-  let calls = 0;
-  const result = await purchaseGear({ player: buyer, itemId: 'shortSword', storage: failing,
-    persist: async () => { calls += 1; if (calls === 1) throw new Error('Disco cheio.'); } });
+  const crashing = fakeStore(2000, { failSaveOnce: true });
+  const buyer = { accountId: 'b', inventory: createInventory({ slots: [{ itemId: 'knife', quantity: 1 }], gold: 0 }) };
+  const during = addInventoryItem; // mudança concorrente simulada durante a compra
+  let result;
+  const pending = purchaseGear({ player: buyer, itemId: 'shortSword', debitAndSave: async (...args) => {
+    during(buyer.inventory, 'stone', 4);
+    return crashing.debitAndSave(...args);
+  } });
+  result = await pending;
   assert.equal(result.ok, false);
-  assert.equal(result.refunded, true);
+  assert.equal(crashing.balance, 2000, 'nada foi cobrado');
   assert.equal(buyer.inventory.shortSword, 0);
-  assert.equal(failing.balance, 2000);
-  assert.equal(currencyValue(buyer.inventory), 2000);
+  assert.equal(buyer.inventory.stone, 4, 'a mudança concorrente é preservada');
+  assert.equal(buyer.inventory.knife, 1);
+  const retry = await purchaseGear({ player: buyer, itemId: 'shortSword', debitAndSave: crashing.debitAndSave });
+  assert.equal(retry.ok, true);
+  assert.equal(crashing.balance, 500);
 
-  const poor = await purchaseGear({ player: { accountId: 'c', inventory: createInventory() }, itemId: 'shortSword', storage: fakeStorage(10), persist: async () => {} });
-  assert.deepEqual([poor.ok, poor.message], [false, 'Saldo insuficiente.']);
+  const poor = { accountId: 'c', inventory: createInventory() };
+  const refused = await purchaseGear({ player: poor, itemId: 'shortSword', debitAndSave: fakeStore(10).debitAndSave });
+  assert.deepEqual([refused.ok, refused.message, poor.inventory.shortSword], [false, 'Saldo insuficiente.', 0]);
+});
+
+test('a second purchase while the first is in flight is refused as already owned', async () => {
+  const store = fakeStore(5000);
+  const player = { accountId: 'd', inventory: createInventory() };
+  const first = purchaseGear({ player, itemId: 'shortSword', debitAndSave: store.debitAndSave });
+  const second = await purchaseGear({ player, itemId: 'shortSword', debitAndSave: store.debitAndSave });
+  assert.equal(second.ok, false);
+  assert.equal((await first).ok, true);
+  assert.equal(store.balance, 3500);
+});
+
+test('JSON storage saves the item first, debits second, and never charges without delivering', async () => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const os = await import('node:os'); const path = await import('node:path');
+  const { createStorageAdapter } = await import('../database/storage.mjs');
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'clareira-gear-store-'));
+  const storage = createStorageAdapter({ directory });
+  try {
+    const account = await storage.accounts.register({ username: 'GearStore', password: 'gear-store-test-password' });
+    const id = account.profile.id;
+    await storage.creditWallet(id, 1300);
+    const owner = { accountId: id, inventory: createInventory() };
+    const ok = await purchaseGear({ player: owner, itemId: 'leatherJerkin', debitAndSave: (price, after, before) => storage.debitWalletAndSaveProgress(id, price, after, before) });
+    assert.equal(ok.ok, true);
+    let session = await storage.accounts.getSession(account.token);
+    assert.equal(session.profile.inventory.leatherJerkin, 1);
+    assert.equal(currencyValue(session.profile.inventory), 100);
+    // Saldo insuficiente: o item gravado antes do débito é retirado de novo.
+    const broke = await purchaseGear({ player: owner, itemId: 'shortSword', debitAndSave: (price, after, before) => storage.debitWalletAndSaveProgress(id, price, after, before) });
+    assert.equal(broke.ok, false);
+    session = await storage.accounts.getSession(account.token);
+    assert.equal(session.profile.inventory.shortSword, 0);
+    assert.equal(session.profile.inventory.leatherJerkin, 1);
+    assert.equal(currencyValue(session.profile.inventory), 100);
+  } finally { await storage.close(); await rm(directory, { recursive: true, force: true }); }
 });
 
 test('armor button text depends on whether the slot is occupied', () => {

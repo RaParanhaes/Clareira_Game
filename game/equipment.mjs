@@ -33,6 +33,7 @@ export function selectedItemId(inventory) {
 
 export function weaponDamage(inventory) { return weaponDamageFor(selectedItemId(inventory)); }
 
+// Sem uso ainda: a branch de vida liga isto a playerDefense(player) numa linha.
 export function armorDefense(inventory) {
   let total = 0;
   for (const slot of EQUIPMENT_SLOTS) {

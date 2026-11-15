@@ -426,7 +426,7 @@ function villageSupplyTreeBlocked(x, y) {
   return false;
 }
 function villageSupplyBlocked(x, y) {
-  return isPathTile(x, y) || worldWaterAt(x, y)
+  return isPathTile(x, y) || worldWaterAt(x, y) || waterPlantExcludedAt(x, y, WORLD_WATER_OPTIONS)
     || waterBankDepthAt(x, y, WORLD_WATER_OPTIONS, RESOURCE_BANK_CLEARANCE) > 0
     || [RECEPTION_BUILDING, ...VILLAGE_BUILDINGS].some(building => x > building.bounds.left - 1.2 && x < building.bounds.right + 1.2
       && y > building.bounds.top - 1.2 && y < building.bounds.bottom + 1.2)

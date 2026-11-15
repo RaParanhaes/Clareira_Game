@@ -15,13 +15,14 @@ export const SERVICE_SECTIONS = Object.freeze({
   directory: Object.freeze({ label: 'Hospedagens da vila', description: 'Conhecer os lugares e onde reservar.' }),
   trade: Object.freeze({ label: 'Vender materiais', description: 'Trocar materiais do Inventário por moedas.' }),
   orders: Object.freeze({ label: 'Encomendas', description: 'Consultar pedidos e entregar materiais.' }),
+  gear: Object.freeze({ label: 'Armas e armaduras', description: 'Espada curta e gibão de couro para o bosque.' }),
   tools: Object.freeze({ label: 'Comprar ferramentas', description: 'Consultar as ferramentas deste balcão.' }),
   government: Object.freeze({ label: 'Governo e impostos', description: 'Consultar o tesouro e ajustar as alíquotas deste governo.' }),
   keys: Object.freeze({ label: 'Chaves da cabana', description: 'Entregar ou revogar chaves para outras contas.' }),
 });
 
 const arrivalExchange = Object.freeze({
-  ...reception(['trade', 'orders', 'tools', 'government'], 'Trocas da vila', .86), id: 'exchange',
+  ...reception(['trade', 'orders', 'tools', 'gear', 'government'], 'Trocas da vila', .86), id: 'exchange',
 });
 export const PLACE_SERVICES = {
   arrival: Object.freeze([reception(['directory'], 'Informações', .14), arrivalExchange]),
@@ -87,7 +88,7 @@ export function nearestPlaceService(context, position, layout, canReach = () => 
 
 const ACTION_SECTIONS = Object.freeze({
   lodgeEnter: ['rooms', 'properties'], lodgeSell: ['trade'],
-  lodgeBuyTool: ['tools'], lodgeCompleteContract: ['orders'],
+  lodgeBuyTool: ['tools'], lodgeBuyGear: ['gear'], lodgeCompleteContract: ['orders'],
   cabinGrantKey: ['keys'], cabinRevokeKey: ['keys'],
   setLodgingAutoRenew: ['rooms','properties'],
   governmentTaxPolicySet: ['government'],

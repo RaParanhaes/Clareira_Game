@@ -27,7 +27,7 @@ test('services and authoritative actions belong to the correct place and counter
   const hotel = points('lodging-ember-hotel')[0];
   assert.deepEqual(hotel.sections, ['rooms', 'properties']);
   assert.equal(placeServiceAllowsAction(hotel, { name: 'lodgeClaim', mode: 'rent', buildingId: hotel.placeId }), true);
-  for (const name of ['lodgeSell', 'lodgeBuyTool', 'lodgeCompleteContract']) assert.equal(placeServiceAllowsAction(hotel, { name }), false);
+  for (const name of ['lodgeSell', 'lodgeBuyTool', 'lodgeBuyGear', 'lodgeCompleteContract']) assert.equal(placeServiceAllowsAction(hotel, { name }), false);
   assert.equal(placeServiceAllowsAction(hotel, { name: 'lodgeClaim', mode: 'owned', buildingId: 'cabin-cedar-one' }), false);
   assert.equal(placeServiceAllowsAction(hotel, { name:'setLodgingAutoRenew', buildingId:hotel.placeId }), true);
   assert.equal(placeServiceAllowsAction(hotel, { name:'setLodgingAutoRenew', buildingId:'lodging-pine-inn' }), false);
@@ -37,6 +37,10 @@ test('services and authoritative actions belong to the correct place and counter
   assert.equal(placeServiceAllowsAction(info, { name: 'lodgeSell' }), false);
   assert.equal(placeServiceAllowsAction(exchange, { name: 'lodgeSell' }), true);
   assert.equal(exchange.sections.includes('government'), true);
+  assert.equal(exchange.sections.includes('gear'), true, 'armas e armaduras são vendidas na recepção');
+  assert.equal(SERVICE_SECTIONS.gear.label, 'Armas e armaduras');
+  assert.equal(placeServiceAllowsAction(exchange, { name: 'lodgeBuyGear', itemId: 'shortSword' }), true);
+  assert.equal(placeServiceAllowsAction(info, { name: 'lodgeBuyGear', itemId: 'shortSword' }), false);
   assert.equal(placeServiceAllowsAction(exchange, { name: 'governmentTaxPolicySet' }), true);
   assert.equal(placeServiceAllowsAction(info, { name: 'governmentTaxPolicySet' }), false);
   assert.equal(placeServiceAllowsAction(exchange, { name: 'lodgeClaim', mode: 'rent', buildingId: hotel.placeId }), false);

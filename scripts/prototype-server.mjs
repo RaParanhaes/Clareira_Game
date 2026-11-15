@@ -19,6 +19,8 @@ import {
   addInventoryItem, canAddInventoryItems, createInventory, findInventorySlot, inventorySnapshot,
   removeInventoryItem, restoreInventory, selectedInventoryItem, STONE_AXE_DURABILITY, STONE_PICKAXE_DURABILITY,
 } from '../game/inventory.mjs';
+import { GEAR_LABELS, weaponDamageFor } from '../game/equipment.mjs';
+import { equipItem, unequipItem, purchaseGear } from '../game/equipment-actions.mjs';
 import { AXE_TOOL_SPECS, AXE_TOOL_IDS, PICKAXE_TOOL_SPECS, PICKAXE_TOOL_IDS, axeToolFor, axeUpgradeFor, pickaxeToolFor, pickaxeUpgradeFor } from '../game/tool-progression.mjs';
 import { RESOURCE_CONTRACTS, resourceContractBoard, resourceContractDayKey } from '../game/resource-contracts.mjs';
 import {normalizeAppearance} from '../game/appearance.mjs';
@@ -2191,7 +2193,7 @@ export function createPrototypeServer({
         notice(socket,'A fagulha deixou um galho e uma folha para você. O Bosque das Brasas espera.','chime',{arrivalReady:true});
         broadcast(false);return;
       }
-      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'chestMove', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew', 'setSkyOverride', 'clearSkyOverrides'].includes(message.name)) return;
+      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'chestMove', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeBuyGear', 'equipItem', 'unequipItem', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew', 'setSkyOverride', 'clearSkyOverrides'].includes(message.name)) return;
       if (message.name === 'allocateAttribute') {
         const key = typeof message.attribute === 'string' ? message.attribute : '';
         if (!ATTRIBUTE_KEYS.includes(key)) { notice(socket, 'Esse atributo não existe.'); return; }
@@ -2293,7 +2295,7 @@ export function createPrototypeServer({
         if (!animal) { notice(socket, 'Escolha um animal visível para mirar.'); releaseCooldown(); return; }
         const combatTechnique = ability.kind === 'combat-technique';
         const weapon = selectedInventoryItem(player.inventory);
-        const weaponDamage = AXE_TOOL_IDS.includes(weapon) ? 2 : 1;
+        const weaponDamage = weaponDamageFor(weapon);
         const damage = combatTechnique
           ? ability.damage + weaponDamage + attributeAttackBonus(player.inventory.attributes,player.inventory.learnedAbilities)
           : ability.damage + attributeSpellDamageBonus(player.inventory.attributes);
@@ -2302,7 +2304,7 @@ export function createPrototypeServer({
           hasClearPath:(from,to,definition)=>hasClearInteractionPath(from,to,{targetRadius:definition.stats.radius,
             fires:[...firesFor(player.dimensionId||'surface').values()],ignoreWildlife:animal.id}), });
         if (result.status === 'too-far') { notice(socket, combatTechnique?'O alvo está longe demais para o Golpe Pesado.':'O alvo está fora do alcance desta magia.'); releaseCooldown(); return; }
-        if (result.status === 'no-tool') { notice(socket, 'Equipe uma faca ou um machado para usar o Golpe Pesado.'); releaseCooldown(); return; }
+        if (result.status === 'no-tool') { notice(socket, 'Equipe uma faca, uma espada ou um machado para usar o Golpe Pesado.'); releaseCooldown(); return; }
         if (result.status === 'blocked') { notice(socket, 'Não há um caminho livre até o alvo.'); releaseCooldown(); return; }
         if (result.status === 'inventory-full') { notice(socket, 'O Inventário está cheio; libere espaço antes de derrotar o animal.'); releaseCooldown(); return; }
         if (result.status === 'save-failed') { notice(socket, 'Não consegui salvar o resultado; o alvo continua no bosque.'); releaseCooldown(); return; }
@@ -2342,6 +2344,30 @@ export function createPrototypeServer({
           : '';
         notice(socket, `${potion.label} usada: +${result.gained} XP.${levelText}${rewardText}${pageText}`, 'chime',
           result.levelsGained ? { progressionLevelUp: true, newlyUnlockedPages, durationMs: 6000 } : null);
+        broadcast(false);
+        return;
+      }
+      if (message.name === 'equipItem' || message.name === 'unequipItem') {
+        const before = inventorySnapshot(player.inventory);
+        const candidate = createInventory(before);
+        const equipping = message.name === 'equipItem';
+        const result = equipping ? equipItem(candidate, typeof message.itemId === 'string' ? message.itemId : '')
+          : unequipItem(candidate, typeof message.slot === 'string' ? message.slot : '');
+        if (!result.ok) {
+          notice(socket, result.reason === 'bag-full' ? 'A mochila está cheia; libere um espaço antes de guardar o equipamento.'
+            : equipping ? 'Esse item não pode ser vestido.' : 'Não há nada vestido nesse espaço.');
+          return;
+        }
+        const label = GEAR_LABELS[result.itemId] || 'Equipamento';
+        try {
+          await persistPlayer({ ...player, inventory: candidate });
+          if (JSON.stringify(inventorySnapshot(player.inventory)) !== JSON.stringify(before)) {
+            await persistPlayer(player);
+            notice(socket, 'O Inventário mudou durante a troca. Tente novamente.'); return;
+          }
+          player.inventory = candidate;
+        } catch { notice(socket, 'Não consegui salvar o equipamento. Tente novamente.'); return; }
+        notice(socket, equipping ? `${label} vestido.` : `${label} guardado na mochila.`, 'soft');
         broadcast(false);
         return;
       }
@@ -2444,7 +2470,7 @@ export function createPrototypeServer({
           notice(socket,'A árvore está entre você e o animal. Aproxime-se por outro lado.','soft');return;
         }
         if(result.status==='no-tool'){
-          notice(socket,'Equipe a faca simples ou um machado na barra rápida para caçar.');return;
+          notice(socket,'Equipe a faca simples, a espada curta ou um machado na barra rápida para caçar.');return;
         }
         if(result.status==='injured'){
           notice(socket,`${result.definition.label} foi ferido e tenta fugir.`, 'soft');broadcast(false);return;
@@ -2765,6 +2791,19 @@ export function createPrototypeServer({
           } catch (refundError) { process.stderr.write(`Could not refund failed tool purchase: ${refundError.message}\n`); }
           notice(socket, error.message || 'Não consegui salvar a ferramenta; o pagamento foi devolvido.');
         }
+        return;
+      }
+
+      if (message.name === 'lodgeBuyGear') {
+        if (player.location !== 'room' || player.roomKind !== 'lobby') {
+          notice(socket, 'Armas e armaduras são compradas na recepção.');
+          return;
+        }
+        if (!player.accountId) { notice(socket, 'Entre com uma conta para pagar e guardar um equipamento.'); return; }
+        const itemId = typeof message.itemId === 'string' ? message.itemId : '';
+        const result = await purchaseGear({ player, itemId, storage, persist: persistPlayer });
+        notice(socket, result.message, result.ok ? 'chime' : undefined);
+        if (result.ok) broadcast(false);
         return;
       }
 

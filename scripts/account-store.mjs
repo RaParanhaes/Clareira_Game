@@ -101,7 +101,7 @@ export function validateInventory(value) {
   values.xp = Number.isSafeInteger(value?.xp) ? Math.max(0, Math.min(xpRequiredForNextLevel(values.level) - 1, value.xp)) : 0;
   // Old saves stored kindling and firewood separately; they now share the wood stack.
   const legacyFirewood = Number.isSafeInteger(value?.firewood) ? Math.max(0, Math.min(999, value.firewood)) : 0;
-  return inventorySnapshot(createInventory({ ...values, attributes: value?.attributes, learnedAbilities: value?.learnedAbilities, level: value?.level, xp: value?.xp, attributePoints: value?.attributePoints, skillPoints: value?.skillPoints, firewood: legacyFirewood, slots: value?.slots, selectedSlot: value?.selectedSlot }));
+  return inventorySnapshot(createInventory({ ...values, attributes: value?.attributes, learnedAbilities: value?.learnedAbilities, level: value?.level, xp: value?.xp, attributePoints: value?.attributePoints, skillPoints: value?.skillPoints, firewood: legacyFirewood, slots: value?.slots, selectedSlot: value?.selectedSlot, equipment: value?.equipment }));
 }
 
 export function hashPassword(password, salt, requestedCost = SCRYPT_N) {

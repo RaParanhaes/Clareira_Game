@@ -3279,7 +3279,7 @@ const craftingGuideView = createCraftingGuideView({
 let inventoryHudRenderKey='';
 function renderInventory(forcePanel = false) {
   if (!ui.quickbar || !ui.inventoryGrid) return;
-  craftingGuideView.update(localInventory, { dismissedStage: craftHintDismissedStage });
+  craftingGuideView.update(localInventory, { dismissedStage: craftHintDismissedStage, canCraft: worldLocation === 'clearing' });
   const hudKey=JSON.stringify([localInventory,inventorySelectionIndex,inventoryDragSource]);
   if(!forcePanel&&!ui.inventoryDialog.open&&hudKey===inventoryHudRenderKey){
     // Cooldowns depend on time; inventory, recipes and slot DOM do not.

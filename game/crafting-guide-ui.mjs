@@ -10,7 +10,7 @@ function element(tag, className, text) {
   return node;
 }
 
-function recipeCard(recipe, { onCraft }) {
+function recipeCard(recipe, { onCraft, canCraft }) {
   const card = element('li', `craft-recipe${recipe.owned ? ' is-owned' : recipe.ready ? ' is-ready' : ''}`);
   const head = element('div', 'craft-recipe-head');
   head.append(element('b', '', recipe.label), element('kbd', '', recipe.key));
@@ -23,11 +23,14 @@ function recipeCard(recipe, { onCraft }) {
   const note = element('small', 'craft-recipe-note',
     `${recipe.use[0].toUpperCase()}${recipe.use.slice(1)}. Cipó: corte com a faca. Pronta na recepção: ${recipe.priceLabel} (com conta).`);
   card.append(head, materials, note);
-  if (recipe.ready) {
+  if (recipe.ready && canCraft) {
     const button = element('button', 'craft-recipe-button', 'Montar agora');
     button.type = 'button';
     button.addEventListener('click', () => onCraft(recipe.action));
     card.append(button);
+  } else if (recipe.ready) {
+    // O servidor só monta ferramentas no bosque (location === 'clearing').
+    card.append(element('small', 'craft-recipe-note', 'Monte no bosque.'));
   }
   return card;
 }
@@ -45,7 +48,7 @@ export function createCraftingGuideView({ hint, panel, onOpen, onCraft, onDismis
   return {
     guideFor: craftingGuide,
     // `visible` diz se o aviso do mundo deve aparecer agora (bosque, sem dispensa).
-    update(inventory, { visible = true, dismissedStage = '' } = {}) {
+    update(inventory, { visible = true, dismissedStage = '', canCraft = true } = {}) {
       const guide = craftingGuide(inventory);
       const showHint = visible && guide.showHint && dismissedStage !== guide.stage;
       const nextHintKey = `${showHint}|${guide.stage}|${guide.text}`;
@@ -55,11 +58,11 @@ export function createCraftingGuideView({ hint, panel, onOpen, onCraft, onDismis
         hint.dataset.stage = guide.stage;
         if (hintText) hintText.textContent = `${guide.title}. ${guide.text}`;
       }
-      const nextPanelKey = JSON.stringify([guide.stage, guide.text, guide.recipes.map(recipe => [recipe.owned, recipe.ready, recipe.summary])]);
+      const nextPanelKey = JSON.stringify([canCraft, guide.stage, guide.text, guide.recipes.map(recipe => [recipe.owned, recipe.ready, recipe.summary])]);
       if (panel && nextPanelKey !== panelKey) {
         panelKey = nextPanelKey;
         if (panelNext) panelNext.textContent = `${guide.title}. ${guide.text}`;
-        if (panelList) panelList.replaceChildren(...guide.recipes.map(recipe => recipeCard(recipe, { onCraft })));
+        if (panelList) panelList.replaceChildren(...guide.recipes.map(recipe => recipeCard(recipe, { onCraft, canCraft })));
       }
       return guide;
     },

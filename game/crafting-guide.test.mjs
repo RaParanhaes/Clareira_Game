@@ -100,3 +100,11 @@ test('o cliente liga o guia ao aviso do mundo e à seção de receitas do Invent
   assert.match(main, /createCraftingGuideView\(/u);
   assert.match(main, /craftingGuideView\.update\(localInventory/u);
 });
+
+test('"Montar agora" só vale no bosque, a mesma regra de localização do servidor', async () => {
+  const ui = await readFile(path.join(root, 'game', 'crafting-guide-ui.mjs'), 'utf8');
+  assert.match(server, /player\.location !== 'clearing'\) \{ notice\(socket, 'Monte ferramentas no bosque\.'\)/u);
+  assert.match(ui, /recipe\.ready && canCraft/u);
+  assert.match(ui, /Monte no bosque\./u);
+  assert.match(main, /canCraft: worldLocation === 'clearing'/u);
+});

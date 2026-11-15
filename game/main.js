@@ -2653,6 +2653,7 @@ function connect() {
   socket.addEventListener('close', event => {
     if(connectionProfileDiagnostics){ui.connection.dataset.lastCloseCode=String(event.code);ui.connection.dataset.lastCloseReason=String(event.reason||'').slice(0,120);ui.connection.dataset.lastCloseAttempt=String(connectionAttempt);}
     if (socket !== connection) return;
+    forestArrivalNoticePending=false; // reconectar não deve trazer o aviso de chegada tarde demais
     recordMovementDiagnostic('connection-close',{attempt:connectionAttempt,code:event.code,pending:pendingInputs.length,
       outbound:outboundInputs.length,lastSentSeq:inputSequence,lastAckSeq:lastAcknowledgedInput,
       reason:movementCloseReasonBucket(event.reason,event.code)},true);

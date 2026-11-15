@@ -45,3 +45,15 @@ test('ao deixar o Breu o cliente mostra o aviso de chegada ao bosque', () => {
   assert.match(main, /forestArrivalNoticePending=true/);
   assert.match(main, /announce\(forestArrivalNotice\(\),/);
 });
+
+test('o menu aberto no celular usa a altura útil da tela, sem esconder o Ajuda atrás de rolagem', () => {
+  // 320x640: topo em 58 px; o menu mede ~410 px com as moedas em linha. O limite precisa ser >= isso.
+  const rule = css.match(/\.topbar\.menu-expanded\{max-height:calc\(100dvh - max\(58px,env\(safe-area-inset-top\)\) - 12px\)\}/);
+  assert.ok(rule, 'regra de altura do menu aberto');
+  assert.ok(640 - 58 - 12 >= 410, 'cabe em 320x640');
+  assert.match(css, /\.topbar \.coin-wallet\{display:flex;flex-direction:row/);
+});
+
+test('o aviso de chegada ao bosque é descartado ao reconectar', () => {
+  assert.match(main, /if \(socket !== connection\) return;\s*forestArrivalNoticePending=false;/);
+});

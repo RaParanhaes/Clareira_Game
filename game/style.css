@@ -1464,3 +1464,10 @@ dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header
 @media(max-width:420px){
   .shell.is-authenticated .side-panel{top:calc(max(58px,env(safe-area-inset-top)) + 54px)}
 }
+/* Menu aberto no celular: usa a altura útil da tela e as moedas ficam numa linha, para os botões caberem sem rolar (320x640). */
+@media(max-width:740px),(any-pointer:coarse){
+  .shell.is-authenticated>.topbar.menu-expanded{max-height:calc(100dvh - max(58px,env(safe-area-inset-top)) - 12px)}
+  .shell.is-authenticated .topbar .coin-wallet{display:flex;flex-direction:row;justify-content:space-between;gap:6px;padding:6px 9px}
+  .shell.is-authenticated .topbar .coin-wallet>span{display:flex;align-items:center;gap:4px;font-size:11px}
+  .shell.is-authenticated .topbar .coin-wallet small{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+}

@@ -163,6 +163,8 @@ async function openPage(user, viewport = { width: 1440, height: 900 }) {
   await page.waitForFunction(() => window.roomLayoutAudit()?.location === 'room'
     || window.roomLayoutAudit()?.position?.x > 0, null, { timeout: 10_000 });
   await page.waitForTimeout(350);
+  // The first-load overlay holds controls until it leaves (complete phase lasts ~1.4 s).
+  await page.waitForFunction(()=>document.querySelector('#scene-loading').hidden&&!document.querySelector('.shell').inert,null,{timeout:20_000});
   // A brief approach stays inside; crossing the doorway floor exits promptly.
   // After checking that boundary, return through the door before measuring both fades.
   const thresholdLayout = await page.evaluate(() => window.roomLayoutConfig());

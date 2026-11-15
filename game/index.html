@@ -23,6 +23,10 @@ html.cache-verifying body{background:#000!important}html.cache-verifying .shell{
 .loading-pixel-assembly{opacity:1}
 .loading-word-shadow{fill:#26312f}
 .loading-word-face{fill:#f0d9aa}
+.loading-fragment{opacity:0;transform-box:fill-box;transform-origin:center;animation:loading-fragment-drift 4.8s steps(5,end) infinite}
+.scene-loading[data-context="world"] .loading-fragment{display:none!important;animation:none}
+.loading-fragment:nth-child(3n + 1){fill:#9eaf78}.loading-fragment:nth-child(3n + 2){fill:#d18d52}.loading-fragment:nth-child(3n){fill:#f0d9aa}
+.loading-fragment:nth-child(1){animation-delay:0s}.loading-fragment:nth-child(2){animation-delay:.45s}.loading-fragment:nth-child(3){animation-delay:.9s}.loading-fragment:nth-child(4){animation-delay:1.35s}.loading-fragment:nth-child(5){animation-delay:1.8s}.loading-fragment:nth-child(6){animation-delay:2.25s}.loading-fragment:nth-child(7){animation-delay:2.7s}.loading-fragment:nth-child(8){animation-delay:3.15s}.loading-fragment:nth-child(9){animation-delay:.22s}.loading-fragment:nth-child(10){animation-delay:.67s}.loading-fragment:nth-child(11){animation-delay:1.12s}.loading-fragment:nth-child(12){animation-delay:1.57s}
 .loading-status{display:grid;place-items:center;width:min(680px,90vw);height:3em;margin:12px 0 18px;color:#c4b89e;font:400 14px/1.5 system-ui,sans-serif;letter-spacing:.025em;text-wrap:balance}
 .loading-progress-row{display:flex;align-items:center;gap:12px;width:min(490px,86vw);margin:0 auto}
 .loading-track{position:relative;flex:1;height:7px;margin:0;overflow:hidden;border:1px solid #777b7138;border-radius:0;background:#111313;box-shadow:0 1px 0 #000}
@@ -60,6 +64,7 @@ html.cache-verifying body{background:#000!important}html.cache-verifying .shell{
 .scene-loading[data-context][data-phase="error"]{--loading-accent:#c97970}
 .scene-loading[data-phase="error"] .loading-status{height:auto;min-height:3em}
 @keyframes loading-wordmark-glow{0%,100%{filter:drop-shadow(0 4px 0 #111713) drop-shadow(0 0 17px #d59a4b16)}50%{filter:drop-shadow(0 4px 0 #111713) drop-shadow(0 0 24px #d59a4b30)}}
+@keyframes loading-fragment-drift{0%{opacity:0;translate:0 0}12%,24%{opacity:.88;translate:0 -1px}72%,100%{opacity:0;translate:3px -12px}}
 @keyframes loading-clearing-breathe{0%,100%{filter:brightness(.96)}50%{filter:brightness(1.08)}}
 @keyframes loading-tree-sway{0%,100%{rotate:-.45deg}50%{rotate:.45deg}}
 @keyframes loading-progress-scan{from{translate:-110% 0}to{translate:390% 0}}
@@ -70,13 +75,14 @@ html.cache-verifying body{background:#000!important}html.cache-verifying .shell{
 @media(max-height:500px) and (orientation:landscape){.scene-loading{padding:8px 16px}.loading-layout{width:min(600px,100%);min-height:0;padding:0 8px;transform:translateY(-8px)}.loading-wordmark{width:min(460px,58vw)}.loading-status{width:min(560px,88vw);height:auto;min-height:2em;margin:5px 0 9px;font-size:12px}.loading-progress-row,.loading-subprogress{width:min(460px,82vw)}.loading-subprogress{margin-top:8px}.loading-checkpoints{margin-top:8px}.loading-clearing,.loading-tree-layer{height:min(34vh,132px)}}
 @media(max-width:420px){.scene-loading{padding:12px}.loading-layout{min-height:min(320px,calc(100dvh - 24px));padding:0 4px}.loading-wordmark{width:92vw}.loading-status{width:88vw;font-size:clamp(11px,3vw,13px)}.loading-progress-row,.loading-subprogress{width:92vw}.loading-progress-row{gap:8px}.loading-substep{grid-template-columns:76px minmax(24px,1fr) 112px;gap:5px}}
 @media(prefers-reduced-motion:reduce){.loading-wordmark,.loading-track span,.loading-subtrack i,.loading-clearing,.loading-clearing img,.loading-tree{animation:none!important;transition:none!important}.scene-loading[data-progress-mode="indeterminate"] .loading-track span{width:34%;opacity:.72}}
+@media(prefers-reduced-motion:reduce){.loading-fragment{display:none!important;animation:none!important}}
 
 html:not(.clareira-styles-ready) .shell{visibility:hidden}
 </style>
   <link rel="stylesheet" href="/dev/style.css">
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<svg class="icon-sprite" width="0" height="0" aria-hidden="true" focusable="false"><defs>
 <symbol id="i-bag" viewBox="0 0 24 24"><path d="M4 10h16v9.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V10Z"/><path d="M4 10V7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10"/><path d="M10 13.5h4"/></symbol>
 <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 3.5V16H6.5A2.5 2.5 0 0 1 4 13.5v-7Z"/><path d="M8 8.5h8M8 11.5h5"/></symbol>
 <symbol id="i-tools" viewBox="0 0 24 24"><path d="M4 20 14 10"/><path d="M10 4l4 4-2.5 2.5L7.5 6.5z"/><path d="M14 14l6 6"/></symbol>

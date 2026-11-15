@@ -1462,3 +1462,4 @@ dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header
   .craft-recipe-list{grid-template-columns:minmax(0,1fr)}
   .crafting-guide-next p{font-size:12px}
 }
+.icon-sprite{position:absolute}

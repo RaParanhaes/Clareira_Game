@@ -342,9 +342,33 @@ test('pedras e gravetos soltos ficam a poucos passos do ponto de chegada, com qu
    }
   }
   applyWorldDefinition({...origin,seed:1234567});
-  const idsA=getResourcesInBounds({left:SPAWN.x-12,right:SPAWN.x+12,top:SPAWN.y-12,bottom:SPAWN.y+12}).filter(r=>r.id.startsWith('resource-village-')).map(r=>r.id).sort();
+  const idsA=getResourcesInBounds({left:SPAWN.x-12,right:SPAWN.x+12,top:SPAWN.y-12,bottom:SPAWN.y+12}).filter(r=>r.id.startsWith('resource-village-')).map(r=>r.id.replace(/-t\d(?=-g)/,'')).sort();
   applyWorldDefinition(origin);
-  const idsB=getResourcesInBounds({left:SPAWN.x-12,right:SPAWN.x+12,top:SPAWN.y-12,bottom:SPAWN.y+12}).filter(r=>r.id.startsWith('resource-village-')).map(r=>r.id).sort();
-  assert.deepEqual(idsA,idsB,'ids estáveis entre sementes');
+  const idsB=getResourcesInBounds({left:SPAWN.x-12,right:SPAWN.x+12,top:SPAWN.y-12,bottom:SPAWN.y+12}).filter(r=>r.id.startsWith('resource-village-')).map(r=>r.id.replace(/-t\d(?=-g)/,'')).sort();
+  assert.deepEqual(idsA,idsB,'os mesmos pontos existem em qualquer semente');
+ } finally { applyWorldDefinition(origin); }
+});
+
+test('pontos da vila respeitam objetos de edições do mundo e um id nunca muda de lugar',()=>{
+ const origin=getWorldDefinition();
+ const box={left:SPAWN.x-14,right:SPAWN.x+14,top:SPAWN.y-14,bottom:SPAWN.y+14};
+ const village=()=>new Map(getResourcesInBounds(box).filter(r=>r.id.startsWith('resource-village-')).map(r=>[r.id,r]));
+ try {
+  const before=village();
+  assert.equal(before.size,14,'todos os pontos existem');
+  assert.ok([...before.keys()].every(id=>/^resource-village-\d+-t\d-g\d+$/.test(id)),'a tentativa vai no id');
+  const [firstId,first]=[...before][0];
+  for(const type of ['rock','tree','resource']){
+   const edit=type==='resource'?{id:`edit-${type}`,type,resourceKind:'berries',x:first.x+.2,y:first.y-.2}:{id:`edit-${type}`,type,x:first.x+.2,y:first.y-.2};
+   applyWorldDefinition(appendWorldEdit(origin,edit,{worldSize:WORLD_SIZE}));
+   const after=village();
+   for(const item of after.values())assert.ok(Math.hypot(item.x-edit.x,item.y-edit.y)>=1,`${type} editado a menos de 1 tile não recebe ponto da vila (${item.id})`);
+   for(const [id,item] of after){const old=before.get(id);if(old)assert.deepEqual([item.x,item.y],[old.x,old.y],`${id} não muda de lugar`);}
+   assert.ok(!after.has(firstId)||Math.hypot(after.get(firstId).x-edit.x,after.get(firstId).y-edit.y)>=1);
+   applyWorldDefinition(origin);
+  }
+  const far=appendWorldEdit(origin,{id:'edit-far',type:'rock',x:SPAWN.x+60,y:SPAWN.y+60},{worldSize:WORLD_SIZE});
+  applyWorldDefinition(far);
+  assert.deepEqual([...village()].map(([id,r])=>[id,r.x,r.y]),[...before].map(([id,r])=>[id,r.x,r.y]),'edição distante não mexe em nada');
  } finally { applyWorldDefinition(origin); }
 });

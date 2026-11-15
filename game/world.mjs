@@ -425,16 +425,30 @@ function villageSupplyTreeBlocked(x, y) {
   }
   return false;
 }
+// Objetos vindos de edições do mundo (árvores, pedras e recursos do mapa) também impedem o ponto.
+function villageSupplyEditBlocked(x, y) {
+  const near = { left: x - 1, right: x + 1, top: y - 1, bottom: y + 1 };
+  return worldTreesInBounds(near).some(tree => Math.hypot(tree.x - x, tree.y - y) < 1)
+    || worldRocksInBounds(near).some(rock => Math.hypot(rock.x - x, rock.y - y) < 1)
+    || worldResourcesInBounds(near).some(resource => Math.hypot(resource.x - x, resource.y - y) < 1);
+}
 function villageSupplyBlocked(x, y) {
   return isPathTile(x, y) || worldWaterAt(x, y) || waterPlantExcludedAt(x, y, WORLD_WATER_OPTIONS)
     || waterBankDepthAt(x, y, WORLD_WATER_OPTIONS, RESOURCE_BANK_CLEARANCE) > 0
     || [RECEPTION_BUILDING, ...VILLAGE_BUILDINGS].some(building => x > building.bounds.left - 1.2 && x < building.bounds.right + 1.2
       && y > building.bounds.top - 1.2 && y < building.bounds.bottom + 1.2)
+    || villageSupplyEditBlocked(x, y)
     || villageSupplyTreeBlocked(x, y);
 }
+// A posição de cada tentativa só depende da semente, do ponto e do número da tentativa, e o id leva
+// a tentativa: um id nunca muda de lugar, mesmo que a geometria do mundo mude durante a recuperação.
 function addVillageSupplies(cx, cy, definition, resources) {
+  const left = cx * WORLD_CHUNK_SIZE, top = cy * WORLD_CHUNK_SIZE;
   VILLAGE_SUPPLY_ANCHORS.forEach((anchor, index) => {
     const baseX = atDimensionOrigin(anchor.x), baseY = atDimensionOrigin(anchor.y);
+    // Teste barato: o ponto nunca sai de base ± folga, então os demais chunks saem aqui.
+    if (baseX + VILLAGE_SUPPLY_JITTER < left || baseX - VILLAGE_SUPPLY_JITTER >= left + WORLD_CHUNK_SIZE
+        || baseY + VILLAGE_SUPPLY_JITTER < top || baseY - VILLAGE_SUPPLY_JITTER >= top + WORLD_CHUNK_SIZE) return;
     for (let attempt = 0; attempt < 6; attempt += 1) {
       const seed = Math.imul(index + 101, 2654435761) ^ Math.imul(attempt + 7, 374761393) ^ activeWorldSeed;
       const jitter = attempt === 5 ? 0 : VILLAGE_SUPPLY_JITTER;
@@ -442,7 +456,7 @@ function addVillageSupplies(cx, cy, definition, resources) {
       const y = baseY + (chunkRandom(seed ^ 0x27d4eb2d) * 2 - 1) * jitter;
       if (villageSupplyBlocked(x, y)) continue;
       if (Math.floor(x / WORLD_CHUNK_SIZE) === cx && Math.floor(y / WORLD_CHUNK_SIZE) === cy)
-        resources.push({ id: `resource-village-${index}-g${definition.generationVersion}`, kind: anchor.kind, x, y });
+        resources.push({ id: `resource-village-${index}-t${attempt}-g${definition.generationVersion}`, kind: anchor.kind, x, y });
       return;
     }
   });

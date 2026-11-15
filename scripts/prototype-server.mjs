@@ -71,7 +71,7 @@ import {
   campfireFlameStrength, campfireRemainingMs,
 } from '../game/campfire-life.mjs';
 import {
-  applyDamage, createVitals, damageFromAttack, isDowned, maxHealth, regenStep, vitalsSnapshot,
+  applyDamage, createVitals, damageFromAttack, downedRefusal, isDowned, maxHealth, regenStep, releaseAnimalsFromPlayer, vitalsSnapshot,
 } from '../game/vitals.mjs';
 
 function wildlifeOutsideVillage(position,dimensionId,padding=4) {
@@ -1095,9 +1095,7 @@ export function createPrototypeServer({
     if (result.fainted) {
       player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq; player.moving = false;
       player.position.vx = 0; player.position.vy = 0; player.sitting = false; player.emote = null;
-      for (const animal of wildlifeFor(player.dimensionId || 'surface').values()) {
-        if (animal.provokedUntil > at) { animal.provokedUntil = 0; animal.state = 'explorando'; }
-      }
+      releaseAnimalsFromPlayer(wildlifeFor(player.dimensionId || 'surface').values(), player.id, event.animalId, at);
     }
     return result.damage;
   };
@@ -1935,6 +1933,9 @@ export function createPrototypeServer({
         return;
       }
 
+      // Ponto único: caído, o jogador não age, não viaja nem visita quarto até acordar.
+      const downedRefused = downedRefusal(message, player.vitals, now());
+      if (downedRefused) { notice(socket, downedRefused.text, 'soft', downedRefused.details); return; }
       if (message.type === 'objectCatalogReady') {
         const revision = Number(message.revision);
         if (Number.isSafeInteger(revision) && revision === (sceneObjectCatalog?.revision ?? -1)) {

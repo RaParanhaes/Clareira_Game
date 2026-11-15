@@ -48,4 +48,26 @@ export function applyDamage(vitals, damage, now, max) {
   return { damage, fainted: true };
 }
 
-export const vitalsSnapshot = (vitals, max) => ({ hp: Math.max(vitals.hp > 0 ? 1 : 0, Math.floor(vitals.hp)), max, downedUntil: vitals.downedUntil });
+export const DOWNED_BLOCKED_MESSAGES = ['action', 'dimensionTravel', 'roomWarm'];
+export const DOWNED_NOTICE = 'Você ainda está se recompondo…';
+
+// Ponto único de recusa: caído, nenhuma ação, viagem de dimensão, visita a quarto ou teleporte passa.
+export function downedRefusal(message, vitals, now) {
+  if (!isDowned(vitals, now) || !DOWNED_BLOCKED_MESSAGES.includes(message?.type)) return null;
+  return {
+    text: DOWNED_NOTICE,
+    details: message.type === 'dimensionTravel' ? { action: 'dimensionTravel', requestId: message.requestId, result: 'rejected' } : null,
+  };
+}
+
+// No desmaio só perdem o alvo o agressor e os animais provocados por este jogador; os provocados por outros seguem.
+export function releaseAnimalsFromPlayer(animals, playerId, attackerId, now) {
+  for (const animal of animals) {
+    const provokedByPlayer = animal.provokedBy === playerId && animal.provokedUntil > now;
+    if (animal.id !== attackerId && !provokedByPlayer) continue;
+    if (animal.provokedBy === playerId) { animal.provokedUntil = 0; animal.provokedBy = null; }
+    animal.state = 'explorando';
+  }
+}
+
+export const vitalsSnapshot =(vitals, max) => ({ hp: Math.max(vitals.hp > 0 ? 1 : 0, Math.floor(vitals.hp)), max, downedUntil: vitals.downedUntil });

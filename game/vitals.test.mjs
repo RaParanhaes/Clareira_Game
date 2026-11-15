@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  applyDamage, createVitals, damageFromAttack, faintOutcome, isDowned, maxHealth, regenStep, vitalsSnapshot,
+  applyDamage, createVitals, downedRefusal, releaseAnimalsFromPlayer, damageFromAttack, faintOutcome, isDowned, maxHealth, regenStep, vitalsSnapshot,
 } from './vitals.mjs';
 import { vitalsHudState, wakeText } from './vitals-hud.mjs';
 import { WILDLIFE_BY_ID } from './wildlife.mjs';
@@ -84,4 +84,26 @@ test('HUD: dano, desmaio e despertar', () => {
   assert.equal(woke.message, wakeText('surface'));
   assert.match(woke.message, /acordou na vila/);
   assert.equal(vitalsHudState(null, null).visible, false);
+});
+
+test('caído, toda ação, viagem de dimensão e visita a quarto são recusadas num ponto único', () => {
+  const vitals = { hp: 21, downedUntil: 5000, lastHitAt: 0, immuneUntil: 0 };
+  const action = downedRefusal({ type: 'action', name: 'gather' }, vitals, 1000);
+  assert.equal(action.text, 'Você ainda está se recompondo…');
+  const travel = downedRefusal({ type: 'dimensionTravel', requestId: 7 }, vitals, 1000);
+  assert.deepEqual(travel.details, { action: 'dimensionTravel', requestId: 7, result: 'rejected' });
+  assert.ok(downedRefusal({ type: 'roomWarm', buildingId: 'a' }, vitals, 1000));
+  assert.equal(downedRefusal({ type: 'input' }, vitals, 1000), null, 'movimento já é zerado pelo servidor');
+  assert.equal(downedRefusal({ type: 'action', name: 'gather' }, vitals, 5000), null, 'acordado, volta a agir');
+  assert.equal(downedRefusal({ type: 'action' }, null, 1000), null);
+});
+
+test('desmaio solta só o agressor e os provocados por este jogador', () => {
+  const mine = { id: 'a', provokedBy: 'p1', provokedUntil: 9000, state: 'atacando' };
+  const other = { id: 'b', provokedBy: 'p2', provokedUntil: 9000, state: 'atacando' };
+  const attacker = { id: 'c', provokedBy: null, provokedUntil: 0, state: 'atacando' };
+  releaseAnimalsFromPlayer([mine, other, attacker], 'p1', 'c', 1000);
+  assert.deepEqual([mine.provokedUntil, mine.state], [0, 'explorando']);
+  assert.deepEqual([other.provokedUntil, other.state], [9000, 'atacando']);
+  assert.equal(attacker.state, 'explorando');
 });

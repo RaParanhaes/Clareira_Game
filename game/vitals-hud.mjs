@@ -21,7 +21,8 @@ export function vitalsHudState(prev, vitals, { dimensionId = 'surface' } = {}) {
 export function createVitalsHud(root) {
   if (!root) return { update() {} };
   const fill = root.querySelector('.vitals-fill'), label = root.querySelector('.vitals-label'), note = root.querySelector('.vitals-note');
-  let prev = null, noteTimer = null, hurtTimer = null;
+  let prev = null, hurtFrame = 0;
+  note.addEventListener('animationend', () => { note.hidden = true; note.classList.remove('is-timed'); });
   return {
     update(vitals, context) {
       const state = vitalsHudState(prev, vitals, context);
@@ -35,12 +36,16 @@ export function createVitalsHud(root) {
       label.textContent = `${state.hp}/${state.max}`;
       root.setAttribute('aria-label', `Vida ${state.hp} de ${state.max}`);
       if (state.hurt) {
-        root.classList.add('is-hurt'); clearTimeout(hurtTimer);
-        hurtTimer = setTimeout(() => root.classList.remove('is-hurt'), 600);
+        // Reinicia a animação CSS (.is-hurt) sem temporizador: remove, força um quadro e recoloca.
+        root.classList.remove('is-hurt');
+        cancelAnimationFrame(hurtFrame);
+        hurtFrame = requestAnimationFrame(() => root.classList.add('is-hurt'));
       }
       if (state.message) {
-        note.textContent = state.message; note.hidden = false; clearTimeout(noteTimer);
-        noteTimer = state.downed ? null : setTimeout(() => { note.hidden = true; noteTimer = null; }, 6000);
+        // O recolhimento do aviso é uma animação CSS (.is-timed); caído, o aviso fica até acordar.
+        note.hidden = false;
+        note.classList.remove('is-timed');
+        if (!state.downed) requestAnimationFrame(() => note.classList.add('is-timed'));
       }
       return state;
     },

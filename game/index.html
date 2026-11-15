@@ -303,23 +303,46 @@ html:not(.clareira-styles-ready) .shell{visibility:hidden}
           <div class="tiny-people" aria-hidden="true"><span>●</span><span>●</span><span>●</span><small>um lugar para encontrar gente</small></div>
         </section>
         <section class="panel-card controls-card">
-          <div class="card-title"><h2>O que fazer</h2><span class="sparkle" aria-hidden="true">✧</span></div>
-          <div class="control-row"><span class="keycap">W A S D</span><span>caminhar</span></div>
-          <div class="control-row"><span class="keycap">Shift</span><span>correr enquanto anda</span></div>
-          <div class="control-row"><span class="keycap">C</span><span>agachar; segure para andar abaixado</span></div>
-          <div class="control-row"><span class="keycap">Espaço</span><span>pular enquanto se move; obstáculos continuam bloqueando o caminho</span></div>
-          <div class="control-row"><span class="keycap">E</span><span>interagir com alguém, usar objetos ou fazer a ação disponível</span></div>
-          <div class="control-row"><span class="keycap">H / R / P</span><span><b id="tool-status">Faca simples · sem machado</b><small>H cria ou usa o machado/picareta; R afia o machado com uma pedra; P monta a picareta com 2 pedras, galho forte e cipó.</small><small>Árvore: 40 golpes · tora: 30 cortes. Sem fio, o machado demora até 8 s por golpe; afiar leva 10 s e usa 1 pedra.</small><small>O machado dura 210 golpes: cerca de 3 ciclos completos de árvore e tora. A afiação recupera o fio, não o desgaste.</small></span></div>
-          <div class="control-row"><span class="keycap">U / Y</span><span>Melhorar machado e picareta de cobre ou ferro na bancada; use lingotes e ripas. Ferramentas de metal duram mais e reduzem golpes por recurso.</span></div>
-          <div class="control-row"><span class="keycap">B / K / O / M</span><span>construir bancada, caieira, fornalha e iniciar lote; Shift+M fatia ripas em gravetos <small>Bancada: 24 madeira bruta + 8 pedras + 4 cipós · caieira: 20 madeira bruta + 12 pedras + 4 ripas · fornalha: 25 pedras + 8 madeira bruta + 8 ripas.</small><small>Na bancada: 20 madeira bruta → 5 ripas em 30 s; depois 2 ripas → 12 gravetos em 18 s. Carvão vegetal: 20 madeira bruta → 6 em 90 s.</small></span></div>
-          <div class="control-row"><span class="keycap">V</span><span>visitar alguém por perto</span></div>
-          <div class="control-row"><span class="keycap">F</span><span>fazer ou reacender uma fogueira <small>nova: 20 gravetos + 10 pedras + 1 maço de folhas secas</small><small>reacender: 10 gravetos + 1 maço de folhas secas</small><small>alimentar fraca: 2 gravetos · reconstruir: 10 gravetos + 5 pedras + 1 maço de folhas secas</small></span></div>
-          <div class="control-row"><span class="keycap">G</span><span>oferecer uma frutinha a alguém por perto</span></div>
-          <div class="control-row"><span class="keycap">B no quarto</span><span>escolher um ponto para colocar banco</span></div>
-          <div class="control-row"><span class="keycap">X</span><span>clicar num banco para retirá-lo</span></div>
-          <div class="control-row"><span class="keycap">Alt+1–3</span><span>acenar, dançar, sentar no chão ou num banco próximo</span></div>
-          <div class="control-row"><span class="keycap">N</span><span>abrir o mapa do mundo</span></div><div class="control-row"><span class="keycap">1–9</span><span>trocar rapidamente o item equipado</span></div><div class="control-row"><span class="keycap">Shift+1–4</span><span>usar até quatro habilidades ativas aprendidas</span></div>
-          <div class="control-row"><span class="keycap">I</span><span>abrir o Inventário; clique num item para colocá-lo na barra rápida</span></div>
+          <div class="card-title"><h2>Para começar</h2><span class="sparkle" aria-hidden="true">✧</span></div>
+          <div class="control-row help-keys-only"><span class="keycap">W A S D</span><span>andar pelo bosque; Shift corre enquanto você anda</span></div>
+          <div class="control-row help-touch-only"><span class="keycap">Toque</span><span>no chão para andar; Correr acelera o passo</span></div>
+          <div class="control-row help-keys-only"><span class="keycap">E</span><span>usar: falar com alguém, abrir uma porta, recolher o que está perto</span></div>
+          <div class="control-row help-touch-only"><span class="keycap">Usar</span><span>fala com alguém, abre uma porta, recolhe o que está perto</span></div>
+          <div class="control-row help-keys-only"><span class="keycap">I</span><span>abre a mochila; clique num item para pô-lo na barra rápida</span></div>
+          <div class="control-row help-touch-only"><span class="keycap">Menu</span><span>abre a mochila; toque num item para pô-lo na barra rápida</span></div>
+          <div class="control-row help-touch-only"><span class="keycap">Ações</span><span>guarda ferramentas, construção e gestos</span></div>
+          <div class="control-row help-next"><span class="keycap">Agora</span><span>junte galho forte, pedra e cipó pelo chão. Com eles nasce sua primeira ferramenta.</span></div>
+          <details class="help-more help-keys-only">
+            <summary>Mais atalhos</summary>
+            <div class="control-row"><span class="keycap">C</span><span>agachar; segure para andar abaixado</span></div>
+            <div class="control-row"><span class="keycap">Espaço</span><span>pular enquanto anda; obstáculos continuam no caminho</span></div>
+            <div class="control-row"><span class="keycap">H / R / P</span><span><b id="tool-status">Faca simples · sem machado</b><small>H cria ou usa o machado e a picareta; R afia o machado; P monta a picareta.</small></span></div>
+            <div class="control-row"><span class="keycap">U / Y</span><span>melhorar machado e picareta na bancada</span></div>
+            <div class="control-row"><span class="keycap">B / K / O / M</span><span>construir bancada, caieira e fornalha; iniciar o lote; Shift+M fatia ripas em gravetos</span></div>
+            <div class="control-row"><span class="keycap">F</span><span>fazer ou reacender uma fogueira</span></div>
+            <div class="control-row"><span class="keycap">V</span><span>visitar alguém por perto</span></div>
+            <div class="control-row"><span class="keycap">G</span><span>oferecer uma frutinha a alguém por perto</span></div>
+            <div class="control-row"><span class="keycap">B no quarto</span><span>escolher um ponto para colocar banco</span></div>
+            <div class="control-row"><span class="keycap">X</span><span>clicar num banco para retirá-lo</span></div>
+            <div class="control-row"><span class="keycap">Alt+1–3</span><span>acenar, dançar, sentar no chão ou num banco próximo</span></div>
+            <div class="control-row"><span class="keycap">N</span><span>abrir o mapa do mundo</span></div>
+            <div class="control-row"><span class="keycap">1–9</span><span>trocar rapidamente o item equipado</span></div>
+            <div class="control-row"><span class="keycap">Shift+1–4</span><span>usar até quatro habilidades ativas aprendidas</span></div>
+          </details>
+          <details class="help-more help-costs">
+            <summary>Custos e receitas</summary>
+            <p>Quando for a hora de construir, estes são os números.</p>
+            <ul>
+              <li>Machado: árvore 40 golpes, tora 30 cortes. Sem fio, até 8 s por golpe; afiar leva 10 s e usa 1 pedra. Dura 210 golpes, cerca de 3 ciclos completos de árvore e tora; a afiação recupera o fio, não o desgaste.</li>
+              <li>Picareta: 2 pedras, galho forte e cipó.</li>
+              <li>Melhorias de cobre ou ferro: lingotes e ripas, na bancada. Ferramentas de metal duram mais e pedem menos golpes por recurso.</li>
+              <li>Bancada: 24 madeira bruta, 8 pedras e 4 cipós.</li>
+              <li>Caieira: 20 madeira bruta, 12 pedras e 4 ripas.</li>
+              <li>Fornalha: 25 pedras, 8 madeira bruta e 8 ripas.</li>
+              <li>Na bancada: 20 madeira bruta viram 5 ripas em 30 s; 2 ripas viram 12 gravetos em 18 s. Carvão vegetal: 20 madeira bruta viram 6 em 90 s.</li>
+              <li>Fogueira nova: 20 gravetos, 10 pedras e 1 maço de folhas secas. Reacender: 10 gravetos e 1 maço. Alimentar uma fraca: 2 gravetos. Reconstruir: 10 gravetos, 5 pedras e 1 maço.</li>
+            </ul>
+          </details>
         </section>
       </aside>
     </section>

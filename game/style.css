@@ -1233,11 +1233,10 @@ body[data-location="room"] .touch-action-group.outside-room{display:none}
 .shell.arrival-tutorial-mode.arrival-tutorial-chat-step #chat-form{display:grid!important;bottom:max(18px,env(safe-area-inset-bottom));width:min(560px,calc(100vw - 28px));border:2px solid #d2ad64;background:linear-gradient(120deg,#102024f5,#14282bf5);box-shadow:0 0 0 3px #0a1011a8,0 0 22px #f2bf7255,inset 0 1px #fff4ce30;animation:arrival-chat-glow 2.8s ease-in-out infinite}
 .shell.arrival-tutorial-mode.arrival-tutorial-chat-step .chat-form input{font:700 13px/1.35 monospace;color:#fff0c7}
 .shell.arrival-tutorial-mode.arrival-tutorial-chat-step .chat-form input::placeholder{color:#b8d6c2;font-size:11px}
-.shell.arrival-tutorial-mode.arrival-tutorial-appearance-step .top-actions:has(#settings-toggle){display:flex!important;gap:8px;margin-left:auto}
-.shell.arrival-tutorial-mode.arrival-tutorial-appearance-step .top-actions>:not(#settings-toggle){display:none!important}
-.shell.arrival-tutorial-mode.arrival-tutorial-appearance-step #settings-toggle{display:flex!important;border:2px solid #e7c778;background:#263b35;color:#ffedbc;box-shadow:0 0 0 3px #101712aa,0 0 20px #f2bf7277;animation:arrival-chat-glow 2.8s ease-in-out infinite}
+/* Lição 3: o destaque guia até Jogador > Aparência do personagem (no celular, começa no botão Menu). */
+.shell.arrival-tutorial-mode.arrival-tutorial-appearance-step .player-menu:not([open])>summary,.shell.arrival-tutorial-mode.arrival-tutorial-appearance-step .player-menu[open] #appearance-open,.shell.arrival-tutorial-mode.arrival-tutorial-appearance-step .topbar:not(.menu-expanded) .mobile-menu-toggle{border:2px solid var(--clareira-ember,#f2c877);background:#263b35;color:var(--clareira-parchment,#f3e5c6);box-shadow:0 0 0 3px #101712aa,0 0 20px #f2bf7277;animation:arrival-chat-glow 2.8s ease-in-out infinite}
 @keyframes arrival-chat-glow{0%,100%{filter:brightness(1);box-shadow:0 0 0 3px #0a1011a8,0 0 16px #f2bf7240,inset 0 1px #fff4ce20}50%{filter:brightness(1.13);box-shadow:0 0 0 3px #0a1011a8,0 0 25px #f2bf7270,inset 0 1px #fff4ce38}}
-@media(prefers-reduced-motion:reduce){.arrival-tutorial-chat-step .chat-form,.arrival-tutorial-appearance-step #settings-toggle{animation:none}}
+@media(prefers-reduced-motion:reduce){.arrival-tutorial-chat-step .chat-form,.arrival-tutorial-appearance-step :is(.player-menu>summary,#appearance-open,.mobile-menu-toggle){animation:none}}
 
 /* Arrival instructions remain crisp DOM text, outside the pixelated world canvas. */
 .shell.arrival-tutorial-mode .arrival-tutorial{position:absolute;z-index:24;top:auto;bottom:max(36px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(420px,calc(100% - 40px));height:auto;margin:0;padding:16px 20px;overflow:visible;clip:auto;white-space:normal;border:0;border-top:1px solid #bfa06b40;background:linear-gradient(180deg,#080c0ed9,#080c0e00);text-align:center;pointer-events:none}
@@ -1430,3 +1429,38 @@ dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header
 #appearance-dialog[open],#lodging-dialog[open]{box-shadow:0 0 0 2px var(--iron),0 0 0 4px var(--brass),0 0 0 6px var(--iron),0 26px 64px #000c}
 .top-actions .ico,.destination-map-button .ico{width:1.25em;height:1.25em}
 .top-actions .icon-button{white-space:nowrap}
+
+/* Ajuda e menu no celular (fix/ui-tutorial-e-celular): o essencial primeiro, custos recolhidos,
+   textos conforme o modo de entrada e menu com rótulos. A consulta é a mesma de TOUCH_INPUT_QUERY. */
+.help-touch-only{display:none}
+.help-more{margin-top:10px;border-top:1px solid var(--clareira-edge,#d5bb8050);padding-top:8px}
+.help-more>summary{cursor:pointer;color:var(--clareira-ember,#f2c877);font-size:10px;letter-spacing:.08em;font-weight:700;list-style-position:inside}
+.help-more>summary:focus-visible{outline:2px solid var(--clareira-parchment,#f3e5c6);outline-offset:2px}
+.help-more>p{margin:8px 0 4px;font-size:9px;color:#98a697}
+.help-more ul{margin:6px 0 0;padding-left:16px;font-size:9px;line-height:1.5;color:#d2dacb}
+.help-more li+li{margin-top:5px}
+.controls-card .keycap{white-space:nowrap}
+.help-next .keycap{color:var(--clareira-leaf,#9fc38d)}
+@media(max-width:740px),(any-pointer:coarse){
+  .help-keys-only{display:none}
+  .help-touch-only{display:flex}
+  /* Menu: os quatro botões mostram o rótulo ao lado do ícone. */
+  .shell.is-authenticated .topbar .top-actions .icon-button{display:flex;align-items:center;justify-content:flex-start;gap:8px;width:100%}
+  .shell.is-authenticated .topbar .top-actions .icon-button span{display:inline;font-size:12px;font-weight:700}
+  /* Título do mundo numa linha só, sempre acima do botão Menu; o clima encurta com reticências. */
+  .shell.is-authenticated .world-heading{flex-wrap:nowrap;max-width:calc(100% - 18px);overflow:hidden}
+  .shell.is-authenticated .world-heading>div{flex:0 0 auto;min-width:0}
+  .shell.is-authenticated .world-heading h1{white-space:nowrap}
+  .shell.is-authenticated .world-heading .weather{flex:1 1 0;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block}
+  /* Barra rápida: os 9 espaços dividem a largura disponível, sem rolagem. */
+  .shell.is-authenticated .quickbar{overflow:visible;gap:2px;padding:4px;max-width:calc(100vw - 16px);width:calc(100vw - 16px);box-sizing:border-box;justify-content:center;scroll-snap-type:none}
+  .shell.is-authenticated .quickbar .inventory-slot{flex:1 1 0;width:auto;min-width:0;max-width:44px;height:auto;aspect-ratio:1/1;scroll-snap-align:none}
+  .shell.is-authenticated .quickbar .inventory-slot-icon{width:min(28px,70%);height:auto;aspect-ratio:1/1}
+}
+/* Celular estreito (320 a 420 px): a barra rápida continua visível quando há altura e a Ajuda desce abaixo do botão Menu. */
+@media(max-width:420px) and (min-height:600px){
+  .shell.is-authenticated .quickbar{display:flex}
+}
+@media(max-width:420px){
+  .shell.is-authenticated .side-panel{top:calc(max(58px,env(safe-area-inset-top)) + 54px)}
+}

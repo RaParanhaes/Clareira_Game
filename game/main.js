@@ -47,6 +47,8 @@ import {worldDefinitionChangesGeometry,worldHasRelief} from './world-edits.mjs';
 import {normalizeAppearance} from './appearance.mjs';
 import {CHARACTER_BY_ID} from './character-catalog.mjs';
 import { createRenderProfiler } from './render-profiler.mjs';
+import { isTouchInput } from './input-mode.mjs';
+import { arrivalTutorialSteps, ARRIVAL_TUTORIAL_FALLBACK, forestArrivalNotice, toolUseText } from './tutorial-copy.mjs';
 import { createGeometryCache } from './geometry-cache.mjs';
 import { roomWallSections, facadePanel, drawFacadeWindow } from './building-art.mjs';
 import { roomAtmosphere } from './room-atmosphere.mjs';
@@ -2318,6 +2320,7 @@ function connect() {
     const snapshotDimensionId = message.dimensionId || worldDimensionId;
     const dimensionChanged = snapshotDimensionId !== worldDimensionId;
     const leavingArrivalTutorial=dimensionChanged&&worldDimensionId.startsWith('arrival-');
+    if(leavingArrivalTutorial&&snapshotDimensionId==='surface')forestArrivalNoticePending=true;
     if(dimensionChanged)dimensionTravelRequestPending=false;
     if(dimensionChanged){arrivalGuideAsked=false;arrivalDepartureAsked=false;arrivalTypingText='';arrivalLastDistance=Infinity;resumeCorrectionPending=false;resumeCorrectionUntil=0;remotePositions.clear();remotePlayback.clear();remoteFacings.clear();remoteAvatarVariants.clear();wildlife.clear();wildlifePositions.clear();wildlifePlayback.clear();wildlifeCollisionCache=[];villageActors.clear();villageNpcAvatarVariants.clear();}
     if (message.dimensions) updateDimensionTravel(message.dimensions, snapshotDimensionId);
@@ -2681,6 +2684,7 @@ function connect() {
   socket.addEventListener('close', event => {
     if(connectionProfileDiagnostics){ui.connection.dataset.lastCloseCode=String(event.code);ui.connection.dataset.lastCloseReason=String(event.reason||'').slice(0,120);ui.connection.dataset.lastCloseAttempt=String(connectionAttempt);}
     if (socket !== connection) return;
+    forestArrivalNoticePending=false; // reconectar não deve trazer o aviso de chegada tarde demais
     recordMovementDiagnostic('connection-close',{attempt:connectionAttempt,code:event.code,pending:pendingInputs.length,
       outbound:outboundInputs.length,lastSentSeq:inputSequence,lastAckSeq:lastAcknowledgedInput,
       reason:movementCloseReasonBucket(event.reason,event.code)},true);
@@ -3152,7 +3156,10 @@ const inventoryItemUse = Object.freeze({
 
 function inventoryItemUseFor(itemId) {
   const detail = inventoryItemUse[itemId];
-  if (detail) return detail;
+  if (detail) {
+    const toolText = toolUseText(itemId, { touch: isTouchInput() });
+    return toolText ? [detail[0], toolText] : detail;
+  }
   if (['wood', 'timber', 'sturdyBranch', 'stone', 'leaves', 'vines', 'plank', 'copperOre', 'ironOre', 'coal', 'charcoal', 'copperIngot', 'ironIngot'].includes(itemId)) {
     return ['Material', 'Use este material nas receitas e melhorias da aventura.'];
   }
@@ -7416,6 +7423,7 @@ function drawDaylightAtmosphere() {
   if(shake)ctx.restore();
   drawArrivalSprig(worldClock);
   updateArrivalTutorialPanel();
+  flushForestArrivalNotice();
   drawArrivalTutorialGuide();
   renderProfiler?.mark('effectsAndNight', performance.now());
   if(worldLocation==='clearing') drawFireflies(worldClock);
@@ -8780,6 +8788,15 @@ function drawArrivalCinematicOverlay(){
   }
   ctx.restore();
 }
+let forestArrivalNoticePending=false;
+// Depois do Breu o jogador cai no bosque sem aviso: mostra uma vez, quando a cena já está visível.
+function flushForestArrivalNotice(){
+  if(!forestArrivalNoticePending||!sceneReady||!loadingScreen.hidden||worldDimensionId!=='surface'||worldLocation!=='clearing')return;
+  const overlay=document.querySelector('#teleport-travel-overlay');
+  if(overlay&&!overlay.hidden)return;
+  forestArrivalNoticePending=false;
+  announce(forestArrivalNotice(),7000);
+}
 function updateArrivalTutorialPanel(){
   if(!arrivalUi.panel)return;
   const active=worldLocation==='clearing'&&worldDimensionId.startsWith('arrival-')&&Boolean(arrivalTutorial);
@@ -8800,14 +8817,7 @@ function updateArrivalTutorialPanel(){
   const walkingDeeper=localMoving&&distance>=16.5;
   if(!arrivalDepartureAsked&&!arrivalTutorial.completed&&walkingDeeper){arrivalDepartureAsked=true;  arrivalTravelPending=true;if(teleportTravelReady())requestArrivalTravel();}
   arrivalLastDistance=distance;
-  const steps={
-    welcome:['O BREU','A chama despertou','Clique ou toque no chão para se aproximar. Para seguir sem tutorial, caminhe para a escuridão.'],
-    lesson:['LIÇÃO · 01','Movimento','Use W, A, S, D, as setas ou clique no chão. Dê alguns passos para a fogueira mostrar a próxima lição.'],
-    chat:['LIÇÃO · 02','Sua primeira mensagem','Escreva uma mensagem no campo que apareceu. Pode dizer: “A chama me guia.”'],
-    appearance:['LIÇÃO · 03','Seu personagem','Abra Configurações e escolha Aparência. Mude uma opção e aplique para seguir.'],
-    find:['LIÇÃO · 04','Um pequeno presente','A fagulha deixou um galho e uma folha no chão. Aproxime-se do brilho e clique nele para recolher.'],
-    ready:['CAMINHO ABERTO','O Bosque das Brasas','A fagulha deixou um galho e uma folha. O teletransporte para o bosque já está começando.'],
-  }[arrivalTutorial.phase]||['PRÓLOGO','O Breu','Aproxime-se da fogueira para aprender ou caminhe para a escuridão para seguir.'];
+  const steps=arrivalTutorialSteps({touch:isTouchInput()})[arrivalTutorial.phase]||ARRIVAL_TUTORIAL_FALLBACK;
   const [step,title,text]=steps;
   arrivalUi.step.textContent=step;
   arrivalUi.title.textContent=title;

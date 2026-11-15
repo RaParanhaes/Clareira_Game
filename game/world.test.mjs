@@ -162,7 +162,11 @@ test('distribui jogadores em posições livres e separadas perto da fogueira', (
 });
 
 test('coleta prioriza o recurso alcançável mais próximo', () => {
-  const resources = [RESOURCE_NODES[0], RESOURCE_NODES[1]];
+  // RESOURCE_NODES é vazio: os recursos vêm do mundo gerado por chunks. Usa-se um par fixo aqui.
+  const resources = [
+    { id: 'branch-east', kind: 'wood', ...surfacePosition(11.7, 5.6) },
+    { id: 'stone-west', kind: 'stone', ...surfacePosition(3, 3) },
+  ];
   assert.equal(nearestResource(surfacePosition(11.7, 5.5), resources)?.id, 'branch-east');
   assert.equal(nearestResource(surfacePosition(8, 8), resources), null);
 });
@@ -179,14 +183,15 @@ test('coleta e brilho priorizam material da fogueira que o objetivo ainda pede',
 });
 
 test('objetivo mostra o progresso necessário para a fogueira e a próxima coleta', () => {
-  const nearbyBranch = RESOURCE_NODES.find(resource => resource.kind === 'wood');
+  const nearbyBranch = { id: 'branch-near-fire', kind: 'wood', ...surfacePosition(8.2, 11.9) };
+  const spawnResources = [nearbyBranch];
   const startResources = [
     { kind: 'wood', ...surfacePosition(10, 14.1) },
     { kind: 'stone', ...surfacePosition(3, 12.3) },
   ];
   assert.equal(getObjectiveText(surfacePosition(8.2, 12.3), startResources, readyForCampfire({})), 'Procure gravetos ao sul · Fogueira: 0/20 gravetos, 0/10 pedras, 1/1 maço de folhas.');
-  assert.equal(getObjectiveText(nearbyBranch, RESOURCE_NODES, readyForCampfire({ wood: 1 })), 'Pegue graveto · Fogueira: 1/20 gravetos, 0/10 pedras, 1/1 maço de folhas.');
-  assert.equal(getObjectiveText(surfacePosition(8.2, 12.3), RESOURCE_NODES, readyForCampfire({ wood: 20, stone: 10 })), 'Pressione F para acender uma fogueira · 20 gravetos + 10 pedras + um maço de folhas secas.');
+  assert.equal(getObjectiveText(nearbyBranch, spawnResources, readyForCampfire({ wood: 1 })), 'Pegue graveto · Fogueira: 1/20 gravetos, 0/10 pedras, 1/1 maço de folhas.');
+  assert.equal(getObjectiveText(surfacePosition(8.2, 12.3), spawnResources, readyForCampfire({ wood: 20, stone: 10 })), 'Pressione F para acender uma fogueira · 20 gravetos + 10 pedras + um maço de folhas secas.');
 });
 
 test('objetivo aguarda snapshot novo durante a reconexão e volta ao normal depois dele', () => {
@@ -290,7 +295,7 @@ test('abrigo bloqueia seu volume e o espaço da fogueira sem fogo permanece cami
   const exit={x:CLEARING_DOOR.x,y:CLEARING_DOOR.y+.5};
   assert.equal(canOccupy(exit),true);
   assert.ok(findWalkPath(exit,{x:8.2,y:12.3}).length>1);
-  const distant=getResourcesInBounds({left:16,right:48,top:16,bottom:48}).find(node=>canOccupy(node));
+  const distant=getResourcesInBounds({left:840,right:1000,top:840,bottom:1000}).find(node=>canOccupy(node));
   assert.ok(distant,'há coleta utilizável além do mapa anterior');
   assert.ok(findWalkPath({x:8.2,y:12.3},distant).length>1);
   assert.equal(canOccupy({x:WORLD_SIZE+.1,y:20}),false);
@@ -298,14 +303,14 @@ test('abrigo bloqueia seu volume e o espaço da fogueira sem fogo permanece cami
 
 test('o mundo expandido gera coleta alcançável além da antiga borda e consulta objetos por chunks', () => {
   assert.ok(WORLD_SIZE >= 670);
-  const distant = getResourcesInBounds({left:640,right:656,top:640,bottom:656})[0];
+  const distant = getResourcesInBounds({left:840,right:1000,top:840,bottom:1000})[0];
   assert.ok(distant, 'há recurso gerado no novo território');
   assert.ok(canOccupy(distant), 'o recurso distante é alcançável');
   const bounds = { left: distant.x - 1, right: distant.x + 1, top: distant.y - 1, bottom: distant.y + 1 };
   assert.ok(getResourcesInBounds(bounds).some(node => node.id === distant.id));
   assert.ok(getSolidTreesInBounds(bounds).every(tree => tree.x >= bounds.left && tree.x <= bounds.right
     && tree.y >= bounds.top && tree.y <= bounds.bottom));
-  const region={left:640,right:656,top:640,bottom:656};
+  const region={left:840,right:1000,top:840,bottom:1000};
   const treesBefore=getSolidTreesInBounds(region).map(({x,y,r,index})=>({x,y,r,index}));
   const resourcesBefore=getResourcesInBounds(region);
   for(let cy=0;cy<12;cy++)for(let cx=0;cx<12;cx++)getSolidTreesInBounds({left:cx*16,right:cx*16+15,top:cy*16,bottom:cy*16+15});

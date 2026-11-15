@@ -57,9 +57,8 @@ test('social reach can cross the low campfire while movement and object use rema
 });
 
 test('a resource beside the campfire can be collected from a safe reachable edge', () => {
-  const resource = RESOURCE_NODES.reduce((nearest,node)=>
-    Math.hypot(node.x-SPAWN_CAMPFIRE.x,node.y-SPAWN_CAMPFIRE.y)
-      < Math.hypot(nearest.x-SPAWN_CAMPFIRE.x,nearest.y-SPAWN_CAMPFIRE.y)?node:nearest);
+  // RESOURCE_NODES é vazio (recursos vêm do mundo gerado): usa-se um recurso fixo ao lado da fogueira.
+  const resource = { id: 'branch-by-fire', kind: 'wood', x: SPAWN_CAMPFIRE.x + 0.9, y: SPAWN_CAMPFIRE.y };
   const offset = { x: resource.x - SPAWN_CAMPFIRE.x, y: resource.y - SPAWN_CAMPFIRE.y };
   const distance = Math.hypot(offset.x, offset.y);
   const direction = { x: offset.x / distance, y: offset.y / distance };

@@ -3378,15 +3378,16 @@ export function createPrototypeServer({
           : resource.kind === 'leaves' ? 'maço de folhas secas' : resource.kind === 'vines' ? 'cipó'
             : resource.kind === 'apples' ? 'maçã' : 'frutinha';
         if (typeof storage.saveWorldAndProgressAndRecordInteraction === 'function') {
-          // O item entra no vivo antes; a gravação fotografa o vivo quando roda. Falhou: sai só este item.
-          addInventoryItem(player.inventory, resource.kind, quantity);
+          const candidateInventory = createInventory(beforeInventory);
+          addInventoryItem(candidateInventory, resource.kind, quantity);
           try {
-            const saved = await persistWorldCollection(player, updated, currentDefinition.revision, interaction, player.inventory);
+            const saved = await persistWorldCollection(player, updated, currentDefinition.revision, interaction, candidateInventory);
+            restoreInventory(player.inventory, inventorySnapshot(candidateInventory));
             worldDefinitions.set(player.dimensionId, saved);
             activeWorldRevision = -1;
             activateWorld(player.dimensionId);
           } catch (error) {
-            removeInventoryItem(player.inventory, resource.kind, quantity);
+            restoreInventory(player.inventory, beforeInventory);
             resourcesForDimension.collected.delete(resource.id);
             if (error.status === 409) {
               const latest = normalizeWorldDefinition(await storage.loadWorld(player.dimensionId));

@@ -320,3 +320,63 @@ test('o mundo expandido gera coleta alcançável além da antiga borda e consult
   assert.deepEqual(getSolidTreesInBounds(region).map(({x,y,r,index})=>({x,y,r,index})),treesBefore);
   assert.deepEqual(getResourcesInBounds(region),resourcesBefore,'chunks descarregados são recriados sem alterar o mundo');
 });
+
+test('pedras e gravetos soltos ficam a poucos passos do ponto de chegada, com qualquer semente',()=>{
+ const origin=getWorldDefinition();
+ const exit=surfacePosition(41.5,15);
+ try {
+  for(const seed of [origin.seed,1234567,987654321,4000000000]){
+   applyWorldDefinition({...origin,seed});
+   const R=12,box={left:SPAWN.x-R,right:SPAWN.x+R,top:SPAWN.y-R,bottom:SPAWN.y+R};
+   const near=getResourcesInBounds(box).filter(r=>Math.hypot(r.x-SPAWN.x,r.y-SPAWN.y)<=R&&r.id.startsWith('resource-village-'));
+   const stones=near.filter(r=>r.kind==='stone'),sticks=near.filter(r=>r.kind==='wood'),branches=near.filter(r=>r.kind==='sturdyBranch'),vines=near.filter(r=>r.kind==='vines');
+   assert.ok(stones.length>=4,`semente ${seed}: ao menos 4 pedras em ${R} tiles (achou ${stones.length})`);
+   assert.ok(sticks.length>=2,`semente ${seed}: ao menos 2 gravetos em ${R} tiles (achou ${sticks.length})`);
+   assert.ok(branches.length>=2,`semente ${seed}: ao menos 2 galhos fortes (achou ${branches.length})`);
+   assert.ok(vines.length>=2,`semente ${seed}: ao menos 2 cipós (achou ${vines.length})`);
+   for(const item of [...stones,...sticks,...branches,...vines]){
+    assert.equal(isPathTile(item.x,item.y),false,`${item.id} fora do piso da trilha`);
+    assert.equal(canOccupy({x:item.x,y:item.y},PLAYER_RADIUS),true,`${item.id} em chão livre`);
+    assert.ok(getSolidTreesInBounds({left:item.x-1,right:item.x+1,top:item.y-1,bottom:item.y+1}).every(t=>Math.hypot(t.x-item.x,t.y-item.y)>=1),`${item.id} longe de árvores`);
+    assert.ok(item.id.startsWith('resource-village-'),'id fixo, para reaparecer pela regra comum');
+   }
+   assert.ok(stones.every(s=>Math.hypot(s.x-CLEARING_DOOR.x,s.y-CLEARING_DOOR.y)>1.5),'pedras não bloqueiam a porta da recepção');
+   const toExit=findWalkPath(SPAWN,exit);
+   assert.ok(Array.isArray(toExit)&&toExit.length>0,`semente ${seed}: caminho do ponto de chegada até a saída da vila`);
+   assert.ok(toExit.every(p=>canOccupy(p,PLAYER_RADIUS)),'caminho sem colisão');
+   for(const stone of stones){
+    const walk=findWalkPath(SPAWN,stone);
+    assert.ok(Array.isArray(walk)&&walk.length>0,`${stone.id} é alcançável a pé`);
+   }
+  }
+  applyWorldDefinition({...origin,seed:1234567});
+  const idsA=getResourcesInBounds({left:SPAWN.x-12,right:SPAWN.x+12,top:SPAWN.y-12,bottom:SPAWN.y+12}).filter(r=>r.id.startsWith('resource-village-')).map(r=>r.id.replace(/-t\d(?=-g)/,'')).sort();
+  applyWorldDefinition(origin);
+  const idsB=getResourcesInBounds({left:SPAWN.x-12,right:SPAWN.x+12,top:SPAWN.y-12,bottom:SPAWN.y+12}).filter(r=>r.id.startsWith('resource-village-')).map(r=>r.id.replace(/-t\d(?=-g)/,'')).sort();
+  assert.deepEqual(idsA,idsB,'os mesmos pontos existem em qualquer semente');
+ } finally { applyWorldDefinition(origin); }
+});
+
+test('pontos da vila respeitam objetos de edições do mundo e um id nunca muda de lugar',()=>{
+ const origin=getWorldDefinition();
+ const box={left:SPAWN.x-14,right:SPAWN.x+14,top:SPAWN.y-14,bottom:SPAWN.y+14};
+ const village=()=>new Map(getResourcesInBounds(box).filter(r=>r.id.startsWith('resource-village-')).map(r=>[r.id,r]));
+ try {
+  const before=village();
+  assert.equal(before.size,14,'todos os pontos existem');
+  assert.ok([...before.keys()].every(id=>/^resource-village-\d+-t\d-g\d+$/.test(id)),'a tentativa vai no id');
+  const [firstId,first]=[...before][0];
+  for(const type of ['rock','tree','resource']){
+   const edit=type==='resource'?{id:`edit-${type}`,type,resourceKind:'berries',x:first.x+.2,y:first.y-.2}:{id:`edit-${type}`,type,x:first.x+.2,y:first.y-.2};
+   applyWorldDefinition(appendWorldEdit(origin,edit,{worldSize:WORLD_SIZE}));
+   const after=village();
+   for(const item of after.values())assert.ok(Math.hypot(item.x-edit.x,item.y-edit.y)>=1,`${type} editado a menos de 1 tile não recebe ponto da vila (${item.id})`);
+   for(const [id,item] of after){const old=before.get(id);if(old)assert.deepEqual([item.x,item.y],[old.x,old.y],`${id} não muda de lugar`);}
+   assert.ok(!after.has(firstId)||Math.hypot(after.get(firstId).x-edit.x,after.get(firstId).y-edit.y)>=1);
+   applyWorldDefinition(origin);
+  }
+  const far=appendWorldEdit(origin,{id:'edit-far',type:'rock',x:SPAWN.x+60,y:SPAWN.y+60},{worldSize:WORLD_SIZE});
+  applyWorldDefinition(far);
+  assert.deepEqual([...village()].map(([id,r])=>[id,r.x,r.y]),[...before].map(([id,r])=>[id,r.x,r.y]),'edição distante não mexe em nada');
+ } finally { applyWorldDefinition(origin); }
+});

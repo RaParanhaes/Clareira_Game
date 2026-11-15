@@ -158,6 +158,7 @@ import { createStaffSky } from './staff-sky-ui.mjs';
 import { drawWeatherSky, rainStyleFor } from './weather-renderer.mjs';
 import { rainFrame, rainDropCount, drawRainWorld } from './rain-world.mjs';
 import { showFramedNotice } from './framed-notice.mjs';
+import { createVitalsHud } from './vitals-hud.mjs';
 import { createCraftingGuideView } from './crafting-guide-ui.mjs';
 import { workKeyAction } from './crafting-guide.mjs';
 
@@ -268,6 +269,7 @@ const connectionProfileDiagnostics = new URLSearchParams(location.search).get("p
 let lastInputSend = 0;
 let lastInput = { x: 0, y: 0 };
 let toastTimer = null;
+const vitalsHud = createVitalsHud(document.querySelector('#vitals-hud'));
 let audioContext = null;
 let ambience = null;
 let soundSuspendTimer = null;
@@ -2265,6 +2267,10 @@ function connect() {
       }
       if(message.arrivalReady===true){arrivalTravelPending=true;if(teleportTravelReady())requestArrivalTravel();}
       if (typeof message.text === 'string') placePanel.notice(message.text);
+      if(message.action === 'dimensionTravel' && message.result === 'rejected' && message.cancelled === true){
+        // Viagem já aceita e interrompida pelo servidor (desmaio): desfaz a tela de viagem e destrava o jogador.
+        dimensionTravelRequestPending=false;dimensionRequestStartedAt=0;pendingDimensionTravelRequestId=null;dimensionTravelStarting=false;teleportEffects.clear();updateDimensionTravel(dimensionList,worldDimensionId);
+      }
       if(dimensionTravelRequestPending && message.action === 'dimensionTravel' && message.result === 'rejected'){
         dimensionTravelRequestPending=false;dimensionRequestStartedAt=0;pendingDimensionTravelRequestId=null;dimensionTravelStarting=false;teleportEffects.cancelLocal();updateDimensionTravel(dimensionList,worldDimensionId);
         if(message.action==='dimensionTravel'&&message.result==='rejected'&&worldDimensionId.startsWith('arrival-')&&!arrivalTutorial?.completed)arrivalDepartureAsked=false;
@@ -2622,6 +2628,7 @@ function connect() {
       if (inventoryState && typeof inventoryState === 'object') {
         localInventory = inventoryPrediction.reconcile(inventoryState.inventory || self.inventory, inventoryState.seq || 0);
       }
+      if (message.vitals) vitalsHud.update(message.vitals, { dimensionId: snapshotDimensionId });
       renderInventory();
       updateContextActionLabel();
       loadingProcessingPhase=6;

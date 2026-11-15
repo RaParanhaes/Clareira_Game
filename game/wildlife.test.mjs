@@ -159,7 +159,10 @@ test('territorial animals cannot hit a player through a tree', () => {
   const openPopulation = new Map([[openBear.id,openBear]]);
   const openEvents = stepWildlifePopulation(openPopulation,{dimensionId:'test',players:[openPlayer],now:10000,
     deltaSeconds:.03,worldSize:100,isOccluded:()=>false});
-  assert.ok(openEvents.some(event=>event.type==='player-attacked'));
+  const attackEvent = openEvents.find(event=>event.type==='player-attacked');
+  assert.ok(attackEvent);
+  assert.equal(attackEvent.force, WILDLIFE_BY_ID.get('bear').attack.force);
+  assert.equal(attackEvent.reach, WILDLIFE_BY_ID.get('bear').attack.reach);
   assert.ok(openPlayer.position.vx > 0);
   assert.equal(openPlayer.position.crouching,false);
 });

@@ -26,7 +26,8 @@ export async function huntWildlifeTarget({
 
   const previousHealth=animal.health;
   const previousProvokedUntil=animal.provokedUntil||0;
-  animal.provokedUntil=now+5000;
+  const previousProvokedBy=animal.provokedBy;
+  animal.provokedUntil=now+5000;animal.provokedBy=player.id;
   const damage=Number.isFinite(damageOverride)?Math.max(1,Math.floor(damageOverride)):(isAxe?2:1)+attributeAttackBonus(player.inventory.attributes,player.inventory.learnedAbilities);
   animal.health=Math.max(0,animal.health-damage);
   if(animal.health>0){
@@ -44,7 +45,7 @@ export async function huntWildlifeTarget({
   }
   if(!canAddInventoryItems(player.inventory,loot)){
     animal.health=previousHealth;
-    animal.provokedUntil=previousProvokedUntil;
+    animal.provokedUntil=previousProvokedUntil;animal.provokedBy=previousProvokedBy;
     return {status:'inventory-full',definition};
   }
   const before=inventorySnapshot(player.inventory);
@@ -53,7 +54,7 @@ export async function huntWildlifeTarget({
   catch{
     restoreInventory(player.inventory,before);
     animal.health=previousHealth;
-    animal.provokedUntil=previousProvokedUntil;
+    animal.provokedUntil=previousProvokedUntil;animal.provokedBy=previousProvokedBy;
     return {status:'save-failed',definition};
   }
   population?.delete(animal.id);

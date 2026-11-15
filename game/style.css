@@ -1430,6 +1430,21 @@ dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header
 .top-actions .ico,.destination-map-button .ico{width:1.25em;height:1.25em}
 .top-actions .icon-button{white-space:nowrap}
 
+/* Vida do personagem (feat/character-vida): barra discreta no topo da cena; some quase por completo com vida cheia. */
+.vitals-hud{position:absolute;top:68px;left:50%;z-index:7;display:grid;justify-items:center;gap:6px;transform:translateX(-50%);pointer-events:none;transition:opacity .3s}
+.vitals-hud[hidden]{display:none}
+.vitals-hud.is-full:not(.is-downed){opacity:.8}
+.vitals-bar{position:relative;width:140px;height:15px;border:1px solid var(--clareira-ember,#f2c877);border-radius:6px 2px 6px 2px;background:color-mix(in srgb,var(--clareira-ink,#111a35) 80%,black);box-shadow:0 2px 8px color-mix(in srgb,var(--clareira-ink,#111a35) 40%,transparent);overflow:hidden}
+.vitals-fill{position:absolute;inset:0 auto 0 0;width:100%;background:linear-gradient(90deg,var(--clareira-leaf,#9fc38d),var(--clareira-ember,#f2c877));transition:width .25s,background .25s}
+.vitals-hud.is-low .vitals-fill{background:linear-gradient(90deg,var(--clareira-afterglow,#eb9871),var(--clareira-ember,#f2c877))}
+.vitals-hud.is-hurt .vitals-bar{animation:vitals-hurt .6s ease-out}
+@keyframes vitals-hurt{0%,60%{border-color:var(--clareira-afterglow,#eb9871);box-shadow:0 0 0 2px color-mix(in srgb,var(--clareira-afterglow,#eb9871) 35%,transparent)}}
+.vitals-note.is-timed{animation:vitals-note-out 6s linear forwards}
+@keyframes vitals-note-out{0%,90%{opacity:1}100%{opacity:0}}
+.vitals-label{position:absolute;inset:0;display:grid;place-items:center;color:var(--clareira-parchment,#f3e5c6);font-size:10px;font-weight:700;letter-spacing:.04em;text-shadow:0 1px 2px var(--clareira-ink,#111a35)}
+.vitals-note{max-width:min(78vw,300px);margin:0;padding:7px 11px;border:1px solid var(--clareira-edge,#d5bb8050);border-radius:4px 12px 4px 12px;background:color-mix(in srgb,var(--clareira-surface,#142833) 93%,transparent);color:var(--clareira-parchment,#f3e5c6);font-size:12px;line-height:1.35;text-align:center;box-shadow:0 8px 24px color-mix(in srgb,var(--clareira-ink,#111a35) 55%,transparent)}
+.vitals-note[hidden]{display:none}
+@media(max-width:720px){.vitals-hud{top:112px;left:10px;justify-items:start;transform:none}.vitals-bar{width:112px;height:14px}.vitals-note{max-width:210px;font-size:11px;text-align:left}}
 /* Ajuda e menu no celular (fix/ui-tutorial-e-celular): o essencial primeiro, custos recolhidos,
    textos conforme o modo de entrada e menu com rótulos. A consulta é a mesma de TOUCH_INPUT_QUERY. */
 .help-touch-only{display:none}

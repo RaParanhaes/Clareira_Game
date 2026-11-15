@@ -14,7 +14,7 @@ export const CRAFTING_MATERIALS = Object.freeze({
 
 export const CRAFTING_RECIPES = Object.freeze({
   stoneAxe: Object.freeze({
-    id: 'stoneAxe', label: 'Machado de pedra', key: 'H', action: 'work', toolIds: AXE_TOOL_IDS,
+    id: 'stoneAxe', label: 'Machado de pedra', key: 'H', action: 'craftAxe', toolIds: AXE_TOOL_IDS,
     cost: Object.freeze({ sturdyBranch: 1, stone: 1, vines: 1 }),
     price: TOOL_PRICES.stoneAxe, use: 'corta árvores e toras',
   }),

@@ -89,6 +89,8 @@ test('as quantidades e teclas repetem o que o servidor e o cliente de fato exige
   assert.deepEqual(CRAFTING_RECIPES.stoneAxe.cost, { sturdyBranch: 1, stone: 1, vines: 1 });
   assert.deepEqual(CRAFTING_RECIPES.stonePickaxe.cost, { stone: 2, sturdyBranch: 1, vines: 1 });
   assert.match(main, /key === 'h' \|\| key === 'H'\) action\('work'\)/u);
+  assert.equal(CRAFTING_RECIPES.stoneAxe.action, 'craftAxe');
+  assert.match(server, /message\.name === 'craftAxe'/u);
   assert.match(main, /key === 'p' \|\| key === 'P'\) action\('craftPickaxe'\)/u);
   assert.equal(CRAFTING_RECIPES.stoneAxe.key, 'H');
   assert.equal(CRAFTING_RECIPES.stonePickaxe.key, 'P');

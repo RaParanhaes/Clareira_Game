@@ -4307,8 +4307,8 @@ function action(name) {
     sendPlayerCommand({ type:'action', name:'work' });
     return;
   }
-  if (name === 'craftPickaxe') {
-    sendPlayerCommand({ type:'action', name:'craftPickaxe' });
+  if (name === 'craftAxe' || name === 'craftPickaxe') {
+    sendPlayerCommand({ type:'action', name });
     return;
   }
   if (name === 'upgradeAxe' || name === 'upgradePickaxe') {

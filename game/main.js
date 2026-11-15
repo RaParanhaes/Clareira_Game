@@ -158,6 +158,7 @@ import { createStaffSky } from './staff-sky-ui.mjs';
 import { drawWeatherSky, rainStyleFor } from './weather-renderer.mjs';
 import { rainFrame, rainDropCount, drawRainWorld } from './rain-world.mjs';
 import { showFramedNotice } from './framed-notice.mjs';
+import { GEAR_ITEM_PRESENTATION, GEAR_ITEM_USE, armorButtonFor, renderEquipmentSlots } from './equipment-ui.mjs';
 import { createVitalsHud } from './vitals-hud.mjs';
 import { createCraftingGuideView } from './crafting-guide-ui.mjs';
 import { workKeyAction } from './crafting-guide.mjs';
@@ -185,7 +186,7 @@ const ui = {
   toolStatus: document.querySelector('#tool-status'),
   quickbar: document.querySelector('#quickbar'), inventoryDialog: document.querySelector('#inventory-dialog'), inventoryToggle: document.querySelector('#inventory-toggle'),
   inventoryClose: document.querySelector('#inventory-close'), progressionBadge: document.querySelector('#progression-points-badge'), inventoryGrid: document.querySelector('#inventory-grid'), inventoryQuickGrid: document.querySelector('#inventory-quick-grid'), inventoryPages: document.querySelector('#inventory-pages'), inventoryCapacity: document.querySelector('#inventory-capacity'), attributePoints: document.querySelector('#attribute-points'), attributeList: document.querySelector('#attribute-list'), skillPoints: document.querySelector('#skill-points'), skillList: document.querySelector('#skill-list'),
-  inventoryDetailIcon: document.querySelector('#inventory-detail-image'), inventoryDetailName: document.querySelector('#inventory-detail-name'), inventoryDetailMeta: document.querySelector('#inventory-detail-meta'), inventoryDetailUse: document.querySelector('#inventory-detail-use'), inventoryEquip: document.querySelector('#inventory-equip'),
+  inventoryDetailIcon: document.querySelector('#inventory-detail-image'), inventoryDetailName: document.querySelector('#inventory-detail-name'), inventoryDetailMeta: document.querySelector('#inventory-detail-meta'), inventoryDetailUse: document.querySelector('#inventory-detail-use'), inventoryEquip: document.querySelector('#inventory-equip'), inventoryEquipment: document.querySelector('#inventory-equipment'),
   objective: document.querySelector('#objective-text'), toast: document.querySelector('#toast'), sound: document.querySelector('#sound-toggle'), authSound: document.querySelector('#auth-sound-toggle'),
   chatForm: document.querySelector('#chat-form'), chatText: document.querySelector('#chat-text'), chatStatus: document.querySelector('#chat-status'),
   shell: document.querySelector('.shell'), authStatus: document.querySelector('#auth-status'), sessionLabel: document.querySelector('#session-label'), logout: document.querySelector('#logout-button'),
@@ -3135,6 +3136,7 @@ const inventoryItemPresentation = Object.freeze({
   stonePickaxe: ['Picareta de pedra', 'stonePickaxe'], copperPickaxe:['Picareta de cobre','copperPickaxe'], ironPickaxe:['Picareta de ferro','ironPickaxe'],
   rawMeat:['Carne crua','rawMeat'], hide:['Couro','hide'], bone:['Osso','bone'], feather:['Pena','feather'], venom:['Veneno','venom'], glowDust:['Pó de luz','glowDust'], cinderShard:['Fragmento de cinza','glowDust'], emberCore:['Núcleo de brasa','glowDust'],
   xpPotionI:['Poção de XP I','xpPotionI'], xpPotionII:['Poção de XP II','xpPotionI'], xpPotionIII:['Poção de XP III','xpPotionI'], xpPotionIV:['Poção de XP IV','xpPotionI'],
+  ...GEAR_ITEM_PRESENTATION,
 });
 
 const inventoryItemUse = Object.freeze({
@@ -3162,7 +3164,7 @@ const inventoryItemUse = Object.freeze({
 });
 
 function inventoryItemUseFor(itemId) {
-  const detail = inventoryItemUse[itemId];
+  const detail = inventoryItemUse[itemId] || GEAR_ITEM_USE[itemId];
   if (detail) {
     const toolText = toolUseText(itemId, { touch: isTouchInput() });
     return toolText ? [detail[0], toolText] : detail;
@@ -3375,7 +3377,7 @@ function renderInventory(forcePanel = false) {
   renderAbilityCooldowns();
   syncInventoryGrid(ui.quickbar, Array.from({length:9}, (_, slot) => slot), {quick:true});
   if (!forcePanel && !ui.inventoryDialog.open) return;
-  const signature = JSON.stringify([localInventory.slots, localInventory.selectedSlot, localInventory.level, localInventory.xp, localInventory.attributePoints, localInventory.skillPoints, localInventory.attributes, localInventory.learnedAbilities, inventoryStoragePage, inventoryDragSource, localInventory.axeSharpness, localInventory.axeDurability, localInventory.pickaxeDurability, localInventory.gold, localInventory.silver, localInventory.bronze]);
+  const signature = JSON.stringify([localInventory.slots, localInventory.selectedSlot, localInventory.level, localInventory.xp, localInventory.attributePoints, localInventory.skillPoints, localInventory.attributes, localInventory.learnedAbilities, inventoryStoragePage, inventoryDragSource, localInventory.axeSharpness, localInventory.axeDurability, localInventory.pickaxeDurability, localInventory.gold, localInventory.silver, localInventory.bronze, localInventory.equipment]);
   if (signature === inventoryRenderKey) { renderInventorySelection(); return; }
   const active = document.activeElement;
   const activeSlot = active?.closest?.('[data-inventory-slot]');
@@ -3388,6 +3390,7 @@ function renderInventory(forcePanel = false) {
   setHudText(ui.bagSilver, String(localInventory.silver || 0));
   setHudText(ui.bagBronze, String(localInventory.bronze || 0));
   syncInventoryGrid(ui.inventoryQuickGrid, Array.from({length:9}, (_, slot) => slot));
+  renderEquipmentSlots(ui.inventoryEquipment, localInventory, slot => sendPlayerCommand({ type:'action', name:'unequipItem', slot }));
   const unlockedPages = storagePageCountForLevel(localInventory.level || 1);
   inventoryStoragePage = Math.min(inventoryStoragePage, unlockedPages - 1);
   const pageButtons = document.createDocumentFragment();
@@ -3495,7 +3498,9 @@ function renderInventoryDetails() {
   ui.inventoryDetailUse.textContent = use;
   const isXpPotion = stack.itemId.startsWith('xpPotion');
   const atMaxLevel = isXpPotion && (localInventory.level || 1) >= MAX_PLAYER_LEVEL;
+  const armorButton = armorButtonFor(stack.itemId, localInventory.equipment);
   ui.inventoryEquip.disabled = isXpPotion ? atMaxLevel || localInventory.level < ({ xpPotionI:1, xpPotionII:5, xpPotionIII:10, xpPotionIV:20 }[stack.itemId] || 99) : (index < 9 && firstStorageSlot < 0);
+  if (armorButton) { ui.inventoryEquip.disabled = false; ui.inventoryEquip.textContent = armorButton.text; return; }
   ui.inventoryEquip.textContent = isXpPotion ? atMaxLevel ? 'Nível máximo' : 'Beber poção' : index < 9
     ? firstStorageSlot < 0 ? 'Inventário cheio' : 'Guardar no Inventário'
     : `Levar para acesso rápido ${localInventory.selectedSlot + 1}`;
@@ -8640,6 +8645,7 @@ ui.inventoryEquip.addEventListener('click', () => {
   const index = inventorySelectionIndex;
   if (!Number.isInteger(index) || index < 0 || index >= localInventory.slots.length || !localInventory.slots?.[index]) return;
   const selected = localInventory.slots[index];
+  if (armorButtonFor(selected.itemId, localInventory.equipment)) { sendPlayerCommand({ type:'action', name:'equipItem', itemId:selected.itemId }); return; }
   if (selected.itemId.startsWith('xpPotion')) {
     if (openXpPotionConfirmation(selected.itemId)) return;
     sendPlayerCommand({ type:'action', name:'consumeXpPotion', itemId:selected.itemId }); return;

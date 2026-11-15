@@ -2,7 +2,7 @@ import {
   addInventoryItem, canAddInventoryItems, inventorySnapshot,
   restoreInventory, selectedInventoryItem,
 } from './inventory.mjs';
-import { AXE_TOOL_IDS } from './tool-progression.mjs';
+import { isWeapon, weaponDamageFor } from './equipment.mjs';
 import { WILDLIFE_BY_ID } from './wildlife.mjs';
 import { attributeAttackBonus } from './progression.mjs';
 
@@ -21,14 +21,14 @@ export async function huntWildlifeTarget({
   if(!hasClearPath(player.position,animal,definition))return {status:'blocked',definition};
 
   const weapon=weaponOverride||selectedInventoryItem(player.inventory);
-  const isAxe=AXE_TOOL_IDS.includes(weapon);
-  if(!weaponOverride&&weapon!=='knife'&&!isAxe)return {status:'no-tool',definition};
+  const usableWeapon=isWeapon(weapon);
+  if(!weaponOverride&&!usableWeapon)return {status:'no-tool',definition};
 
   const previousHealth=animal.health;
   const previousProvokedUntil=animal.provokedUntil||0;
   const previousProvokedBy=animal.provokedBy;
   animal.provokedUntil=now+5000;animal.provokedBy=player.id;
-  const damage=Number.isFinite(damageOverride)?Math.max(1,Math.floor(damageOverride)):(isAxe?2:1)+attributeAttackBonus(player.inventory.attributes,player.inventory.learnedAbilities);
+  const damage=Number.isFinite(damageOverride)?Math.max(1,Math.floor(damageOverride)):weaponDamageFor(weapon)+attributeAttackBonus(player.inventory.attributes,player.inventory.learnedAbilities);
   animal.health=Math.max(0,animal.health-damage);
   if(animal.health>0){
     animal.state='ferido';

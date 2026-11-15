@@ -36,6 +36,22 @@ export function createStorageAdapter({
         await saveAccountProgress(directory, accountId, inventory);
         return interactions.recordInteraction(event);
       },
+      // JSON usa dois arquivos: grava o inventário com o item primeiro e debita depois;
+      // se o débito falhar, regrava o inventário anterior. Uma queda no meio nunca cobra sem entregar.
+      debitWalletAndSaveProgress: async (accountId, amount, inventoryAfter, inventoryBefore) => {
+        await saveAccountProgress(directory, accountId, inventoryAfter);
+        try { return await accounts.debitWallet(accountId, amount); }
+        catch (error) {
+          if (inventoryBefore) await saveAccountProgress(directory, accountId, inventoryBefore).catch(() => {});
+          throw error;
+        }
+      },
+      // JSON: credita primeiro e grava depois (uma queda no meio favorece o jogador; aceito, JSON só serve a testes).
+      creditWalletAndSaveProgress: async (accountId, amount, inventory) => {
+        const wallet = await accounts.creditWallet(accountId, amount);
+        await saveAccountProgress(directory, accountId, inventory);
+        return wallet;
+      },
       loadRoom: accountId => loadAccountRoom(directory, accountId),
       saveRoom: (accountId, furniture) => saveAccountRoom(directory, accountId, furniture),
       loadAppearance: accountId => loadAppearance(directory, accountId),

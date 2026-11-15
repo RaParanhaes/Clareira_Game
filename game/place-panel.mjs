@@ -4,6 +4,8 @@ import { LODGING_OFFERS, TOOL_PRICES, TRADE_PRICES, formatCoins } from './lodgin
 import { axeToolFor, pickaxeToolFor } from './tool-progression.mjs';
 import { SERVICE_SECTIONS } from './place-services.mjs';
 import { isCabin } from './cabin-access.mjs';
+import { GEAR_LABELS, GEAR_PRICES } from './equipment.mjs';
+import { renderGearShop } from './equipment-ui.mjs';
 
 const itemNames = Object.freeze({ wood: 'Graveto seco', timber: 'Madeira bruta', stone: 'Pedra',
   sturdyBranch: 'Galho forte', berries: 'Frutinha', apples: 'Maçã', leaves: 'Folhas secas', vines: 'Cipó',
@@ -302,6 +304,8 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
         const save=actionButton('Salvar alíquota','governmentTaxPolicySet',{taxCode:policy.taxCode});
         form.append(save); card.append(form); fragment.append(card);
       }
+    } else if (route === 'gear') {
+      renderGearShop(fragment, { element, actionButton, formatCoins, balance, state });
     } else if (route === 'tools') {
       for (const [tool, price] of Object.entries(TOOL_PRICES)) {
         const owned = tool === 'stoneAxe' ? axeToolFor(state.inventory) : pickaxeToolFor(state.inventory);
@@ -421,7 +425,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
           : name === 'propertyDelist' ? 'Retirar a propriedade da venda. Você continuará dono e poderá anunciar novamente.' : `Revogar a chave de ${recipient}. A conta perde o acesso à cabana; visitantes sem outra chave serão retirados pelo servidor.` };
       controller.navigate('commerce-review'); return;
     }
-    if (['lodgeClaim', 'propertyBuy', 'propertyRent', 'propertyList', 'lodgeBuyTool', 'lodgeSell'].includes(name)) {
+    if (['lodgeClaim', 'propertyBuy', 'propertyRent', 'propertyList', 'lodgeBuyTool', 'lodgeBuyGear', 'lodgeSell'].includes(name)) {
       const state = getState(), price = operationPrice(message, state);
       if (!Number.isSafeInteger(price) || price < 1) { status.textContent = 'Preço indisponível. Atualize e tente novamente.'; return; }
       if(name==='lodgeClaim') message.requestId=crypto.randomUUID();
@@ -432,7 +436,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
       draft = { message, price, cost, title: selling ? 'Revisar venda' : listing ? 'Revisar anúncio' : name === 'lodgeClaim' && message.mode === 'rent' ? 'Revisar aluguel' : 'Revisar compra',
         summary: selling ? `${message.quantity} × ${itemNames[message.item]} · total bruto ${formatCoins(price * message.quantity)}. O imposto vigente será descontado pelo servidor.`
           : listing ? `Anunciar a propriedade por ${formatCoins(price)}. Você continua dono até a venda ser concluída.`
-          : `${VILLAGE_BUILDINGS.find(place => place.id === message.buildingId)?.name || (message.tool === 'stoneAxe' ? 'Machado de pedra' : 'Picareta de pedra')} · ${formatCoins(price)}. Saldo após pagamento: ${formatCoins(balance(state) - price)}.`,
+          : `${VILLAGE_BUILDINGS.find(place => place.id === message.buildingId)?.name || (message.name === 'lodgeBuyGear' ? GEAR_LABELS[message.itemId] : message.tool === 'stoneAxe' ? 'Machado de pedra' : 'Picareta de pedra')} · ${formatCoins(price)}. Saldo após pagamento: ${formatCoins(balance(state) - price)}.`,
         detail: message.mode === 'rent' || name==='propertyRent' ? `Período de ${gameDurationLabel(gameDaysToMs(message.rentalDays || 1))}. Renovação automática ${message.autoRenew ? 'ativada: novas diárias serão cobradas se houver saldo' : 'desativada'}.` : '' };
       controller.navigate('commerce-review'); return;
     }
@@ -450,6 +454,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
     if(message.name==='propertyRent')return state.propertyRentalListings?.find(l=>l.buildingId===message.buildingId)?.rentBronze * Number(message.rentalDays||1);
     if (message.name === 'propertyBuy') return message.requestId ? state.propertyRequests?.find(r=>r.requestId===message.requestId)?.askingPriceBronze : state.propertyListings?.find(item => item.buildingId === message.buildingId)?.askingPriceBronze;
     if (message.name === 'lodgeBuyTool') return TOOL_PRICES[message.tool];
+    if (message.name === 'lodgeBuyGear') return GEAR_PRICES[message.itemId];
     return LODGING_OFFERS.find(offer => offer.buildingId === message.buildingId && offer.mode === message.mode)?.price * (message.mode==='rent' ? Number(message.rentalDays || 1) : 1);
   }
 

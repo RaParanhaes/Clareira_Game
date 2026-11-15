@@ -214,7 +214,7 @@ export async function auditPlayerSaves(directory) {
       addIssue(issues, 'invalidInventories');
       continue;
     }
-    const metadataKeys = new Set(['slots', 'selectedSlot', 'attributes', 'learnedAbilities']);
+    const metadataKeys = new Set(['slots', 'selectedSlot', 'attributes', 'learnedAbilities', 'equipment']);
     const legacyItemKeys = new Set(['firewood']);
     if (Object.keys(inventory).some(key => !INVENTORY_KEYS.includes(key) && !metadataKeys.has(key) && !legacyItemKeys.has(key))) addIssue(issues, 'unknownInventoryItems');
     for (const key of [...INVENTORY_KEYS, ...legacyItemKeys].filter(key => key !== 'attributes' && key !== 'learnedAbilities')) {

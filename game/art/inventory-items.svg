@@ -28,4 +28,6 @@
   <symbol id="venom" viewBox="0 0 24 24"><path fill="#93b66d" d="M10 2h4v5l5 4-1 9-3 3H9l-3-3-1-9 5-4z"/><path fill="#d9e99a" d="M8 12h8l-1 7H9z"/><path fill="#57754a" d="M10 4h4v2h-4zm2 10 2 3h-4z"/></symbol>
   <symbol id="glowDust" viewBox="0 0 24 24"><path fill="#6e9d81" d="M6 5h12l2 3v11l-3 3H7l-3-3V8z"/><path fill="#c9ed9b" d="m12 5 2 5 4 2-4 2-2 5-2-5-4-2 4-2z"/><path fill="#f5e6a3" d="m18 3 1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/></symbol>
   <symbol id="xpPotionI" viewBox="0 0 24 24"><path fill="#c4a966" d="M9 2h6v3l2 2v2l3 3v8l-3 3H7l-3-3v-8l3-3V7l2-2z"/><path fill="#f1d78a" d="M9 7h6v2l3 3v6l-2 2H8l-2-2v-6l3-3z"/><path fill="#a5d58f" d="m12 9 1 3 3 1-3 1-1 3-1-3-3-1 3-1z"/><path fill="#fff0bb" d="M10 3h4v2h-4z"/></symbol>
+  <symbol id="shortSword" viewBox="0 0 24 24"><path fill="#b3c7be" d="m17 2 5 1-1 5L10 17l-3-3z"/><path fill="#ecedcf" d="m17 4 2 .5-.5 2L10 14.5 9 13.5z"/><path fill="#c5a76c" d="M5 13l6 6-2 2-6-6z"/><path fill="#94603e" d="m3 17 4 4-2 2-4-4z"/></symbol>
+  <symbol id="leatherJerkin" viewBox="0 0 24 24"><path fill="#7a5233" d="M8 3h8l1 3 5 2-2 5-3-1v10H7V12l-3 1-2-5 5-2z"/><path fill="#b4824f" d="M9 4h6l-1 3h-4zM8 9h8v12H8z"/><path fill="#d9b277" d="M11 8h2v13h-2z"/><path fill="#5a3b25" d="M8 15h8v1H8z"/></symbol>
 </svg>

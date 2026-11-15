@@ -1,3 +1,4 @@
+import { GEAR_ITEM_IDS, normalizeEquipment, isArmor } from './equipment.mjs';
 import { DEFAULT_ATTRIBUTES, XP_POTIONS, normalizeProgression, storageCapacityForLevel } from './progression.mjs';
 import { CURRENCY_KEYS, CURRENCY_QUANTITY_LIMITS } from './lodging-catalog.mjs';
 export const BAG_SLOT_COUNT = 27;
@@ -12,6 +13,7 @@ export const INVENTORY_ITEM_KEYS = Object.freeze([
   'copperOre', 'ironOre', 'coal', 'charcoal', 'copperIngot', 'ironIngot',
   'knife', ...AXE_TOOL_IDS, ...PICKAXE_TOOL_IDS, 'rawMeat', 'hide', 'bone', 'feather', 'venom', 'glowDust', 'cinderShard', 'emberCore',
   'xpPotionI', 'xpPotionII', 'xpPotionIII', 'xpPotionIV',
+  ...GEAR_ITEM_IDS,
 ]);
 
 export const INVENTORY_STACK_LIMITS = Object.freeze({
@@ -49,6 +51,8 @@ export const INVENTORY_STACK_LIMITS = Object.freeze({
   xpPotionII: 2,
   xpPotionIII: 1,
   xpPotionIV: 1,
+  shortSword: 1,
+  leatherJerkin: 1,
 });
 
 const CURRENCIES = CURRENCY_KEYS;
@@ -168,6 +172,7 @@ export function createInventory(value = {}) {
     pickaxeDurability: Number.isSafeInteger(value.pickaxeDurability)
       ? Math.max(0, Math.min(maxPickaxeDurabilityFor(Object.fromEntries(PICKAXE_TOOL_IDS.map(id => [id, countInSlots(slots, id)]))), value.pickaxeDurability))
       : pickaxeDurabilityFor(Object.fromEntries(PICKAXE_TOOL_IDS.map(id => [id, countInSlots(slots, id)]))),
+    equipment: normalizeEquipment(value.equipment),
     gold: validCurrencyQuantity(value.gold, 'gold'),
     silver: validCurrencyQuantity(value.silver, 'silver'),
     bronze: validCurrencyQuantity(value.bronze, 'bronze'),
@@ -219,6 +224,7 @@ export function inventorySnapshot(inventory) {
     skillPoints: progression.skillPoints,
     attributes: progression.attributes,
     learnedAbilities: progression.learnedAbilities,
+    equipment: normalizeEquipment(inventory.equipment),
   };
 }
 
@@ -233,6 +239,7 @@ export function restoreInventory(inventory, value) {
   inventory.attributePoints = restored.attributePoints; inventory.skillPoints = restored.skillPoints;
   inventory.attributes = { ...restored.attributes };
   inventory.learnedAbilities = [...restored.learnedAbilities];
+  inventory.equipment = { ...restored.equipment };
   for (const key of CURRENCIES) inventory[key] = restored[key];
   return inventory;
 }
@@ -298,6 +305,9 @@ export function inventoryRows(inventory) {
   rows.push({ itemId: 'inventory:attributePoints', quantity: inventory.attributePoints });
   rows.push({ itemId: 'inventory:skillPoints', quantity: inventory.skillPoints });
   for (const [key, value] of Object.entries(inventory.attributes || {})) rows.push({ itemId: `inventory:attribute:${key}`, quantity: value });
+  for (const [slot, itemId] of Object.entries(normalizeEquipment(inventory.equipment))) {
+    if (itemId) rows.push({ itemId: `inventory:equip:${slot}:${itemId}`, quantity: 1 });
+  }
   for (const abilityId of inventory.learnedAbilities || []) rows.push({ itemId: `inventory:ability:${abilityId}`, quantity: 1 });
   return rows;
 }
@@ -328,7 +338,10 @@ export function inventoryFromRows(rows, fallback = {}) {
       else if (row.itemId === 'inventory:xp') values.xp = Number(row.quantity);
       else if (row.itemId === 'inventory:attributePoints') values.attributePoints = Number(row.quantity);
       else if (row.itemId === 'inventory:skillPoints') values.skillPoints = Number(row.quantity);
-      else if (/^inventory:ability:[A-Za-z][A-Za-z0-9]*$/.test(row.itemId) && Number(row.quantity) > 0) {
+      else if (/^inventory:equip:body:[A-Za-z][A-Za-z0-9]*$/.test(row.itemId) && Number(row.quantity) > 0) {
+        const equipped = row.itemId.slice('inventory:equip:body:'.length);
+        if (isArmor(equipped)) values.equipment = { body: equipped };
+      } else if (/^inventory:ability:[A-Za-z][A-Za-z0-9]*$/.test(row.itemId) && Number(row.quantity) > 0) {
         values.learnedAbilities ||= []; values.learnedAbilities.push(row.itemId.slice('inventory:ability:'.length));
       } else if (/^inventory:attribute:(force|attack|defense|agility|magic|speed)$/.test(row.itemId)) {
         values.attributes ||= {}; values.attributes[row.itemId.slice('inventory:attribute:'.length)] = Number(row.quantity);

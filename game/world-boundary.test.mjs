@@ -15,7 +15,7 @@ test('all dimensions have fifty times the area and preserve arrival locations',(
     for(const dimension of DEFAULT_DIMENSIONS){
       applyWorldDefinition(initialWorldForDimension(dimension));
       assert.equal(canOccupy({x:WORLD_SIZE+.1,y:50}),false);
-      const nodes=getResourcesInBounds({left:5500,right:5540,top:5500,bottom:5540});
+      const nodes=getResourcesInBounds({left:5120,right:5150,top:5000,bottom:5030});
       const newLand=dimension.theme==='dark'?{x:WORLD_CENTER.x+10,y:WORLD_CENTER.y}:{x:5501,y:5501};
       assert.ok(canOccupy(newLand)||canOccupy({x:newLand.x+1,y:newLand.y+1}),dimension.id+' has walkable new land');
       if(dimension.theme!=='dark')assert.ok(nodes.length,dimension.id+' generates distant exploration resources');

@@ -72,6 +72,9 @@ import {
   CAMPFIRE_REKINDLE_COST, campfireBurnedOutForMs, campfireDecayProgress,
   campfireFlameStrength, campfireRemainingMs,
 } from '../game/campfire-life.mjs';
+import {
+  applyDamage, createVitals, damageFromAttack, dimensionTravelCancelledDetails, downedRefusal, isDowned, maxHealth, regenStep, releaseAnimalsFromPlayer, vitalsSnapshot,
+} from '../game/vitals.mjs';
 
 function wildlifeOutsideVillage(position,dimensionId,padding=4) {
   return dimensionId!=='surface'||(
@@ -1075,9 +1078,57 @@ export function createPrototypeServer({
     return state.promise;
   };
 
+  // Dívida: a vida vive só em memória; ao sair e voltar o jogador começa com vida cheia (sem migração nesta fatia).
+  const playerVitals = player => player.vitals ||= createVitals(player.inventory?.level);
+  const isPlayerDowned = (player, at = now()) => isDowned(player.vitals, at);
+  // Ponto único para a branch de equipamento ligar a defesa.
+  const playerDefense = player => 0;
+  const playerVitalsSnapshot = viewer => {
+    const vitals = playerVitals(viewer), at = now();
+    const snapshot = vitalsSnapshot(vitals, maxHealth(viewer.inventory?.level));
+    return isDowned(vitals, at) ? { ...snapshot, downedMs: Math.ceil(vitals.downedUntil - at) } : snapshot;
+  };
+  const applyWildlifeHit = (player, event, at) => {
+    if (player.location !== 'clearing') return 0;
+    const vitals = playerVitals(player), max = maxHealth(player.inventory?.level);
+    const result = applyDamage(vitals, damageFromAttack({ force: Number(event.force) || 0 }, playerDefense(player)), at, max);
+    if (result.damage <= 0) return 0;
+    vitals.waking = vitals.waking || result.fainted;
+    if (result.fainted) {
+      player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq; player.moving = false;
+      player.position.vx = 0; player.position.vy = 0; player.sitting = false; player.emote = null;
+      // Uma viagem já iniciada é cancelada: caído, o jogador não troca de dimensão.
+      const pendingTransit = activeDimensionTransits.get(player.pendingDimensionTransitId);
+      if (pendingTransit) {
+        removeDimensionTransit(pendingTransit);
+        // O cliente desfaz a tela de viagem com a mesma resposta de uma viagem recusada.
+        notice(player.socket, 'A viagem foi interrompida.', 'soft', dimensionTravelCancelledDetails(pendingTransit.id));
+      }
+      delete player.pendingDimensionTransitId;
+      releaseAnimalsFromPlayer(wildlifeFor(player.dimensionId || 'surface').values(), player.id, event.animalId, at);
+    }
+    return result.damage;
+  };
+  const wakePlayer = (player, at) => {
+    const vitals = player.vitals;
+    vitals.waking = false;
+    const dimensionId = player.dimensionId || 'surface';
+    const spawn = dimensionById(dimensions, dimensionId).spawn;
+    const safe = findNearbyPosition(spawn, [
+      ...spatialIndex.query(playerContextId(player), spawn, 8).filter(other => other !== player).map(other => other.position),
+      ...firesFor(dimensionId).values(),
+    ]) || spawn;
+    player.position = { ...safe, vx: 0, vy: 0, z: 0, vz: 0, jumpHeld: false, running: false, crouching: false };
+    player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq;
+    player.moving = false; player.sitting = false; player.emote = null;
+    indexPlayer(player.socket, player);
+    notice(player.socket, dimensionId === 'surface' ? 'Você desmaiou… e acordou na vila. Nada se perdeu.' : 'Você desmaiou… e acordou no ponto de partida. Nada se perdeu.', 'soft');
+  };
+
   const personalSnapshot = viewer => ({
       inventoryState: { seq: viewer.inventorySeq || 0, inventory: inventorySnapshot(viewer.inventory) },
       flightPilotAllowed: viewer.flightPilotEnabled === true,
+      vitals: playerVitalsSnapshot(viewer),
       roomOwnerName: viewer.roomState.name,
       roomCanEdit: canEditCurrentRoom(viewer),
       canOwnerVisitHomes: viewer.canOwnerVisitHomes === true,
@@ -1210,7 +1261,7 @@ export function createPrototypeServer({
       'inventoryState', 'flightPilotAllowed', 'roomOwnerName', 'roomCanEdit', 'canOwnerVisitHomes', 'roomKey', 'roomKind', 'roomBuildingId',
       'roomLodgingMode', 'lodgingClaim', 'lodgingClaims', 'lodgingLeases', 'lodgingLease', 'recurringLeasesAvailable', 'cabinKeys',
       'issuedCabinKeys', 'cabinOccupancy', 'propertyListings', 'propertyRentalListings', 'propertyRequests', 'resourceContracts', 'marketQuotes', 'objectCatalog',
-      'governmentTaxPanel', 'resourceContractsRequireAccount', 'arrivalTutorial', 'dimensions',
+      'governmentTaxPanel', 'resourceContractsRequireAccount', 'arrivalTutorial', 'dimensions', 'vitals',
     ],
   });
   let pendingBroadcast = null;
@@ -1804,6 +1855,7 @@ export function createPrototypeServer({
       sequenced: resume?.sequenced === true,
       // Recent authoritative state also protects accounts from a stale session read during a pending save.
       inventory: createInventory({ ...EMPTY_INVENTORY, ...(resume?.inventory ?? profile.inventory), knife: 1 }),
+      vitals: null,
       emote: null, sitting:false,furnitureUse:null,exitFurnitureId:null,
       lastActionAt: 0,
       nextWoodworkAt: 0,
@@ -1891,6 +1943,9 @@ export function createPrototypeServer({
         return;
       }
 
+      // Ponto único: caído, o jogador não age, não viaja nem visita quarto até acordar.
+      const downedRefused = downedRefusal(message, player.vitals, now());
+      if (downedRefused) { notice(socket, downedRefused.text, 'soft', downedRefused.details); return; }
       if (message.type === 'objectCatalogReady') {
         const revision = Number(message.revision);
         if (Number.isSafeInteger(revision) && revision === (sceneObjectCatalog?.revision ?? -1)) {
@@ -2031,6 +2086,7 @@ export function createPrototypeServer({
         const transferTimer = setTimeout(() => {
           dimensionTransitTimers.delete(transit.id);
           if (activeDimensionTransits.get(transit.id) !== transit || player.pendingDimensionTransitId !== transit.id
+              || isPlayerDowned(player)
               || !peers.has(socket) || socket.readyState !== WebSocket.OPEN) return;
           player.dimensionId = targetDimension.id;
           player.arrivalTutorial = isPersonalArrivalDimensionId(targetDimension.id) ? { phase: 'welcome', step: 0, completed: false } : null;
@@ -2193,7 +2249,7 @@ export function createPrototypeServer({
         notice(socket,'A fagulha deixou um galho e uma folha para você. O Bosque das Brasas espera.','chime',{arrivalReady:true});
         broadcast(false);return;
       }
-      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'chestMove', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeBuyGear', 'equipItem', 'unequipItem', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew', 'setSkyOverride', 'clearSkyOverrides'].includes(message.name)) return;
+      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftAxe', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'chestMove', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeBuyGear', 'equipItem', 'unequipItem', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew', 'setSkyOverride', 'clearSkyOverrides'].includes(message.name)) return;
       if (message.name === 'allocateAttribute') {
         const key = typeof message.attribute === 'string' ? message.attribute : '';
         if (!ATTRIBUTE_KEYS.includes(key)) { notice(socket, 'Esse atributo não existe.'); return; }
@@ -3453,6 +3509,35 @@ export function createPrototypeServer({
         return;
       }
 
+        // Fabricação do machado de pedra, compartilhada pela ação contextual `work` e por `craftAxe`.
+        const craftStoneAxe = async () => {
+          if (player.inventory.sturdyBranch < 1 || player.inventory.stone < 1 || player.inventory.vines < 1) {
+            notice(socket, 'Para montar um machado simples, junte 1 galho forte, 1 pedra e 1 cipó.');
+            return;
+          }
+          const before = inventorySnapshot(player.inventory);
+          removeInventoryItem(player.inventory, 'sturdyBranch', 1);
+          removeInventoryItem(player.inventory, 'stone', 1);
+          removeInventoryItem(player.inventory, 'vines', 1);
+          addInventoryItem(player.inventory, 'stoneAxe', 1);
+          player.inventory.axeSharpness = 100;
+          player.inventory.axeDurability = STONE_AXE_DURABILITY;
+          player.inventory.selectedSlot = findInventorySlot(player.inventory, 'stoneAxe');
+          try { await persistPlayer(player); }
+          catch { restoreInventory(player.inventory, before); notice(socket, 'Não consegui salvar o machado. Os materiais foram devolvidos.'); return; }
+          player.emote = { name: 'gather', until: now() + 700 };
+          notice(socket, 'Você amarrou a pedra ao galho forte e fez um machado. Ele dura cerca de três ciclos completos de árvore e tora; 1–9 troca a ferramenta equipada.');
+          broadcast(false);
+          return;
+        };
+
+        if (message.name === 'craftAxe') {
+          if (player.location !== 'clearing') { notice(socket, 'Monte ferramentas no bosque.'); return; }
+          if (axeToolFor(player.inventory)) { notice(socket, 'Você já tem um machado.'); return; }
+          await craftStoneAxe();
+          return;
+        }
+
         if (message.name === 'craftPickaxe') {
           if (player.location !== 'clearing') { notice(socket, 'Monte ferramentas no bosque.'); return; }
           if (pickaxeToolFor(player.inventory)) { notice(socket, 'Você já tem uma picareta.'); return; }
@@ -3811,23 +3896,7 @@ export function createPrototypeServer({
 
         const ownedAxe = axeToolFor(player.inventory);
         if (!ownedAxe) {
-          if (player.inventory.sturdyBranch < 1 || player.inventory.stone < 1 || player.inventory.vines < 1) {
-            notice(socket, 'Para montar um machado simples, junte 1 galho forte, 1 pedra e 1 cipó.');
-            return;
-          }
-          const before = inventorySnapshot(player.inventory);
-          removeInventoryItem(player.inventory, 'sturdyBranch', 1);
-          removeInventoryItem(player.inventory, 'stone', 1);
-          removeInventoryItem(player.inventory, 'vines', 1);
-          addInventoryItem(player.inventory, 'stoneAxe', 1);
-          player.inventory.axeSharpness = 100;
-          player.inventory.axeDurability = STONE_AXE_DURABILITY;
-          player.inventory.selectedSlot = findInventorySlot(player.inventory, 'stoneAxe');
-          try { await persistPlayer(player); }
-          catch { restoreInventory(player.inventory, before); notice(socket, 'Não consegui salvar o machado. Os materiais foram devolvidos.'); return; }
-          player.emote = { name: 'gather', until: now() + 700 };
-          notice(socket, 'Você amarrou a pedra ao galho forte e fez um machado. Ele dura cerca de três ciclos completos de árvore e tora; 1–9 troca a ferramenta equipada.');
-          broadcast(false);
+          await craftStoneAxe();
           return;
         }
 
@@ -4270,6 +4339,15 @@ export function createPrototypeServer({
         player.lodgingClaim = null;
       }
       activateWorld(player.dimensionId || 'surface');
+      if (player.vitals || player.location === 'clearing') {
+        const vitals = playerVitals(player), at = now();
+        const max = maxHealth(player.inventory?.level);
+        if (isDowned(vitals, at)) { player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq; player.moving = false; continue; }
+        if (vitals.waking) wakePlayer(player, at);
+        const nearFire = [...firesFor(player.dimensionId || 'surface').values()].some(fire =>
+          campfireRemainingMs(fire, at) > 0 && Math.hypot(player.position.x - fire.x, player.position.y - fire.y) <= FIRE_RADIUS + 3.5);
+        vitals.hp = regenStep(vitals, { now: at, dtMs: elapsedSincePreviousTickMs, max, nearFire, location: player.location });
+      }
       if (player.chat && player.chat.until <= now()) player.chat = null;
       const position = player.position;
       const input = player.sequenced ? null : player.input;
@@ -4356,7 +4434,7 @@ export function createPrototypeServer({
         const startedAt=performance.now();
         try{return callback(...args);}finally{wildlifeProfile[`${field}Ms`]+=performance.now()-startedAt;}
       };
-      const events=stepWildlifePopulation(population,{dimensionId,players:dimensionPlayers,now:wildlifeNow,
+      const events=stepWildlifePopulation(population,{dimensionId,players:dimensionPlayers.filter(candidate=>!isPlayerDowned(candidate,wildlifeNow)),now:wildlifeNow,
         deltaSeconds:wildlifeDelta,night:day.night>.48,hours:day.hours,worldSize:WORLD_SIZE,playerRadius:PLAYER_RADIUS,
         canOccupy:timedWildlifeQuery('canOccupy',(position,radius)=>wildlifeOutsideVillage(position,dimensionId)&&canOccupy(position,radius)),
         isOccluded:timedWildlifeQuery('isOccluded',(from,to)=>{
@@ -4394,7 +4472,8 @@ export function createPrototypeServer({
       wildlifeStepMs+=wildlifeStepDurationMs;wildlifeStepMaxMs=Math.max(wildlifeStepMaxMs,wildlifeStepDurationMs);wildlifeStepCount++;
       for(const event of events)if(event.type==='player-attacked'||event.type==='player-evaded'){
         const target=[...peers.entries()].find(([,player])=>player.id===event.playerId);
-        if(target){const definition=WILDLIFE_BY_ID.get(event.speciesId);notice(target[0],event.type==='player-evaded'?`Você esquivou do ataque de ${definition?.label||'um animal'}.`:`${definition?.label||'O animal'} se defendeu e empurrou você.`,event.type==='player-evaded'?'chime':'thud');}
+        const hitDamage=target&&event.type==='player-attacked'?applyWildlifeHit(target[1],event,wildlifeNow):0;
+        if(target){const definition=WILDLIFE_BY_ID.get(event.speciesId);notice(target[0],event.type==='player-evaded'?`Você esquivou do ataque de ${definition?.label||'um animal'}.`:(hitDamage?`${definition?.label||'O animal'} se defendeu e empurrou você. Você perdeu ${hitDamage} de vida.`:`${definition?.label||'O animal'} se defendeu e empurrou você.`),event.type==='player-evaded'?'chime':'thud');}
       }
     }
     const wildlifePhaseMs=performance.now()-wildlifePhaseStartedAt;

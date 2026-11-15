@@ -39,7 +39,7 @@ import { compareSceneDepth } from './depth-order.mjs';
 import { contentById } from './content-catalog.mjs';
 import { MEDIEVAL_FURNITURE, MEDIEVAL_FURNITURE_CATEGORIES } from './medieval-furniture.mjs';
 import { mergeQueuedState } from './state-inbox.mjs';
-import { createOverlayReleaseGuard, createSceneReadiness, sceneInputReady } from './scene-loading.mjs';
+import { createOverlayReleaseGuard, createRevealOnce, createSceneReadiness, sceneInputReady } from './scene-loading.mjs';
 import { calculateInitialMiniProgress, createLoadingProgress, initialLoadingMiniStage } from './loading-progress.mjs';
 import {getNaturalPatches,NATURAL_PATCHES,TERRAIN_BOUNDS} from './natural-terrain.mjs';
 import {buildWorldMapDetailFeatures,initialForestMapBounds} from './initial-forest-map-features.mjs';
@@ -1749,13 +1749,16 @@ function hideSceneLoading({ worldReady = true } = {}) {
 }
 // A ready scene must not stay behind the overlay forever: if a reveal step never
 // settles, release the overlay and the controls together after this limit.
+let activeReveal = null;
 const overlayRelease = createOverlayReleaseGuard({
   limitMs: 4000,
   onRelease: ({ limitMs }) => {
     if (!sceneReady || loadingScreen.hidden) return;
     console.warn(`[clareira] overlay de carga ainda visível ${limitMs} ms após a cena ficar pronta; liberando controles.`,
       { phase: loadingScreen.dataset.phase, context: loadingScreen.dataset.context, stage: loadingScreen.dataset.loadingStage || null });
-    hideSceneLoading();
+    // Same finalization as the normal reveal, run at most once for this generation.
+    if (activeReveal?.generation === loadingGeneration) activeReveal.force();
+    else hideSceneLoading();
   },
 });
 let lightingRevealScheduled=false, lightingRevealStartedAt=null;
@@ -1786,15 +1789,9 @@ function revealLoadedScene() {
   lastFrame = 0; accumulator = 0; lastCameraFrame = 0;
   resizeCanvas(); draw(1);
   const generation = loadingGeneration;
-  requestAnimationFrame(function revealReadyFrame() {
+  let initialCompletionSeen = false;
+  const revealFinish = initialCompletion => {
     if (!sceneReady || generation !== loadingGeneration) return;
-    if(!draw(1)){requestAnimationFrame(revealReadyFrame);return;}
-    loadingProgress?.complete('first-frame');
-    const finish=()=>{
-      if(!sceneReady||generation!==loadingGeneration)return;
-      const initialCompletion=markInitialLoadingComplete();
-      const reveal=()=>{
-        if(!sceneReady||generation!==loadingGeneration)return;
         const enteringArrival = initialCompletion && worldLocation === 'clearing' && worldDimensionId.startsWith('arrival-');
         if (enteringArrival && arrivalWordmark) {
           const source = document.querySelector('.loading-layout .loading-wordmark');
@@ -1822,7 +1819,25 @@ function revealLoadedScene() {
         if(transitId)send({type:'dimensionTransitReady',transitId});
         canvas.focus({preventScroll:true});
         ui.connection.textContent='Você chegou';
-      };
+  };
+  const revealOnce = createRevealOnce(revealFinish);
+  // Overlay deadline: run the same finalization once, even if the normal reveal never settles.
+  activeReveal = {
+    generation,
+    force: () => {
+      if (revealOnce.finished || !sceneReady || generation !== loadingGeneration) return;
+      revealOnce.run(initialCompletionSeen || markInitialLoadingComplete());
+    },
+  };
+  requestAnimationFrame(function revealReadyFrame() {
+    if (!sceneReady || generation !== loadingGeneration) return;
+    if(!draw(1)){requestAnimationFrame(revealReadyFrame);return;}
+    loadingProgress?.complete('first-frame');
+    const finish=()=>{
+      if(!sceneReady||generation!==loadingGeneration||revealOnce.finished)return;
+      const initialCompletion=markInitialLoadingComplete();
+      initialCompletionSeen = initialCompletion || initialCompletionSeen;
+      const reveal=()=>revealOnce.run(initialCompletion);
       // Keep both progress bars visibly complete before revealing the world.
       if(initialCompletion){
         const settling = pendingMiniSceneTransition?.promise || Promise.resolve();

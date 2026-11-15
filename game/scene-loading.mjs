@@ -42,3 +42,18 @@ export function createOverlayReleaseGuard({ limitMs, onRelease, schedule = setTi
     get armed() { return timer !== null; },
   };
 }
+
+// Runs the reveal finalization exactly once. A late reveal that arrives after a
+// forced release only sees that it already ran and returns without repeating it.
+export function createRevealOnce(run) {
+  let finished = false;
+  return {
+    get finished() { return finished; },
+    run(...args) {
+      if (finished) return false;
+      finished = true;
+      run(...args);
+      return true;
+    },
+  };
+}

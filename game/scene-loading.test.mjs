@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createOverlayReleaseGuard, createSceneReadiness, sceneInputReady } from './scene-loading.mjs';
+import { createOverlayReleaseGuard, createRevealOnce, createSceneReadiness, sceneInputReady } from './scene-loading.mjs';
 const self = { id:'me', x:8, y:15, location:'clearing', appearance:{skin:3} };
 const full = {type:'state', players:[self], resources:[], fires:[{x:8,y:14}], roomFurniture:[]};
 test('welcome and a self-less snapshot cannot reveal placeholder avatar', () => {
@@ -69,4 +69,23 @@ test('a guard cancelled before its limit does not release the overlay', () => {
  assert.deepEqual(cancelled, [1]);
  assert.equal(guard.armed, false);
  assert.equal(released, false);
+});
+
+test('a reveal that never settles is finalized once by the deadline', () => {
+ const calls = [];
+ const reveal = createRevealOnce(initialCompletion => calls.push(initialCompletion));
+ // Deadline fires while the normal reveal is still waiting: the same finalization runs once.
+ assert.equal(reveal.run(true), true);
+ // The stuck transition never resolves, so no other path calls it again.
+ assert.deepEqual(calls, [true]);
+ assert.equal(reveal.finished, true);
+});
+
+test('a late reveal after the deadline does not finalize again or skip the initial arrival', () => {
+ const calls = [];
+ const reveal = createRevealOnce(initialCompletion => calls.push(initialCompletion));
+ reveal.run(true); // forced at the deadline, with the initial arrival
+ // The delayed reveal arrives later with initialCompletion=false (already marked by the forced path).
+ assert.equal(reveal.run(false), false);
+ assert.deepEqual(calls, [true], 'finalization ran once, keeping the arrival');
 });

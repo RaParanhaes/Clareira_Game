@@ -51,6 +51,8 @@ const nonRuntimeRoots = [
   'art/room-furniture/medieval-3d-v1/materials/',
   'art/room-furniture/bed-3d-prototype/',
   'art/buildings/medieval-cottage-3d/',
+  // Modelos de aviso para desenho e revisão; o cliente usa framed-notice.mjs e não carrega estes arquivos.
+  'avisos-modelos/',
 ];
 const runtimeSourceExceptions = new Set([
   ...['iso-rot0-shell.png', 'iso-rot0-shell-night.png', 'iso-rot0-canopy.png',

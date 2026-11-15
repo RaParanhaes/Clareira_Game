@@ -1233,11 +1233,10 @@ body[data-location="room"] .touch-action-group.outside-room{display:none}
 .shell.arrival-tutorial-mode.arrival-tutorial-chat-step #chat-form{display:grid!important;bottom:max(18px,env(safe-area-inset-bottom));width:min(560px,calc(100vw - 28px));border:2px solid #d2ad64;background:linear-gradient(120deg,#102024f5,#14282bf5);box-shadow:0 0 0 3px #0a1011a8,0 0 22px #f2bf7255,inset 0 1px #fff4ce30;animation:arrival-chat-glow 2.8s ease-in-out infinite}
 .shell.arrival-tutorial-mode.arrival-tutorial-chat-step .chat-form input{font:700 13px/1.35 monospace;color:#fff0c7}
 .shell.arrival-tutorial-mode.arrival-tutorial-chat-step .chat-form input::placeholder{color:#b8d6c2;font-size:11px}
-.shell.arrival-tutorial-mode.arrival-tutorial-appearance-step .top-actions:has(#settings-toggle){display:flex!important;gap:8px;margin-left:auto}
-.shell.arrival-tutorial-mode.arrival-tutorial-appearance-step .top-actions>:not(#settings-toggle){display:none!important}
-.shell.arrival-tutorial-mode.arrival-tutorial-appearance-step #settings-toggle{display:flex!important;border:2px solid #e7c778;background:#263b35;color:#ffedbc;box-shadow:0 0 0 3px #101712aa,0 0 20px #f2bf7277;animation:arrival-chat-glow 2.8s ease-in-out infinite}
+/* Lição 3: o destaque guia até Jogador > Aparência do personagem (no celular, começa no botão Menu). */
+.shell.arrival-tutorial-mode.arrival-tutorial-appearance-step .player-menu:not([open])>summary,.shell.arrival-tutorial-mode.arrival-tutorial-appearance-step .player-menu[open] #appearance-open,.shell.arrival-tutorial-mode.arrival-tutorial-appearance-step .topbar:not(.menu-expanded) .mobile-menu-toggle{border:2px solid var(--clareira-ember,#f2c877);background:#263b35;color:var(--clareira-parchment,#f3e5c6);box-shadow:0 0 0 3px #101712aa,0 0 20px #f2bf7277;animation:arrival-chat-glow 2.8s ease-in-out infinite}
 @keyframes arrival-chat-glow{0%,100%{filter:brightness(1);box-shadow:0 0 0 3px #0a1011a8,0 0 16px #f2bf7240,inset 0 1px #fff4ce20}50%{filter:brightness(1.13);box-shadow:0 0 0 3px #0a1011a8,0 0 25px #f2bf7270,inset 0 1px #fff4ce38}}
-@media(prefers-reduced-motion:reduce){.arrival-tutorial-chat-step .chat-form,.arrival-tutorial-appearance-step #settings-toggle{animation:none}}
+@media(prefers-reduced-motion:reduce){.arrival-tutorial-chat-step .chat-form,.arrival-tutorial-appearance-step :is(.player-menu>summary,#appearance-open,.mobile-menu-toggle){animation:none}}
 
 /* Arrival instructions remain crisp DOM text, outside the pixelated world canvas. */
 .shell.arrival-tutorial-mode .arrival-tutorial{position:absolute;z-index:24;top:auto;bottom:max(36px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(420px,calc(100% - 40px));height:auto;margin:0;padding:16px 20px;overflow:visible;clip:auto;white-space:normal;border:0;border-top:1px solid #bfa06b40;background:linear-gradient(180deg,#080c0ed9,#080c0e00);text-align:center;pointer-events:none}
@@ -1446,3 +1445,76 @@ dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header
 .vitals-note{max-width:min(78vw,300px);margin:0;padding:7px 11px;border:1px solid var(--clareira-edge,#d5bb8050);border-radius:4px 12px 4px 12px;background:color-mix(in srgb,var(--clareira-surface,#142833) 93%,transparent);color:var(--clareira-parchment,#f3e5c6);font-size:12px;line-height:1.35;text-align:center;box-shadow:0 8px 24px color-mix(in srgb,var(--clareira-ink,#111a35) 55%,transparent)}
 .vitals-note[hidden]{display:none}
 @media(max-width:720px){.vitals-hud{top:112px;left:10px;justify-items:start;transform:none}.vitals-bar{width:112px;height:14px}.vitals-note{max-width:210px;font-size:11px;text-align:left}}
+/* Ajuda e menu no celular (fix/ui-tutorial-e-celular): o essencial primeiro, custos recolhidos,
+   textos conforme o modo de entrada e menu com rótulos. A consulta é a mesma de TOUCH_INPUT_QUERY. */
+.help-touch-only{display:none}
+.help-more{margin-top:10px;border-top:1px solid var(--clareira-edge,#d5bb8050);padding-top:8px}
+.help-more>summary{cursor:pointer;color:var(--clareira-ember,#f2c877);font-size:10px;letter-spacing:.08em;font-weight:700;list-style-position:inside}
+.help-more>summary:focus-visible{outline:2px solid var(--clareira-parchment,#f3e5c6);outline-offset:2px}
+.help-more>p{margin:8px 0 4px;font-size:9px;color:#98a697}
+.help-more ul{margin:6px 0 0;padding-left:16px;font-size:9px;line-height:1.5;color:#d2dacb}
+.help-more li+li{margin-top:5px}
+.controls-card .keycap{white-space:nowrap}
+.help-next .keycap{color:var(--clareira-leaf,#9fc38d)}
+@media(max-width:740px),(any-pointer:coarse){
+  .help-keys-only{display:none}
+  .help-touch-only{display:flex}
+  /* Menu: os quatro botões mostram o rótulo ao lado do ícone. */
+  .shell.is-authenticated .topbar .top-actions .icon-button{display:flex;align-items:center;justify-content:flex-start;gap:8px;width:100%}
+  .shell.is-authenticated .topbar .top-actions .icon-button span{display:inline;font-size:12px;font-weight:700}
+  /* Título do mundo numa linha só, sempre acima do botão Menu; o clima encurta com reticências. */
+  .shell.is-authenticated .world-heading{flex-wrap:nowrap;max-width:calc(100% - 18px);overflow:hidden}
+  .shell.is-authenticated .world-heading>div{flex:0 0 auto;min-width:0}
+  .shell.is-authenticated .world-heading h1{white-space:nowrap}
+  .shell.is-authenticated .world-heading .weather{flex:1 1 0;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block}
+  /* Barra rápida: os 9 espaços dividem a largura disponível, sem rolagem. */
+  .shell.is-authenticated .quickbar{overflow:visible;gap:2px;padding:4px;max-width:calc(100vw - 16px);width:calc(100vw - 16px);box-sizing:border-box;justify-content:center;scroll-snap-type:none}
+  .shell.is-authenticated .quickbar .inventory-slot{flex:1 1 0;width:auto;min-width:0;max-width:44px;height:auto;aspect-ratio:1/1;scroll-snap-align:none}
+  .shell.is-authenticated .quickbar .inventory-slot-icon{width:min(28px,70%);height:auto;aspect-ratio:1/1}
+}
+/* Celular estreito (320 a 420 px): a barra rápida continua visível quando há altura e a Ajuda desce abaixo do botão Menu. */
+@media(max-width:420px) and (min-height:600px){
+  .shell.is-authenticated .quickbar{display:flex}
+}
+@media(max-width:420px){
+  .shell.is-authenticated .side-panel{top:calc(max(58px,env(safe-area-inset-top)) + 54px)}
+}
+/* Menu aberto no celular: usa a altura útil da tela e as moedas ficam numa linha, para os botões caberem sem rolar (320x640). */
+@media(max-width:740px),(any-pointer:coarse){
+  .shell.is-authenticated>.topbar.menu-expanded{max-height:calc(100dvh - max(58px,env(safe-area-inset-top)) - 12px)}
+  .shell.is-authenticated .topbar .coin-wallet{display:flex;flex-direction:row;justify-content:space-between;gap:6px;padding:6px 9px}
+  .shell.is-authenticated .topbar .coin-wallet>span{display:flex;align-items:center;gap:4px;font-size:11px}
+  .shell.is-authenticated .topbar .coin-wallet small{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+}
+/* Guia de fabricação (feat/ui-guia-fabricacao): aviso "Próximo passo" no mundo e receitas no Inventário. Só tokens --clareira-*. */
+.craft-hint{position:absolute;z-index:4;left:50%;bottom:136px;transform:translateX(-50%);display:flex;align-items:stretch;max-width:min(520px,calc(100vw - 32px));border:2px solid var(--clareira-edge);background:color-mix(in srgb,var(--clareira-surface) 94%,transparent);color:var(--clareira-parchment);box-shadow:0 3px 0 var(--clareira-ink),0 6px 12px color-mix(in srgb,var(--clareira-ink) 70%,transparent);pointer-events:auto}
+.craft-hint[hidden],body[data-location="room"] .craft-hint{display:none}
+.craft-hint-open{display:grid;gap:1px;min-width:0;padding:5px 9px;border:0;background:transparent;color:inherit;font:600 12px/1.35 'Trebuchet MS',system-ui,sans-serif;text-align:left;cursor:pointer}
+.craft-hint-label{color:var(--clareira-ember);font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.craft-hint-text{overflow-wrap:anywhere}
+.craft-hint-close{flex:none;width:26px;border:0;border-left:1px solid var(--clareira-edge);background:var(--clareira-ink);color:var(--clareira-ember);font:700 16px/1 'Trebuchet MS',system-ui,sans-serif;cursor:pointer}
+.craft-hint-open:focus-visible,.craft-hint-close:focus-visible{outline:2px solid var(--clareira-parchment);outline-offset:-2px}
+.crafting-guide{margin:9px 0 12px;padding:8px 10px;border:1px solid var(--clareira-edge);border-left:4px solid var(--clareira-ember);background:var(--clareira-canopy);color:var(--clareira-parchment)}
+.crafting-guide h3{margin:0 0 2px;color:var(--clareira-ember);font:700 10px/1.2 'Trebuchet MS',system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.crafting-guide-next p{margin:0;font-size:13px;line-height:1.4}
+.crafting-guide-recipes{margin-top:7px}
+.crafting-guide-recipes summary{cursor:pointer;color:var(--clareira-leaf);font:700 11px/1.4 'Trebuchet MS',system-ui,sans-serif}
+.craft-recipe-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:7px 0 0;padding:0;list-style:none}
+.craft-recipe{display:grid;gap:4px;align-content:start;padding:7px 8px;border:1px solid var(--clareira-edge);background:var(--clareira-surface)}
+.craft-recipe.is-ready{border-color:var(--clareira-ember)}
+.craft-recipe.is-owned{opacity:.7}
+.craft-recipe-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px}
+.craft-recipe-head kbd{padding:0 5px;border:1px solid var(--clareira-edge);background:var(--clareira-ink);color:var(--clareira-parchment);font:700 10px/1.5 'Trebuchet MS',system-ui,sans-serif}
+.craft-recipe-state{margin-left:auto;color:var(--clareira-leaf);font-size:10px}
+.craft-recipe-materials{display:flex;flex-wrap:wrap;gap:4px;margin:0}
+.craft-material{padding:1px 6px;font-size:11px;border:1px solid var(--clareira-edge);background:var(--clareira-ink);color:var(--clareira-parchment)}
+.craft-material.is-ok{border-color:var(--clareira-leaf);background:color-mix(in srgb,var(--clareira-leaf) 22%,var(--clareira-surface))}
+.craft-recipe-note{color:color-mix(in srgb,var(--clareira-parchment) 72%,transparent);font-size:10px;line-height:1.4}
+.craft-recipe-button{justify-self:start;min-height:32px;padding:4px 12px;border:2px solid var(--clareira-afterglow);background:var(--clareira-ember);color:var(--clareira-ink);font:700 11px/1 'Trebuchet MS',system-ui,sans-serif;cursor:pointer}
+@media(max-width:720px){
+  .craft-hint{left:8px;right:auto;bottom:auto;top:112px;transform:none;max-width:min(214px,calc(100vw - 190px))}
+  .craft-hint-open{padding:4px 7px;font-size:11px}
+  .craft-recipe-list{grid-template-columns:minmax(0,1fr)}
+  .crafting-guide-next p{font-size:12px}
+}
+.icon-sprite{position:absolute}

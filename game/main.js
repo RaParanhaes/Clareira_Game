@@ -39,7 +39,7 @@ import { compareSceneDepth } from './depth-order.mjs';
 import { contentById } from './content-catalog.mjs';
 import { MEDIEVAL_FURNITURE, MEDIEVAL_FURNITURE_CATEGORIES } from './medieval-furniture.mjs';
 import { mergeQueuedState } from './state-inbox.mjs';
-import { createSceneReadiness } from './scene-loading.mjs';
+import { createOverlayReleaseGuard, createRevealOnce, createSceneReadiness, finishStuckReveal, sceneInputReady } from './scene-loading.mjs';
 import { calculateInitialMiniProgress, createLoadingProgress, initialLoadingMiniStage } from './loading-progress.mjs';
 import {getNaturalPatches,NATURAL_PATCHES,TERRAIN_BOUNDS} from './natural-terrain.mjs';
 import {buildWorldMapDetailFeatures,initialForestMapBounds} from './initial-forest-map-features.mjs';
@@ -47,6 +47,8 @@ import {worldDefinitionChangesGeometry,worldHasRelief} from './world-edits.mjs';
 import {normalizeAppearance} from './appearance.mjs';
 import {CHARACTER_BY_ID} from './character-catalog.mjs';
 import { createRenderProfiler } from './render-profiler.mjs';
+import { isTouchInput } from './input-mode.mjs';
+import { arrivalTutorialSteps, ARRIVAL_TUTORIAL_FALLBACK, forestArrivalNotice, toolUseText } from './tutorial-copy.mjs';
 import { createGeometryCache } from './geometry-cache.mjs';
 import { roomWallSections, facadePanel, drawFacadeWindow } from './building-art.mjs';
 import { roomAtmosphere } from './room-atmosphere.mjs';
@@ -157,6 +159,8 @@ import { drawWeatherSky, rainStyleFor } from './weather-renderer.mjs';
 import { rainFrame, rainDropCount, drawRainWorld } from './rain-world.mjs';
 import { showFramedNotice } from './framed-notice.mjs';
 import { createVitalsHud } from './vitals-hud.mjs';
+import { createCraftingGuideView } from './crafting-guide-ui.mjs';
+import { workKeyAction } from './crafting-guide.mjs';
 
 const canvas = document.querySelector('#world');
 let ctx = canvas.getContext('2d', { alpha: false });
@@ -1637,6 +1641,7 @@ function beginSceneLoading(text, { fade = false, genericTitle = false, showOverl
   sceneProgressRetry = null;
   lastProgressSignature = null;
   ++loadingGeneration; sceneReady = false; snapshotReady = false;
+  overlayRelease.cancel();
   lightingRevealStartedAt=null;
   assetScene = null; avatarAssetVariant = null; assetsReady = false;
   loadingProgress = null;
@@ -1739,6 +1744,7 @@ function markInitialLoadingComplete() {
 }
 function hideSceneLoading({ worldReady = true } = {}) {
   clearSceneProgressWatchdog();
+  overlayRelease.cancel();
   document.documentElement.classList.remove('cache-verifying');
   if (worldReady) {
     markInitialLoadingComplete();
@@ -1747,6 +1753,20 @@ function hideSceneLoading({ worldReady = true } = {}) {
   loadingScreen.hidden = true;
   ui.shell.inert = false; ui.shell.removeAttribute('aria-busy');
 }
+// A ready scene must not stay behind the overlay forever: if a reveal step never
+// settles, release the overlay and the controls together after this limit.
+let activeReveal = null;
+const overlayRelease = createOverlayReleaseGuard({
+  limitMs: 4000,
+  onRelease: ({ limitMs }) => {
+    if (!sceneReady || loadingScreen.hidden) return;
+    console.warn(`[clareira] overlay de carga ainda visível ${limitMs} ms após a cena ficar pronta; liberando controles.`,
+      { phase: loadingScreen.dataset.phase, context: loadingScreen.dataset.context, stage: loadingScreen.dataset.loadingStage || null });
+    // Same finalization as the normal reveal, run at most once for this generation.
+    if (activeReveal?.generation === loadingGeneration) activeReveal.force();
+    else hideSceneLoading();
+  },
+});
 let lightingRevealScheduled=false, lightingRevealStartedAt=null;
 function revealLoadedScene() {
   if (!authenticated || !snapshotReady || !assetsReady || !predictionReady || sceneReady) return;
@@ -1770,19 +1790,14 @@ function revealLoadedScene() {
     return;
   }
   sceneReady = true; updateLoadingDesign();
+  overlayRelease.arm();
   void teleportEffects.prepare().then(ready=>{teleportEffectReady=ready;updateDimensionTravel(dimensionList,worldDimensionId);if(arrivalTravelPending)requestArrivalTravel();});
   lastFrame = 0; accumulator = 0; lastCameraFrame = 0;
   resizeCanvas(); draw(1);
   const generation = loadingGeneration;
-  requestAnimationFrame(function revealReadyFrame() {
+  let initialCompletionSeen = false;
+  const revealFinish = initialCompletion => {
     if (!sceneReady || generation !== loadingGeneration) return;
-    if(!draw(1)){requestAnimationFrame(revealReadyFrame);return;}
-    loadingProgress?.complete('first-frame');
-    const finish=()=>{
-      if(!sceneReady||generation!==loadingGeneration)return;
-      const initialCompletion=markInitialLoadingComplete();
-      const reveal=()=>{
-        if(!sceneReady||generation!==loadingGeneration)return;
         const enteringArrival = initialCompletion && worldLocation === 'clearing' && worldDimensionId.startsWith('arrival-');
         if (enteringArrival && arrivalWordmark) {
           const source = document.querySelector('.loading-layout .loading-wordmark');
@@ -1810,7 +1825,25 @@ function revealLoadedScene() {
         if(transitId)send({type:'dimensionTransitReady',transitId});
         canvas.focus({preventScroll:true});
         ui.connection.textContent='Você chegou';
-      };
+  };
+  const revealOnce = createRevealOnce(revealFinish);
+  // Overlay deadline: run the same finalization once, even if the normal reveal never settles.
+  activeReveal = {
+    generation,
+    force: () => {
+      if (revealOnce.finished || !sceneReady || generation !== loadingGeneration) return;
+      finishStuckReveal({ transition: roomTransition, reveal: revealOnce, initialCompletion: initialCompletionSeen || markInitialLoadingComplete() });
+    },
+  };
+  requestAnimationFrame(function revealReadyFrame() {
+    if (!sceneReady || generation !== loadingGeneration) return;
+    if(!draw(1)){requestAnimationFrame(revealReadyFrame);return;}
+    loadingProgress?.complete('first-frame');
+    const finish=()=>{
+      if(!sceneReady||generation!==loadingGeneration||revealOnce.finished)return;
+      const initialCompletion=markInitialLoadingComplete();
+      initialCompletionSeen = initialCompletion || initialCompletionSeen;
+      const reveal=()=>revealOnce.run(initialCompletion);
       // Keep both progress bars visibly complete before revealing the world.
       if(initialCompletion){
         const settling = pendingMiniSceneTransition?.promise || Promise.resolve();
@@ -2293,6 +2326,7 @@ function connect() {
     const snapshotDimensionId = message.dimensionId || worldDimensionId;
     const dimensionChanged = snapshotDimensionId !== worldDimensionId;
     const leavingArrivalTutorial=dimensionChanged&&worldDimensionId.startsWith('arrival-');
+    if(leavingArrivalTutorial&&snapshotDimensionId==='surface')forestArrivalNoticePending=true;
     if(dimensionChanged)dimensionTravelRequestPending=false;
     if(dimensionChanged){arrivalGuideAsked=false;arrivalDepartureAsked=false;arrivalTypingText='';arrivalLastDistance=Infinity;resumeCorrectionPending=false;resumeCorrectionUntil=0;remotePositions.clear();remotePlayback.clear();remoteFacings.clear();remoteAvatarVariants.clear();wildlife.clear();wildlifePositions.clear();wildlifePlayback.clear();wildlifeCollisionCache=[];villageActors.clear();villageNpcAvatarVariants.clear();}
     if (message.dimensions) updateDimensionTravel(message.dimensions, snapshotDimensionId);
@@ -2657,6 +2691,7 @@ function connect() {
   socket.addEventListener('close', event => {
     if(connectionProfileDiagnostics){ui.connection.dataset.lastCloseCode=String(event.code);ui.connection.dataset.lastCloseReason=String(event.reason||'').slice(0,120);ui.connection.dataset.lastCloseAttempt=String(connectionAttempt);}
     if (socket !== connection) return;
+    forestArrivalNoticePending=false; // reconectar não deve trazer o aviso de chegada tarde demais
     recordMovementDiagnostic('connection-close',{attempt:connectionAttempt,code:event.code,pending:pendingInputs.length,
       outbound:outboundInputs.length,lastSentSeq:inputSequence,lastAckSeq:lastAcknowledgedInput,
       reason:movementCloseReasonBucket(event.reason,event.code)},true);
@@ -3128,7 +3163,10 @@ const inventoryItemUse = Object.freeze({
 
 function inventoryItemUseFor(itemId) {
   const detail = inventoryItemUse[itemId];
-  if (detail) return detail;
+  if (detail) {
+    const toolText = toolUseText(itemId, { touch: isTouchInput() });
+    return toolText ? [detail[0], toolText] : detail;
+  }
   if (['wood', 'timber', 'sturdyBranch', 'stone', 'leaves', 'vines', 'plank', 'copperOre', 'ironOre', 'coal', 'charcoal', 'copperIngot', 'ironIngot'].includes(itemId)) {
     return ['Material', 'Use este material nas receitas e melhorias da aventura.'];
   }
@@ -3275,9 +3313,17 @@ function renderXpPotionRecipes() {
   }
 }
 
+let craftHintDismissedStage = '';
+const craftingGuideView = createCraftingGuideView({
+  hint: document.querySelector('#craft-hint'), panel: document.querySelector('#crafting-guide'),
+  onOpen: () => openInventory(),
+  onCraft: name => { closeInventory(); action(name); },
+  onDismiss: () => { craftHintDismissedStage = craftingGuideView.guideFor(localInventory).stage; craftingGuideView.update(localInventory, { dismissedStage: craftHintDismissedStage }); },
+});
 let inventoryHudRenderKey='';
 function renderInventory(forcePanel = false) {
   if (!ui.quickbar || !ui.inventoryGrid) return;
+  craftingGuideView.update(localInventory, { dismissedStage: craftHintDismissedStage, canCraft: worldLocation === 'clearing' });
   const hudKey=JSON.stringify([localInventory,inventorySelectionIndex,inventoryDragSource]);
   if(!forcePanel&&!ui.inventoryDialog.open&&hudKey===inventoryHudRenderKey){
     // Cooldowns depend on time; inventory, recipes and slot DOM do not.
@@ -4305,8 +4351,8 @@ function action(name) {
     sendPlayerCommand({ type:'action', name:'work' });
     return;
   }
-  if (name === 'craftPickaxe') {
-    sendPlayerCommand({ type:'action', name:'craftPickaxe' });
+  if (name === 'craftAxe' || name === 'craftPickaxe') {
+    sendPlayerCommand({ type:'action', name });
     return;
   }
   if (name === 'upgradeAxe' || name === 'upgradePickaxe') {
@@ -7384,6 +7430,7 @@ function drawDaylightAtmosphere() {
   if(shake)ctx.restore();
   drawArrivalSprig(worldClock);
   updateArrivalTutorialPanel();
+  flushForestArrivalNotice();
   drawArrivalTutorialGuide();
   renderProfiler?.mark('effectsAndNight', performance.now());
   if(worldLocation==='clearing') drawFireflies(worldClock);
@@ -8319,11 +8366,13 @@ function isTyping(target) { return target instanceof HTMLInputElement || target 
 function normalizeHeldKey(key) { return /^[a-z]$/i.test(key) ? key.toLowerCase() : key; }
 
 window.addEventListener('keydown', event => {
+  const worldInputReady = sceneInputReady({ sceneReady, overlayHidden: loadingScreen.hidden,
+    roomFade: loadingScreen.dataset.roomTransition === 'true' });
   const movementKey = movementKeyForEvent(event);
   if (movementKey && dimensionTransitMovementLocked()) { event.preventDefault(); return; }
   const interactive = isInteractiveKeyboardTarget(event.target);
-  if ((event.key==='n'||event.key==='N')&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&sceneReady&&!panels.isOpen&&!isTextEntryTarget(event.target)&&worldLocation==='clearing') {event.preventDefault();openWorldMap();return;}
-  if (!sceneReady || panels.isOpen || isTextEntryTarget(event.target)) return;
+  if ((event.key==='n'||event.key==='N')&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&worldInputReady&&!panels.isOpen&&!isTextEntryTarget(event.target)&&worldLocation==='clearing') {event.preventDefault();openWorldMap();return;}
+  if (!worldInputReady || panels.isOpen || isTextEntryTarget(event.target)) return;
   if (movementKey ? !canHandleMovementKey(event) : interactive) return;
   const shiftAbilityMatch = event.shiftKey ? /^(?:Digit|Numpad)([1-4])$/.exec(event.code || '') : null;
   if (shiftAbilityMatch) {
@@ -8356,7 +8405,7 @@ window.addEventListener('keydown', event => {
   if (key === 'v' || key === 'V') action('visit-nearest');
   if (key === 'f' || key === 'F') action('fire');
   if (key === 'g' || key === 'G') action('share');
-  if (key === 'h' || key === 'H') action('work');
+  if (key === 'h' || key === 'H') action(workKeyAction(localInventory));
   if (key === 'p' || key === 'P') action('craftPickaxe');
   if (key === 'u' || key === 'U') action('upgradeAxe');
   if (key === 'y' || key === 'Y') action('upgradePickaxe');
@@ -8746,6 +8795,15 @@ function drawArrivalCinematicOverlay(){
   }
   ctx.restore();
 }
+let forestArrivalNoticePending=false;
+// Depois do Breu o jogador cai no bosque sem aviso: mostra uma vez, quando a cena já está visível.
+function flushForestArrivalNotice(){
+  if(!forestArrivalNoticePending||!sceneReady||!loadingScreen.hidden||worldDimensionId!=='surface'||worldLocation!=='clearing')return;
+  const overlay=document.querySelector('#teleport-travel-overlay');
+  if(overlay&&!overlay.hidden)return;
+  forestArrivalNoticePending=false;
+  announce(forestArrivalNotice(),7000);
+}
 function updateArrivalTutorialPanel(){
   if(!arrivalUi.panel)return;
   const active=worldLocation==='clearing'&&worldDimensionId.startsWith('arrival-')&&Boolean(arrivalTutorial);
@@ -8766,14 +8824,7 @@ function updateArrivalTutorialPanel(){
   const walkingDeeper=localMoving&&distance>=16.5;
   if(!arrivalDepartureAsked&&!arrivalTutorial.completed&&walkingDeeper){arrivalDepartureAsked=true;  arrivalTravelPending=true;if(teleportTravelReady())requestArrivalTravel();}
   arrivalLastDistance=distance;
-  const steps={
-    welcome:['O BREU','A chama despertou','Clique ou toque no chão para se aproximar. Para seguir sem tutorial, caminhe para a escuridão.'],
-    lesson:['LIÇÃO · 01','Movimento','Use W, A, S, D, as setas ou clique no chão. Dê alguns passos para a fogueira mostrar a próxima lição.'],
-    chat:['LIÇÃO · 02','Sua primeira mensagem','Escreva uma mensagem no campo que apareceu. Pode dizer: “A chama me guia.”'],
-    appearance:['LIÇÃO · 03','Seu personagem','Abra Configurações e escolha Aparência. Mude uma opção e aplique para seguir.'],
-    find:['LIÇÃO · 04','Um pequeno presente','A fagulha deixou um galho e uma folha no chão. Aproxime-se do brilho e clique nele para recolher.'],
-    ready:['CAMINHO ABERTO','O Bosque das Brasas','A fagulha deixou um galho e uma folha. O teletransporte para o bosque já está começando.'],
-  }[arrivalTutorial.phase]||['PRÓLOGO','O Breu','Aproxime-se da fogueira para aprender ou caminhe para a escuridão para seguir.'];
+  const steps=arrivalTutorialSteps({touch:isTouchInput()})[arrivalTutorial.phase]||ARRIVAL_TUTORIAL_FALLBACK;
   const [step,title,text]=steps;
   arrivalUi.step.textContent=step;
   arrivalUi.title.textContent=title;

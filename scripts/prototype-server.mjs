@@ -2247,7 +2247,7 @@ export function createPrototypeServer({
         notice(socket,'A fagulha deixou um galho e uma folha para você. O Bosque das Brasas espera.','chime',{arrivalReady:true});
         broadcast(false);return;
       }
-      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'chestMove', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew', 'setSkyOverride', 'clearSkyOverrides'].includes(message.name)) return;
+      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftAxe', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'chestMove', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew', 'setSkyOverride', 'clearSkyOverrides'].includes(message.name)) return;
       if (message.name === 'allocateAttribute') {
         const key = typeof message.attribute === 'string' ? message.attribute : '';
         if (!ATTRIBUTE_KEYS.includes(key)) { notice(socket, 'Esse atributo não existe.'); return; }
@@ -3473,6 +3473,35 @@ export function createPrototypeServer({
         return;
       }
 
+        // Fabricação do machado de pedra, compartilhada pela ação contextual `work` e por `craftAxe`.
+        const craftStoneAxe = async () => {
+          if (player.inventory.sturdyBranch < 1 || player.inventory.stone < 1 || player.inventory.vines < 1) {
+            notice(socket, 'Para montar um machado simples, junte 1 galho forte, 1 pedra e 1 cipó.');
+            return;
+          }
+          const before = inventorySnapshot(player.inventory);
+          removeInventoryItem(player.inventory, 'sturdyBranch', 1);
+          removeInventoryItem(player.inventory, 'stone', 1);
+          removeInventoryItem(player.inventory, 'vines', 1);
+          addInventoryItem(player.inventory, 'stoneAxe', 1);
+          player.inventory.axeSharpness = 100;
+          player.inventory.axeDurability = STONE_AXE_DURABILITY;
+          player.inventory.selectedSlot = findInventorySlot(player.inventory, 'stoneAxe');
+          try { await persistPlayer(player); }
+          catch { restoreInventory(player.inventory, before); notice(socket, 'Não consegui salvar o machado. Os materiais foram devolvidos.'); return; }
+          player.emote = { name: 'gather', until: now() + 700 };
+          notice(socket, 'Você amarrou a pedra ao galho forte e fez um machado. Ele dura cerca de três ciclos completos de árvore e tora; 1–9 troca a ferramenta equipada.');
+          broadcast(false);
+          return;
+        };
+
+        if (message.name === 'craftAxe') {
+          if (player.location !== 'clearing') { notice(socket, 'Monte ferramentas no bosque.'); return; }
+          if (axeToolFor(player.inventory)) { notice(socket, 'Você já tem um machado.'); return; }
+          await craftStoneAxe();
+          return;
+        }
+
         if (message.name === 'craftPickaxe') {
           if (player.location !== 'clearing') { notice(socket, 'Monte ferramentas no bosque.'); return; }
           if (pickaxeToolFor(player.inventory)) { notice(socket, 'Você já tem uma picareta.'); return; }
@@ -3831,23 +3860,7 @@ export function createPrototypeServer({
 
         const ownedAxe = axeToolFor(player.inventory);
         if (!ownedAxe) {
-          if (player.inventory.sturdyBranch < 1 || player.inventory.stone < 1 || player.inventory.vines < 1) {
-            notice(socket, 'Para montar um machado simples, junte 1 galho forte, 1 pedra e 1 cipó.');
-            return;
-          }
-          const before = inventorySnapshot(player.inventory);
-          removeInventoryItem(player.inventory, 'sturdyBranch', 1);
-          removeInventoryItem(player.inventory, 'stone', 1);
-          removeInventoryItem(player.inventory, 'vines', 1);
-          addInventoryItem(player.inventory, 'stoneAxe', 1);
-          player.inventory.axeSharpness = 100;
-          player.inventory.axeDurability = STONE_AXE_DURABILITY;
-          player.inventory.selectedSlot = findInventorySlot(player.inventory, 'stoneAxe');
-          try { await persistPlayer(player); }
-          catch { restoreInventory(player.inventory, before); notice(socket, 'Não consegui salvar o machado. Os materiais foram devolvidos.'); return; }
-          player.emote = { name: 'gather', until: now() + 700 };
-          notice(socket, 'Você amarrou a pedra ao galho forte e fez um machado. Ele dura cerca de três ciclos completos de árvore e tora; 1–9 troca a ferramenta equipada.');
-          broadcast(false);
+          await craftStoneAxe();
           return;
         }
 

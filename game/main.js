@@ -8341,7 +8341,8 @@ function isTyping(target) { return target instanceof HTMLInputElement || target 
 function normalizeHeldKey(key) { return /^[a-z]$/i.test(key) ? key.toLowerCase() : key; }
 
 window.addEventListener('keydown', event => {
-  const worldInputReady = sceneInputReady({ sceneReady, overlayHidden: loadingScreen.hidden });
+  const worldInputReady = sceneInputReady({ sceneReady, overlayHidden: loadingScreen.hidden,
+    roomFade: loadingScreen.dataset.roomTransition === 'true' });
   const movementKey = movementKeyForEvent(event);
   if (movementKey && dimensionTransitMovementLocked()) { event.preventDefault(); return; }
   const interactive = isInteractiveKeyboardTarget(event.target);

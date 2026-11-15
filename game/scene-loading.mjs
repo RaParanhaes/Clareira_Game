@@ -1,6 +1,8 @@
-// Controls are released only when the loading overlay is gone; sceneReady alone is not enough.
-export function sceneInputReady({ sceneReady, overlayHidden }) {
-  return sceneReady === true && overlayHidden === true;
+// Controls wait for the real loading overlay to leave. The room fade reuses the same
+// overlay element, but it is not a loading screen: the room transition already covers
+// the scene, so keys must not wait for it.
+export function sceneInputReady({ sceneReady, overlayHidden, roomFade = false }) {
+  return sceneReady === true && (overlayHidden === true || roomFade === true);
 }
 
 // A compact snapshot may omit unchanged collections, but a new connection needs all of them.

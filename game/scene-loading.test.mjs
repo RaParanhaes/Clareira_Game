@@ -105,3 +105,11 @@ test('deadline clears a room transition that never settles so movement is accept
  finishStuckReveal({ transition, reveal, initialCompletion: false });
  assert.deepEqual(calls, [true]);
 });
+
+test('the room fade does not hold controls, but a real loading overlay still does', () => {
+ // Entering a room reuses the overlay for the fade while the scene is already ready.
+ assert.equal(sceneInputReady({ sceneReady: true, overlayHidden: false, roomFade: true }), true);
+ // A real loading overlay (first load or world reload) keeps controls held.
+ assert.equal(sceneInputReady({ sceneReady: true, overlayHidden: false, roomFade: false }), false);
+ assert.equal(sceneInputReady({ sceneReady: false, overlayHidden: false, roomFade: true }), false);
+});

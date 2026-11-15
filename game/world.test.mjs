@@ -321,10 +321,12 @@ test('pedras e gravetos soltos ficam a poucos passos do ponto de chegada, com qu
    applyWorldDefinition({...origin,seed});
    const R=12,box={left:SPAWN.x-R,right:SPAWN.x+R,top:SPAWN.y-R,bottom:SPAWN.y+R};
    const near=getResourcesInBounds(box).filter(r=>Math.hypot(r.x-SPAWN.x,r.y-SPAWN.y)<=R&&r.id.startsWith('resource-village-'));
-   const stones=near.filter(r=>r.kind==='stone'),sticks=near.filter(r=>r.kind==='wood');
+   const stones=near.filter(r=>r.kind==='stone'),sticks=near.filter(r=>r.kind==='wood'),branches=near.filter(r=>r.kind==='sturdyBranch'),vines=near.filter(r=>r.kind==='vines');
    assert.ok(stones.length>=4,`semente ${seed}: ao menos 4 pedras em ${R} tiles (achou ${stones.length})`);
    assert.ok(sticks.length>=2,`semente ${seed}: ao menos 2 gravetos em ${R} tiles (achou ${sticks.length})`);
-   for(const item of [...stones,...sticks]){
+   assert.ok(branches.length>=2,`semente ${seed}: ao menos 2 galhos fortes (achou ${branches.length})`);
+   assert.ok(vines.length>=2,`semente ${seed}: ao menos 2 cipós (achou ${vines.length})`);
+   for(const item of [...stones,...sticks,...branches,...vines]){
     assert.equal(isPathTile(item.x,item.y),false,`${item.id} fora do piso da trilha`);
     assert.equal(canOccupy({x:item.x,y:item.y},PLAYER_RADIUS),true,`${item.id} em chão livre`);
     assert.ok(getSolidTreesInBounds({left:item.x-1,right:item.x+1,top:item.y-1,bottom:item.y+1}).every(t=>Math.hypot(t.x-item.x,t.y-item.y)>=1),`${item.id} longe de árvores`);

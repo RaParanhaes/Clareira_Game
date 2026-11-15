@@ -298,7 +298,7 @@ test('abrigo bloqueia seu volume e o espaço da fogueira sem fogo permanece cami
   const exit={x:CLEARING_DOOR.x,y:CLEARING_DOOR.y+.5};
   assert.equal(canOccupy(exit),true);
   assert.ok(findWalkPath(exit,{x:8.2,y:12.3}).length>1);
-  const distant=getResourcesInBounds({left:840,right:880,top:840,bottom:880}).find(node=>canOccupy(node));
+  const distant=getResourcesInBounds({left:840,right:856,top:840,bottom:856}).find(node=>canOccupy(node));
   assert.ok(distant,'há coleta utilizável além do mapa anterior');
   assert.ok(findWalkPath({x:8.2,y:12.3},distant).length>1);
   assert.equal(canOccupy({x:WORLD_SIZE+.1,y:20}),false);
@@ -306,14 +306,14 @@ test('abrigo bloqueia seu volume e o espaço da fogueira sem fogo permanece cami
 
 test('o mundo expandido gera coleta alcançável além da antiga borda e consulta objetos por chunks', () => {
   assert.ok(WORLD_SIZE >= 670);
-  const distant = getResourcesInBounds({left:840,right:880,top:840,bottom:880})[0];
+  const distant = getResourcesInBounds({left:840,right:856,top:840,bottom:856})[0];
   assert.ok(distant, 'há recurso gerado no novo território');
   assert.ok(canOccupy(distant), 'o recurso distante é alcançável');
   const bounds = { left: distant.x - 1, right: distant.x + 1, top: distant.y - 1, bottom: distant.y + 1 };
   assert.ok(getResourcesInBounds(bounds).some(node => node.id === distant.id));
   assert.ok(getSolidTreesInBounds(bounds).every(tree => tree.x >= bounds.left && tree.x <= bounds.right
     && tree.y >= bounds.top && tree.y <= bounds.bottom));
-  const region={left:840,right:880,top:840,bottom:880};
+  const region={left:840,right:856,top:840,bottom:856};
   const treesBefore=getSolidTreesInBounds(region).map(({x,y,r,index})=>({x,y,r,index}));
   const resourcesBefore=getResourcesInBounds(region);
   for(let cy=0;cy<12;cy++)for(let cx=0;cx<12;cx++)getSolidTreesInBounds({left:cx*16,right:cx*16+15,top:cy*16,bottom:cy*16+15});

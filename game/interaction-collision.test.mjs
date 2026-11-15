@@ -75,7 +75,8 @@ test('a resource beside the campfire can be collected from a safe reachable edge
   assert.equal(hasClearInteractionPath(from, resource, { fires: [SPAWN_CAMPFIRE] }), true);
 });
 
-test('um recurso gerado de verdade perto da fogueira é coletável de uma borda segura', () => {
+// Recurso gerado mais próximo do spawn: prova coleta de terreno gerado, não interação com o colisor da fogueira (ver teste anterior).
+test('recurso gerado mais próximo do spawn é coletável', () => {
   const distanceToFire = resource => Math.hypot(resource.x - SPAWN_CAMPFIRE.x, resource.y - SPAWN_CAMPFIRE.y);
   const generated = getResourcesInBounds({
     left: SPAWN_CAMPFIRE.x - 12, right: SPAWN_CAMPFIRE.x + 12, top: SPAWN_CAMPFIRE.y - 12, bottom: SPAWN_CAMPFIRE.y + 12,

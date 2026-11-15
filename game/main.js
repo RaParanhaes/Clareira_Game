@@ -39,7 +39,7 @@ import { compareSceneDepth } from './depth-order.mjs';
 import { contentById } from './content-catalog.mjs';
 import { MEDIEVAL_FURNITURE, MEDIEVAL_FURNITURE_CATEGORIES } from './medieval-furniture.mjs';
 import { mergeQueuedState } from './state-inbox.mjs';
-import { createSceneReadiness, sceneInputReady } from './scene-loading.mjs';
+import { createOverlayReleaseGuard, createSceneReadiness, sceneInputReady } from './scene-loading.mjs';
 import { calculateInitialMiniProgress, createLoadingProgress, initialLoadingMiniStage } from './loading-progress.mjs';
 import {getNaturalPatches,NATURAL_PATCHES,TERRAIN_BOUNDS} from './natural-terrain.mjs';
 import {buildWorldMapDetailFeatures,initialForestMapBounds} from './initial-forest-map-features.mjs';
@@ -1635,6 +1635,7 @@ function beginSceneLoading(text, { fade = false, genericTitle = false, showOverl
   sceneProgressRetry = null;
   lastProgressSignature = null;
   ++loadingGeneration; sceneReady = false; snapshotReady = false;
+  overlayRelease.cancel();
   lightingRevealStartedAt=null;
   assetScene = null; avatarAssetVariant = null; assetsReady = false;
   loadingProgress = null;
@@ -1737,6 +1738,7 @@ function markInitialLoadingComplete() {
 }
 function hideSceneLoading({ worldReady = true } = {}) {
   clearSceneProgressWatchdog();
+  overlayRelease.cancel();
   document.documentElement.classList.remove('cache-verifying');
   if (worldReady) {
     markInitialLoadingComplete();
@@ -1745,6 +1747,17 @@ function hideSceneLoading({ worldReady = true } = {}) {
   loadingScreen.hidden = true;
   ui.shell.inert = false; ui.shell.removeAttribute('aria-busy');
 }
+// A ready scene must not stay behind the overlay forever: if a reveal step never
+// settles, release the overlay and the controls together after this limit.
+const overlayRelease = createOverlayReleaseGuard({
+  limitMs: 4000,
+  onRelease: ({ limitMs }) => {
+    if (!sceneReady || loadingScreen.hidden) return;
+    console.warn(`[clareira] overlay de carga ainda visível ${limitMs} ms após a cena ficar pronta; liberando controles.`,
+      { phase: loadingScreen.dataset.phase, context: loadingScreen.dataset.context, stage: loadingScreen.dataset.loadingStage || null });
+    hideSceneLoading();
+  },
+});
 let lightingRevealScheduled=false, lightingRevealStartedAt=null;
 function revealLoadedScene() {
   if (!authenticated || !snapshotReady || !assetsReady || !predictionReady || sceneReady) return;
@@ -1768,6 +1781,7 @@ function revealLoadedScene() {
     return;
   }
   sceneReady = true; updateLoadingDesign();
+  overlayRelease.arm();
   void teleportEffects.prepare().then(ready=>{teleportEffectReady=ready;updateDimensionTravel(dimensionList,worldDimensionId);if(arrivalTravelPending)requestArrivalTravel();});
   lastFrame = 0; accumulator = 0; lastCameraFrame = 0;
   resizeCanvas(); draw(1);

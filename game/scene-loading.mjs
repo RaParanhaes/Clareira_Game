@@ -25,3 +25,20 @@ export function createSceneReadiness() {
     },
   };
 }
+
+// Releases a loading overlay that outlives a ready scene (a reveal step that never settles).
+export function createOverlayReleaseGuard({ limitMs, onRelease, schedule = setTimeout, cancel = clearTimeout }) {
+  let timer = null;
+  const clear = () => {
+    if (timer !== null) cancel(timer);
+    timer = null;
+  };
+  return {
+    arm() {
+      clear();
+      timer = schedule(() => { timer = null; onRelease({ limitMs }); }, limitMs);
+    },
+    cancel: clear,
+    get armed() { return timer !== null; },
+  };
+}

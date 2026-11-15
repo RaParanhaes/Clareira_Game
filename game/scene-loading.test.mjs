@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSceneReadiness, sceneInputReady } from './scene-loading.mjs';
+import { createOverlayReleaseGuard, createSceneReadiness, sceneInputReady } from './scene-loading.mjs';
 const self = { id:'me', x:8, y:15, location:'clearing', appearance:{skin:3} };
 const full = {type:'state', players:[self], resources:[], fires:[{x:8,y:14}], roomFurniture:[]};
 test('welcome and a self-less snapshot cannot reveal placeholder avatar', () => {
@@ -36,4 +36,37 @@ test('world controls wait for the loading overlay to leave, not only for sceneRe
  assert.equal(sceneInputReady({ sceneReady: false, overlayHidden: false }), false);
  // Released together: the overlay hides in the same step that controls are enabled.
  assert.equal(sceneInputReady({ sceneReady: true, overlayHidden: true }), true);
+});
+
+test('a ready scene whose overlay never leaves is released after the limit', () => {
+ const timers = []; const cancelled = []; const state = { sceneReady: true, overlayHidden: false }; let releasedAt = null;
+ const guard = createOverlayReleaseGuard({
+  limitMs: 4000,
+  schedule: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
+  cancel: id => cancelled.push(id),
+  onRelease: ({ limitMs }) => { releasedAt = limitMs; state.overlayHidden = true; },
+ });
+ guard.arm();
+ assert.equal(timers[0].ms, 4000);
+ assert.equal(sceneInputReady(state), false);
+ // The transition never resolves: the timer fires and releases overlay and controls together.
+ timers[0].fn();
+ assert.equal(releasedAt, 4000);
+ assert.equal(sceneInputReady(state), true);
+ assert.equal(guard.armed, false);
+});
+
+test('a guard cancelled before its limit does not release the overlay', () => {
+ const timers = []; const cancelled = []; let released = false;
+ const guard = createOverlayReleaseGuard({
+  limitMs: 4000,
+  schedule: (fn) => { timers.push(fn); return timers.length; },
+  cancel: id => cancelled.push(id),
+  onRelease: () => { released = true; },
+ });
+ guard.arm(); assert.equal(guard.armed, true);
+ guard.cancel();
+ assert.deepEqual(cancelled, [1]);
+ assert.equal(guard.armed, false);
+ assert.equal(released, false);
 });

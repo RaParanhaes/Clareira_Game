@@ -156,6 +156,7 @@ import { createStaffSky } from './staff-sky-ui.mjs';
 import { drawWeatherSky, rainStyleFor } from './weather-renderer.mjs';
 import { rainFrame, rainDropCount, drawRainWorld } from './rain-world.mjs';
 import { showFramedNotice } from './framed-notice.mjs';
+import { createVitalsHud } from './vitals-hud.mjs';
 
 const canvas = document.querySelector('#world');
 let ctx = canvas.getContext('2d', { alpha: false });
@@ -264,6 +265,7 @@ const connectionProfileDiagnostics = new URLSearchParams(location.search).get("p
 let lastInputSend = 0;
 let lastInput = { x: 0, y: 0 };
 let toastTimer = null;
+const vitalsHud = createVitalsHud(document.querySelector('#vitals-hud'));
 let audioContext = null;
 let ambience = null;
 let soundSuspendTimer = null;
@@ -2588,6 +2590,7 @@ function connect() {
       if (inventoryState && typeof inventoryState === 'object') {
         localInventory = inventoryPrediction.reconcile(inventoryState.inventory || self.inventory, inventoryState.seq || 0);
       }
+      if (message.vitals) vitalsHud.update(message.vitals, { dimensionId: snapshotDimensionId });
       renderInventory();
       updateContextActionLabel();
       loadingProcessingPhase=6;

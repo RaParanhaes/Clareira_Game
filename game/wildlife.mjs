@@ -372,7 +372,7 @@ function handleAnimalAttack(animal, target, definition, context, events) {
     animal.state = 'atacando';
     animal.targetX = target.position.x;
     animal.targetY = target.position.y;
-    events.push({type:'player-attacked', animalId:animal.id, speciesId:definition.id, playerId:target.id, at:context.now});
+    events.push({type:'player-attacked', animalId:animal.id, speciesId:definition.id, playerId:target.id, force:attack.force, reach:attack.reach, at:context.now});
     return;
   }
   target.health -= 1;

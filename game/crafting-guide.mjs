@@ -102,3 +102,12 @@ export function craftingGuide(inventory = {}) {
   const showHint = stage !== 'mine' || !mined;
   return { stage, title, text, key, showHint, recipes, axe, pickaxe };
 }
+
+// Ação da tecla H. Sem machado e com os materiais, H fabrica (`craftAxe`),
+// mesmo com a picareta equipada; nos demais casos continua sendo `work`
+// (cortar, minerar ou o craft contextual do servidor).
+export function workKeyAction(inventory = {}) {
+  const guide = craftingGuide(inventory);
+  const axe = guide.recipes.find(recipe => recipe.id === 'stoneAxe');
+  return axe.ready ? CRAFTING_RECIPES.stoneAxe.action : 'work';
+}

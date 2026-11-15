@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CRAFTING_RECIPES, craftingGuide } from './crafting-guide.mjs';
+import { CRAFTING_RECIPES, craftingGuide, workKeyAction } from './crafting-guide.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const server = await readFile(path.join(root, 'scripts', 'prototype-server.mjs'), 'utf8');
@@ -88,7 +88,7 @@ test('as quantidades e teclas repetem o que o servidor e o cliente de fato exige
   assert.match(server, /resource\.kind === 'vines' && selectedInventoryItem\(player\.inventory\) !== 'knife'/u);
   assert.deepEqual(CRAFTING_RECIPES.stoneAxe.cost, { sturdyBranch: 1, stone: 1, vines: 1 });
   assert.deepEqual(CRAFTING_RECIPES.stonePickaxe.cost, { stone: 2, sturdyBranch: 1, vines: 1 });
-  assert.match(main, /key === 'h' \|\| key === 'H'\) action\('work'\)/u);
+  assert.match(main, /key === 'h' \|\| key === 'H'\) action\(workKeyAction\(localInventory\)\)/u);
   assert.equal(CRAFTING_RECIPES.stoneAxe.action, 'craftAxe');
   assert.match(server, /message\.name === 'craftAxe'/u);
   assert.match(main, /key === 'p' \|\| key === 'P'\) action\('craftPickaxe'\)/u);
@@ -109,4 +109,14 @@ test('"Montar agora" só vale no bosque, a mesma regra de localização do servi
   assert.match(ui, /recipe\.ready && canCraft/u);
   assert.match(ui, /Monte no bosque\./u);
   assert.match(main, /canCraft: worldLocation === 'clearing'/u);
+});
+
+test('a tecla H fabrica o machado quando falta só apertar, mesmo com a picareta equipada; senão segue como work', () => {
+  const pronto = { sturdyBranch: 1, stone: 1, vines: 1 };
+  assert.equal(workKeyAction(pronto), 'craftAxe');
+  assert.equal(workKeyAction({ ...pronto, stonePickaxe: 1, selectedSlot: 0, slots: [{ itemId: 'stonePickaxe', quantity: 1 }] }), 'craftAxe');
+  assert.equal(workKeyAction({ sturdyBranch: 1, stone: 1, vines: 0 }), 'work');
+  assert.equal(workKeyAction({ ...pronto, stoneAxe: 1 }), 'work');
+  assert.equal(workKeyAction({ stonePickaxe: 1 }), 'work');
+  assert.equal(workKeyAction(), 'work');
 });

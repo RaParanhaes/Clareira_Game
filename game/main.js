@@ -157,6 +157,7 @@ import { drawWeatherSky, rainStyleFor } from './weather-renderer.mjs';
 import { rainFrame, rainDropCount, drawRainWorld } from './rain-world.mjs';
 import { showFramedNotice } from './framed-notice.mjs';
 import { createCraftingGuideView } from './crafting-guide-ui.mjs';
+import { workKeyAction } from './crafting-guide.mjs';
 
 const canvas = document.querySelector('#world');
 let ctx = canvas.getContext('2d', { alpha: false });
@@ -8358,7 +8359,7 @@ window.addEventListener('keydown', event => {
   if (key === 'v' || key === 'V') action('visit-nearest');
   if (key === 'f' || key === 'F') action('fire');
   if (key === 'g' || key === 'G') action('share');
-  if (key === 'h' || key === 'H') action('work');
+  if (key === 'h' || key === 'H') action(workKeyAction(localInventory));
   if (key === 'p' || key === 'P') action('craftPickaxe');
   if (key === 'u' || key === 'U') action('upgradeAxe');
   if (key === 'y' || key === 'Y') action('upgradePickaxe');

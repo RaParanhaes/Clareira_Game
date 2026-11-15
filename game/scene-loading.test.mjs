@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createOverlayReleaseGuard, createRevealOnce, createSceneReadiness, sceneInputReady } from './scene-loading.mjs';
+import { createOverlayReleaseGuard, createRevealOnce, createSceneReadiness, finishStuckReveal, sceneInputReady } from './scene-loading.mjs';
 const self = { id:'me', x:8, y:15, location:'clearing', appearance:{skin:3} };
 const full = {type:'state', players:[self], resources:[], fires:[{x:8,y:14}], roomFurniture:[]};
 test('welcome and a self-less snapshot cannot reveal placeholder avatar', () => {
@@ -88,4 +88,20 @@ test('a late reveal after the deadline does not finalize again or skip the initi
  // The delayed reveal arrives later with initialCompletion=false (already marked by the forced path).
  assert.equal(reveal.run(false), false);
  assert.deepEqual(calls, [true], 'finalization ran once, keeping the arrival');
+});
+
+test('deadline clears a room transition that never settles so movement is accepted again', () => {
+ const calls = [];
+ const transition = { active: true, cancel() { this.active = false; } };
+ const reveal = createRevealOnce(initialCompletion => calls.push(initialCompletion));
+ // The stuck room transition blocks movement while active.
+ const movementAccepted = () => !transition.active;
+ assert.equal(movementAccepted(), false);
+ finishStuckReveal({ transition, reveal, initialCompletion: true });
+ assert.equal(transition.active, false);
+ assert.equal(movementAccepted(), true);
+ assert.deepEqual(calls, [true]);
+ // A late room transition resolution does not run the reveal again.
+ finishStuckReveal({ transition, reveal, initialCompletion: false });
+ assert.deepEqual(calls, [true]);
 });

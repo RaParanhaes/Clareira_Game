@@ -57,3 +57,10 @@ export function createRevealOnce(run) {
     },
   };
 }
+
+// Deadline path: clear a room transition that never settled (so movement is not
+// blocked behind it), then run the same once-only finalization as the normal reveal.
+export function finishStuckReveal({ transition, reveal, initialCompletion }) {
+  transition?.cancel?.();
+  return reveal.run(initialCompletion);
+}

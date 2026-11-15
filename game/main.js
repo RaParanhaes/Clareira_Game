@@ -39,7 +39,7 @@ import { compareSceneDepth } from './depth-order.mjs';
 import { contentById } from './content-catalog.mjs';
 import { MEDIEVAL_FURNITURE, MEDIEVAL_FURNITURE_CATEGORIES } from './medieval-furniture.mjs';
 import { mergeQueuedState } from './state-inbox.mjs';
-import { createOverlayReleaseGuard, createRevealOnce, createSceneReadiness, sceneInputReady } from './scene-loading.mjs';
+import { createOverlayReleaseGuard, createRevealOnce, createSceneReadiness, finishStuckReveal, sceneInputReady } from './scene-loading.mjs';
 import { calculateInitialMiniProgress, createLoadingProgress, initialLoadingMiniStage } from './loading-progress.mjs';
 import {getNaturalPatches,NATURAL_PATCHES,TERRAIN_BOUNDS} from './natural-terrain.mjs';
 import {buildWorldMapDetailFeatures,initialForestMapBounds} from './initial-forest-map-features.mjs';
@@ -1826,7 +1826,7 @@ function revealLoadedScene() {
     generation,
     force: () => {
       if (revealOnce.finished || !sceneReady || generation !== loadingGeneration) return;
-      revealOnce.run(initialCompletionSeen || markInitialLoadingComplete());
+      finishStuckReveal({ transition: roomTransition, reveal: revealOnce, initialCompletion: initialCompletionSeen || markInitialLoadingComplete() });
     },
   };
   requestAnimationFrame(function revealReadyFrame() {

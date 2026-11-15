@@ -49,35 +49,41 @@ function keepGear(inventory, itemId) {
   }
 }
 
-export async function purchaseGear({ player, itemId, debitAndSave, refundAndSave }) {
+// `runExclusive(job)` enfileira a compra INTEIRA na fila de gravações deste jogador (no servidor,
+// `progressWrites`): clone, débito, delta no vivo e eventual estorno rodam num único trabalho, sem
+// outra gravação do mesmo jogador no meio. Gravações enfileiradas depois já fotografam o item.
+export async function purchaseGear({ player, itemId, debitAndSave, refundAndSave, runExclusive = job => job() }) {
   if (buying.has(player)) return { ok: false, message: 'Aguarde a compra anterior terminar.' };
+  buying.add(player);
+  try { return await runExclusive(() => buyNow({ player, itemId, debitAndSave, refundAndSave })); }
+  finally { buying.delete(player); }
+}
+
+async function buyNow({ player, itemId, debitAndSave, refundAndSave }) {
   const check = gearPurchaseCheck(player.inventory, itemId);
   if (!check.ok) return check;
   const price = check.price;
-  buying.add(player);
-  try {
-    const before = inventorySnapshot(player.inventory);
-    const clone = createInventory(before);
-    addInventoryItem(clone, itemId, 1);
-    let wallet;
-    try { wallet = await debitAndSave(price, inventorySnapshot(clone), before); }
-    catch (error) { return { ok: false, message: error.message || 'Não consegui concluir a compra; nada foi cobrado.' }; }
-    for (const key of CURRENCY_KEYS) player.inventory[key] = wallet[key] || 0;
-    if (!canAddInventoryItems(player.inventory, { [itemId]: 1 }) || ownsGear(player.inventory, itemId)) {
-      // A mochila mudou durante a espera e o item não cabe mais. O estorno grava, numa só operação,
-      // o crédito e a mochila VIVA (sem o item), para o salvo e o vivo convergirem.
-      try {
-        const refunded = await refundAndSave(price, inventorySnapshot(player.inventory));
-        for (const key of CURRENCY_KEYS) player.inventory[key] = refunded[key] || 0;
-        return { ok: false, refunded: true, message: 'A mochila mudou durante a compra; o pagamento foi devolvido.' };
-      } catch (error) {
-        process.stderr.write(`Could not refund gear purchase: ${error.message}\n`);
-        keepGear(player.inventory, itemId);
-        return { ok: false, refunded: false, kept: ownsGear(player.inventory, itemId),
-          message: 'Não consegui devolver o pagamento; o item ficou com você.' };
-      }
+  const before = inventorySnapshot(player.inventory);
+  const clone = createInventory(before);
+  addInventoryItem(clone, itemId, 1);
+  let wallet;
+  try { wallet = await debitAndSave(price, inventorySnapshot(clone), before); }
+  catch (error) { return { ok: false, message: error.message || 'Não consegui concluir a compra; nada foi cobrado.' }; }
+  for (const key of CURRENCY_KEYS) player.inventory[key] = wallet[key] || 0;
+  if (!canAddInventoryItems(player.inventory, { [itemId]: 1 }) || ownsGear(player.inventory, itemId)) {
+    // A mochila mudou durante a espera e o item não cabe mais. O estorno grava, numa só operação,
+    // o crédito e a mochila VIVA (fotografada agora, sem o item).
+    try {
+      const refunded = await refundAndSave(price, inventorySnapshot(player.inventory));
+      for (const key of CURRENCY_KEYS) player.inventory[key] = refunded[key] || 0;
+      return { ok: false, refunded: true, message: 'A mochila mudou durante a compra; o pagamento foi devolvido.' };
+    } catch (error) {
+      process.stderr.write(`Could not refund gear purchase: ${error.message}\n`);
+      keepGear(player.inventory, itemId);
+      return { ok: false, refunded: false, kept: ownsGear(player.inventory, itemId),
+        message: 'Não consegui devolver o pagamento; o item ficou com você.' };
     }
-    addInventoryItem(player.inventory, itemId, 1);
-    return { ok: true, price, message: `Compra concluída: ${GEAR_LABELS[itemId].toLowerCase()} por ${formatCoins(price)}.` };
-  } finally { buying.delete(player); }
+  }
+  addInventoryItem(player.inventory, itemId, 1);
+  return { ok: true, price, message: `Compra concluída: ${GEAR_LABELS[itemId].toLowerCase()} por ${formatCoins(price)}.` };
 }

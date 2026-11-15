@@ -175,6 +175,52 @@ test('after the commit only the item is added on top of changes made while waiti
   assert.equal(again.refunded, false);
 });
 
+// Fila de gravações por jogador, como `progressWrites` do servidor: gravações fotografam o vivo ao rodar.
+function playerQueue(player, store) {
+  let tail = Promise.resolve();
+  const enqueue = job => { const next = tail.catch(() => {}).then(job); tail = next.catch(() => {}); return next; };
+  return {
+    runExclusive: enqueue,
+    persist: () => enqueue(async () => { store.saved = inventorySnapshot(player.inventory); }),
+    idle: () => tail,
+  };
+}
+
+test('a sale queued during the purchase still saves the bought item', async () => {
+  const player = { accountId: 'q', inventory: createInventory({ slots: [{ itemId: 'stone', quantity: 10 }] }) };
+  const store = { saved: null, gate: null };
+  const queue = playerQueue(player, store);
+  let release; const gate = new Promise(resolve => { release = resolve; });
+  const debitAndSave = async (price, after) => { await gate; store.saved = after; return walletFromValue(500); };
+  const buying = purchaseGear({ player, itemId: 'shortSword', debitAndSave, runExclusive: queue.runExclusive });
+  await new Promise(resolve => setImmediate(resolve));
+  player.inventory.stone -= 4; // venda concorrente muda o vivo e enfileira a gravação
+  const sale = queue.persist();
+  release();
+  assert.equal((await buying).ok, true);
+  await sale;
+  assert.equal(store.saved.slots.some(stack => stack?.itemId === 'shortSword'), true, 'o item sobrevive à gravação da venda');
+  assert.equal(store.saved.slots.find(stack => stack?.itemId === 'stone').quantity, 6);
+});
+
+test('a change made during the purchase is not overwritten by the refund snapshot', async () => {
+  const player = { accountId: 'r', inventory: createInventory() };
+  const store = { saved: null };
+  const queue = playerQueue(player, store);
+  let release; const gate = new Promise(resolve => { release = resolve; });
+  const result = purchaseGear({ player, itemId: 'shortSword', runExclusive: queue.runExclusive,
+    debitAndSave: async () => { await gate; return walletFromValue(500); },
+    refundAndSave: async (price, live) => { store.saved = live; return walletFromValue(2000); } });
+  await new Promise(resolve => setImmediate(resolve)); // a compra já está esperando o débito
+  for (let i = 0; i < 27; i += 1) addInventoryItem(player.inventory, 'knife', 1);
+  release();
+  const outcome = await result;
+  assert.deepEqual([outcome.ok, outcome.refunded], [false, true]);
+  assert.equal(store.saved.slots.filter(stack => stack?.itemId === 'knife').length, 27, 'a mudança feita na espera está no salvo');
+  assert.equal(store.saved.slots.some(stack => stack?.itemId === 'shortSword'), false);
+  assert.deepEqual(store.saved.slots, inventorySnapshot(player.inventory).slots, 'salvo e vivo convergem');
+});
+
 test('a second purchase while the first is in flight is refused as already owned', async () => {
   const store = fakeStore(5000);
   const player = { accountId: 'd', inventory: createInventory() };

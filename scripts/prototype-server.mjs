@@ -2801,17 +2801,16 @@ export function createPrototypeServer({
         }
         if (!player.accountId) { notice(socket, 'Entre com uma conta para pagar e guardar um equipamento.'); return; }
         const itemId = typeof message.itemId === 'string' ? message.itemId : '';
-        const result = await purchaseGear({ player, itemId, debitAndSave: (price, after, before) => {
-          const previous = progressWrites.get(player.accountId) || Promise.resolve();
-          const next = previous.catch(() => {}).then(() => storage.debitWalletAndSaveProgress(player.accountId, price, after, before));
-          progressWrites.set(player.accountId, next);
-          return next;
-        }, refundAndSave: (price, live) => {
-          const previous = progressWrites.get(player.accountId) || Promise.resolve();
-          const next = previous.catch(() => {}).then(() => storage.creditWalletAndSaveProgress(player.accountId, price, live));
-          progressWrites.set(player.accountId, next);
-          return next;
-        } });
+        const result = await purchaseGear({ player, itemId,
+          // A compra inteira ocupa a fila de gravações do jogador; vendas e outras gravações esperam atrás dela.
+          runExclusive: job => {
+            const previous = progressWrites.get(player.accountId) || Promise.resolve();
+            const next = previous.catch(() => {}).then(job);
+            progressWrites.set(player.accountId, next.catch(() => {}));
+            return next;
+          },
+          debitAndSave: (price, after, before) => storage.debitWalletAndSaveProgress(player.accountId, price, after, before),
+          refundAndSave: (price, live) => storage.creditWalletAndSaveProgress(player.accountId, price, live) });
         notice(socket, result.message, result.ok ? 'chime' : undefined);
         if (result.ok) broadcast(false);
         return;

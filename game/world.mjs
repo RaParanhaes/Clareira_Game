@@ -723,8 +723,12 @@ export function findSpawnPosition(occupiedPositions = []) {
     }
   }
 
+  // Recursos gerados (inclui os soltos perto da vila) também ficam fora da chegada.
+  const nearbyResources = isSurfaceDimension()
+    ? getResourcesInBounds({ left: SPAWN.x - 18, right: SPAWN.x + 18, top: SPAWN.y - 18, bottom: SPAWN.y + 18 })
+    : [];
   const isClear = position => canOccupy(position)
-    && (!isSurfaceDimension() || RESOURCE_NODES.every(resource => Math.hypot(position.x - resource.x, position.y - resource.y) >= 1.25))
+    && nearbyResources.every(resource => Math.hypot(position.x - resource.x, position.y - resource.y) >= 1.25)
     && occupied.every(other => avatarsHaveClearance(position, other));
   const clear = candidates.find(isClear);
   if (clear) return clear;

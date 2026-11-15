@@ -268,6 +268,7 @@ html:not(.clareira-styles-ready) .shell{visibility:hidden}
           <canvas id="world" width="480" height="300" tabindex="0" aria-label="Clareira isométrica. Toque ou clique no chão, ou use as setas e WASD para caminhar; Espaço para pular enquanto se move; obstáculos continuam bloqueando o caminho; E para coletar; H para criar ou usar o machado; R para afiá-lo; I abre o Inventário; Q ativa Arrancada após desbloqueá-la; 1 a 9 troca itens da barra rápida."></canvas>
           <button id="mini-map-toggle" class="mini-map" type="button" aria-haspopup="dialog" aria-controls="world-map-dialog" aria-label="Abrir minimapa e mapa completo" hidden><span class="mini-map-caption"><span>MINIMAPA</span><small id="mini-map-exploration-status">Explorando</small></span><canvas id="mini-map-canvas" width="180" height="132" aria-hidden="true"></canvas><span class="mini-map-open-hint">Toque para expandir</span></button>
           <div id="quickbar" class="quickbar" role="toolbar" aria-label="Barra rápida de itens"></div>
+          <div id="craft-hint" class="craft-hint" role="status" hidden><button type="button" class="craft-hint-open" data-craft-hint-open aria-label="Abrir receitas no Inventário"><span class="craft-hint-label">Próximo passo</span><span class="craft-hint-text" data-craft-hint-text></span></button><button type="button" class="craft-hint-close" data-craft-hint-close aria-label="Dispensar o aviso">×</button></div>
           <div id="room-build-tools" class="room-build-tools" hidden aria-label="Construção do quarto">
             <button id="room-build-toggle" type="button" aria-expanded="false" aria-controls="room-build-options">Construir</button>
             <div id="room-build-options" class="room-build-options" hidden>
@@ -415,6 +416,7 @@ html:not(.clareira-styles-ready) .shell{visibility:hidden}
   </main>
   <dialog id="inventory-dialog" class="inventory-dialog" aria-labelledby="inventory-title">
     <div class="inventory-dialog-head"><div><p class="eyebrow">ESPAÇO POR PÁGINAS · PILHAS LIMITADAS</p><h2 id="inventory-title">Inventário</h2></div><button id="inventory-close" type="button" aria-label="Fechar Inventário">×</button></div>
+    <section id="crafting-guide" class="crafting-guide" aria-labelledby="crafting-guide-title"><div class="crafting-guide-next"><h3 id="crafting-guide-title">Próximo passo</h3><p data-craft-next></p></div><details class="crafting-guide-recipes" open><summary>Receitas de ferramentas</summary><ul class="craft-recipe-list" data-craft-recipes></ul></details></section>
     <p class="inventory-hint">Arraste para reorganizar. No celular, toque no item e depois no destino; a ficha também oferece uma ação rápida.</p>
     <div class="inventory-workspace"><div class="inventory-stacks">
       <section class="inventory-section" aria-labelledby="inventory-quick-title"><div class="inventory-section-head"><h3 id="inventory-quick-title">Acesso rápido</h3><span>1–9 · escolha durante a aventura</span></div><div id="inventory-quick-grid" class="inventory-grid inventory-quick-grid" role="grid" aria-label="Espaços de acesso rápido"></div></section>

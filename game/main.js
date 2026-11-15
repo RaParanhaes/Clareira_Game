@@ -156,6 +156,8 @@ import { createStaffSky } from './staff-sky-ui.mjs';
 import { drawWeatherSky, rainStyleFor } from './weather-renderer.mjs';
 import { rainFrame, rainDropCount, drawRainWorld } from './rain-world.mjs';
 import { showFramedNotice } from './framed-notice.mjs';
+import { createCraftingGuideView } from './crafting-guide-ui.mjs';
+import { workKeyAction } from './crafting-guide.mjs';
 
 const canvas = document.querySelector('#world');
 let ctx = canvas.getContext('2d', { alpha: false });
@@ -3297,9 +3299,17 @@ function renderXpPotionRecipes() {
   }
 }
 
+let craftHintDismissedStage = '';
+const craftingGuideView = createCraftingGuideView({
+  hint: document.querySelector('#craft-hint'), panel: document.querySelector('#crafting-guide'),
+  onOpen: () => openInventory(),
+  onCraft: name => { closeInventory(); action(name); },
+  onDismiss: () => { craftHintDismissedStage = craftingGuideView.guideFor(localInventory).stage; craftingGuideView.update(localInventory, { dismissedStage: craftHintDismissedStage }); },
+});
 let inventoryHudRenderKey='';
 function renderInventory(forcePanel = false) {
   if (!ui.quickbar || !ui.inventoryGrid) return;
+  craftingGuideView.update(localInventory, { dismissedStage: craftHintDismissedStage, canCraft: worldLocation === 'clearing' });
   const hudKey=JSON.stringify([localInventory,inventorySelectionIndex,inventoryDragSource]);
   if(!forcePanel&&!ui.inventoryDialog.open&&hudKey===inventoryHudRenderKey){
     // Cooldowns depend on time; inventory, recipes and slot DOM do not.
@@ -4327,8 +4337,8 @@ function action(name) {
     sendPlayerCommand({ type:'action', name:'work' });
     return;
   }
-  if (name === 'craftPickaxe') {
-    sendPlayerCommand({ type:'action', name:'craftPickaxe' });
+  if (name === 'craftAxe' || name === 'craftPickaxe') {
+    sendPlayerCommand({ type:'action', name });
     return;
   }
   if (name === 'upgradeAxe' || name === 'upgradePickaxe') {
@@ -8380,7 +8390,7 @@ window.addEventListener('keydown', event => {
   if (key === 'v' || key === 'V') action('visit-nearest');
   if (key === 'f' || key === 'F') action('fire');
   if (key === 'g' || key === 'G') action('share');
-  if (key === 'h' || key === 'H') action('work');
+  if (key === 'h' || key === 'H') action(workKeyAction(localInventory));
   if (key === 'p' || key === 'P') action('craftPickaxe');
   if (key === 'u' || key === 'U') action('upgradeAxe');
   if (key === 'y' || key === 'Y') action('upgradePickaxe');

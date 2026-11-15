@@ -1430,4 +1430,36 @@ dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header
 #appearance-dialog[open],#lodging-dialog[open]{box-shadow:0 0 0 2px var(--iron),0 0 0 4px var(--brass),0 0 0 6px var(--iron),0 26px 64px #000c}
 .top-actions .ico,.destination-map-button .ico{width:1.25em;height:1.25em}
 .top-actions .icon-button{white-space:nowrap}
+
+/* Guia de fabricação (feat/ui-guia-fabricacao): aviso "Próximo passo" no mundo e receitas no Inventário. Só tokens --clareira-*. */
+.craft-hint{position:absolute;z-index:4;left:50%;bottom:136px;transform:translateX(-50%);display:flex;align-items:stretch;max-width:min(520px,calc(100vw - 32px));border:2px solid var(--clareira-edge);background:color-mix(in srgb,var(--clareira-surface) 94%,transparent);color:var(--clareira-parchment);box-shadow:0 3px 0 var(--clareira-ink),0 6px 12px color-mix(in srgb,var(--clareira-ink) 70%,transparent);pointer-events:auto}
+.craft-hint[hidden],body[data-location="room"] .craft-hint{display:none}
+.craft-hint-open{display:grid;gap:1px;min-width:0;padding:5px 9px;border:0;background:transparent;color:inherit;font:600 12px/1.35 'Trebuchet MS',system-ui,sans-serif;text-align:left;cursor:pointer}
+.craft-hint-label{color:var(--clareira-ember);font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.craft-hint-text{overflow-wrap:anywhere}
+.craft-hint-close{flex:none;width:26px;border:0;border-left:1px solid var(--clareira-edge);background:var(--clareira-ink);color:var(--clareira-ember);font:700 16px/1 'Trebuchet MS',system-ui,sans-serif;cursor:pointer}
+.craft-hint-open:focus-visible,.craft-hint-close:focus-visible{outline:2px solid var(--clareira-parchment);outline-offset:-2px}
+.crafting-guide{margin:9px 0 12px;padding:8px 10px;border:1px solid var(--clareira-edge);border-left:4px solid var(--clareira-ember);background:var(--clareira-canopy);color:var(--clareira-parchment)}
+.crafting-guide h3{margin:0 0 2px;color:var(--clareira-ember);font:700 10px/1.2 'Trebuchet MS',system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.crafting-guide-next p{margin:0;font-size:13px;line-height:1.4}
+.crafting-guide-recipes{margin-top:7px}
+.crafting-guide-recipes summary{cursor:pointer;color:var(--clareira-leaf);font:700 11px/1.4 'Trebuchet MS',system-ui,sans-serif}
+.craft-recipe-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:7px 0 0;padding:0;list-style:none}
+.craft-recipe{display:grid;gap:4px;align-content:start;padding:7px 8px;border:1px solid var(--clareira-edge);background:var(--clareira-surface)}
+.craft-recipe.is-ready{border-color:var(--clareira-ember)}
+.craft-recipe.is-owned{opacity:.7}
+.craft-recipe-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px}
+.craft-recipe-head kbd{padding:0 5px;border:1px solid var(--clareira-edge);background:var(--clareira-ink);color:var(--clareira-parchment);font:700 10px/1.5 'Trebuchet MS',system-ui,sans-serif}
+.craft-recipe-state{margin-left:auto;color:var(--clareira-leaf);font-size:10px}
+.craft-recipe-materials{display:flex;flex-wrap:wrap;gap:4px;margin:0}
+.craft-material{padding:1px 6px;font-size:11px;border:1px solid var(--clareira-edge);background:var(--clareira-ink);color:var(--clareira-parchment)}
+.craft-material.is-ok{border-color:var(--clareira-leaf);background:color-mix(in srgb,var(--clareira-leaf) 22%,var(--clareira-surface))}
+.craft-recipe-note{color:color-mix(in srgb,var(--clareira-parchment) 72%,transparent);font-size:10px;line-height:1.4}
+.craft-recipe-button{justify-self:start;min-height:32px;padding:4px 12px;border:2px solid var(--clareira-afterglow);background:var(--clareira-ember);color:var(--clareira-ink);font:700 11px/1 'Trebuchet MS',system-ui,sans-serif;cursor:pointer}
+@media(max-width:720px){
+  .craft-hint{left:8px;right:auto;bottom:auto;top:112px;transform:none;max-width:min(214px,calc(100vw - 190px))}
+  .craft-hint-open{padding:4px 7px;font-size:11px}
+  .craft-recipe-list{grid-template-columns:minmax(0,1fr)}
+  .crafting-guide-next p{font-size:12px}
+}
 .icon-sprite{position:absolute}

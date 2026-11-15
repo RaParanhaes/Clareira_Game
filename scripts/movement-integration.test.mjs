@@ -69,7 +69,11 @@ test('servidor confirma passos simulados; repetir pacotes não duplica movimento
 
 test('timer lento acompanha o tempo real e reconexão curta preserva a posição da sessão',async t=>{
  const origin='http://movement-test.local';
- const room=createPrototypeServer({port:0,tickIntervalMs:80,allowedOrigin:origin,resolveSession:()=>({profile:{id:'resume-test',guest:true,displayName:'Teste',inventory:{wood:0,stone:0,berries:0}}})});
+ // A fogueira permanente da chegada bloqueia a rota reta para leste (a 3,8 do spawn) e a retomada empurra o jogador para fora dela; o caso só trata de timer e retomada.
+ // Estado próprio: o diretório padrão (/tmp/clareira-dev) é compartilhado e pode guardar mundo de outras execuções.
+ const stateDirectory=await mkdtemp(path.join(os.tmpdir(),'clareira-movement-resume-'));
+ t.after(()=>rm(stateDirectory,{recursive:true,force:true}));
+ const room=createPrototypeServer({port:0,tickIntervalMs:80,ambientCampfire:false,stateDirectory,allowedOrigin:origin,resolveSession:()=>({profile:{id:'resume-test',guest:true,displayName:'Teste',inventory:{wood:0,stone:0,berries:0}}})});
  const address=await room.listen();t.after(()=>room.close());
  const open=()=>new WebSocket(`ws://127.0.0.1:${address.port}/room`,{headers:{origin}});
  const wait=(ws,predicate)=>new Promise((resolve,reject)=>{

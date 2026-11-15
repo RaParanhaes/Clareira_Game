@@ -109,6 +109,9 @@ function waitFor(socket, predicate, timeout = 2500, description = 'room message'
 const placedFurniture = state => (state?.roomFurniture || []).filter(item => !item.preset);
 
 test('room gives each connection an identity and ignores client attempts to spoof account names', async t => {
+  // Os moradores só estão na vila de dia; o ciclo do jogo segue o relógio real, então o teste fixa meio-dia no jogo (sem parar o tempo).
+  const realNow = Date.now.bind(Date), middayShift = Date.UTC(2026, 10, 15, 1, 0, 0) - realNow();
+  t.mock.method(Date, 'now', () => realNow() + middayShift);
   const room = createTestServer(t, { ambientCampfire: false, port: 0, allowedOrigin: TEST_ORIGIN, resolveSession: testIdentity });
   const address = await room.listen();
   t.after(() => room.close());

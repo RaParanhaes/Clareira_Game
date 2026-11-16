@@ -120,3 +120,28 @@ test('a tecla H fabrica o machado quando falta só apertar, mesmo com a picareta
   assert.equal(workKeyAction({ stonePickaxe: 1 }), 'work');
   assert.equal(workKeyAction(), 'work');
 });
+
+test('o texto do guia fala em toque no celular e em H, P e E no teclado', () => {
+  const pronto = { sturdyBranch: 1, stone: 1, vines: 1 };
+  assert.match(craftingGuide(pronto).text, /aperte H/);
+  const touch = craftingGuide(pronto, { touch: true });
+  assert.match(touch.text, /toque em Montar agora/);
+  assert.doesNotMatch(touch.text, /aperte|\bH\b/);
+  assert.match(craftingGuide({ stoneAxe: 1, sturdyBranch: 1, stone: 2, vines: 1 }).text, /aperte P/);
+  const faltando = craftingGuide({ knife: 1 }, { touch: true }).text;
+  assert.match(faltando, /toque em Usar/);
+  assert.doesNotMatch(faltando, /\(E\)|depois E/);
+  assert.match(craftingGuide({ knife: 1 }).text, /\(E\)/);
+});
+
+test('fora do bosque o guia manda voltar, no teclado e no toque', () => {
+  const pronto = { sturdyBranch: 1, stone: 1, vines: 1 };
+  for (const touch of [false, true]) {
+    const axe = craftingGuide(pronto, { touch, inClearing: false }).text;
+    assert.match(axe, /volte ao bosque para montar o machado/);
+    assert.doesNotMatch(axe, /Montar agora|aperte/);
+    const pick = craftingGuide({ stoneAxe: 1, sturdyBranch: 1, stone: 2, vines: 1 }, { touch, inClearing: false }).text;
+    assert.match(pick, /volte ao bosque para montar a picareta/);
+  }
+  assert.match(craftingGuide(pronto, { touch: true, inClearing: true }).text, /toque em Montar agora/);
+});

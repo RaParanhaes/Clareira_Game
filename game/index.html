@@ -268,7 +268,10 @@ html:not(.clareira-styles-ready) .shell{visibility:hidden}
           <canvas id="world" width="480" height="300" tabindex="0" aria-label="Clareira isométrica. Toque ou clique no chão, ou use as setas e WASD para caminhar; Espaço para pular enquanto se move; obstáculos continuam bloqueando o caminho; E para coletar; H para criar ou usar o machado; R para afiá-lo; I abre o Inventário; Q ativa Arrancada após desbloqueá-la; 1 a 9 troca itens da barra rápida."></canvas>
           <button id="mini-map-toggle" class="mini-map" type="button" aria-haspopup="dialog" aria-controls="world-map-dialog" aria-label="Abrir minimapa e mapa completo" hidden><span class="mini-map-caption"><span>MINIMAPA</span><small id="mini-map-exploration-status">Explorando</small></span><canvas id="mini-map-canvas" width="180" height="132" aria-hidden="true"></canvas><span class="mini-map-open-hint">Toque para expandir</span></button>
           <div id="quickbar" class="quickbar" role="toolbar" aria-label="Barra rápida de itens"></div>
-          <div id="craft-hint" class="craft-hint" role="status" hidden><button type="button" class="craft-hint-open" data-craft-hint-open aria-label="Abrir receitas no Inventário"><span class="craft-hint-label">Próximo passo</span><span class="craft-hint-text" data-craft-hint-text></span></button><button type="button" class="craft-hint-close" data-craft-hint-close aria-label="Dispensar o aviso">×</button></div>
+          <div class="hud-stack">
+            <div id="vitals-hud" class="vitals-hud is-full" role="status" hidden aria-label="Vida"><div class="vitals-bar"><span class="vitals-fill"></span><span class="vitals-label"></span></div><p class="vitals-note" hidden aria-live="polite"></p></div>
+            <div id="craft-hint" class="craft-hint" role="status" hidden><button type="button" class="craft-hint-open" data-craft-hint-open aria-label="Abrir receitas no Inventário"><span class="craft-hint-label">Próximo passo</span><span class="craft-hint-text" data-craft-hint-text></span></button><button type="button" class="craft-hint-close" data-craft-hint-close aria-label="Dispensar o aviso">×</button></div>
+          </div>
           <div id="room-build-tools" class="room-build-tools" hidden aria-label="Construção do quarto">
             <button id="room-build-toggle" type="button" aria-expanded="false" aria-controls="room-build-options">Construir</button>
             <div id="room-build-options" class="room-build-options" hidden>
@@ -289,7 +292,6 @@ html:not(.clareira-styles-ready) .shell{visibility:hidden}
           </div>
           <div class="scene-vignette" aria-hidden="true"></div>
           <div id="toast" class="toast" role="status" aria-live="polite"></div>
-          <div id="vitals-hud" class="vitals-hud is-full" role="status" hidden aria-label="Vida"><div class="vitals-bar"><span class="vitals-fill"></span><span class="vitals-label"></span></div><p class="vitals-note" hidden aria-live="polite"></p></div>
           <div class="mini-coords"><span class="live-pip"></span> MUNDO AO VIVO</div>
         </div>
         <form id="chat-form" class="chat-form" aria-label="Conversa" autocomplete="off">

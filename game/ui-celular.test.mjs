@@ -57,3 +57,34 @@ test('o menu aberto no celular usa a altura útil da tela, sem esconder o Ajuda 
 test('o aviso de chegada ao bosque é descartado ao reconectar', () => {
   assert.match(main, /if \(socket !== connection\) return;\s*forestArrivalNoticePending=false;/);
 });
+
+test('a vida e o "Próximo passo" dividem uma pilha no celular, em vez de duas posições fixas no mesmo ponto', () => {
+  const stack = html.match(/<div class="hud-stack">([\s\S]*?)<\/div>\s*<div id="room-build-tools"/)?.[1] || '';
+  assert.match(stack, /id="vitals-hud"/, 'a barra de vida mora dentro da pilha');
+  assert.match(stack, /id="craft-hint"/, 'o aviso do guia mora dentro da pilha');
+  assert.ok(stack.indexOf('id="vitals-hud"') < stack.indexOf('id="craft-hint"'), 'vida em cima, guia embaixo');
+  const mobile = css.match(/\.hud-stack\{display:contents\}\s*@media\(max-width:720px\)\{([\s\S]*?)\n\}/)?.[1] || '';
+  assert.ok(mobile, 'regra da pilha no celular encontrada');
+  assert.match(mobile, /\.hud-stack\{position:absolute;[^}]*top:var\(--clareira-hud-stack-top\)[^}]*flex-direction:column[^}]*gap:var\(--clareira-hud-stack-gap\)/);
+  assert.match(mobile, /\.hud-stack>\.vitals-hud,\.hud-stack>\.craft-hint\{position:static;/);
+  // Nenhum dos dois filhos tem posição vertical própria no celular: quem manda é a pilha.
+  assert.doesNotMatch(css, /@media\(max-width:720px\)\{[^}]*\.vitals-hud\{[^}]*top:\s*\d+px/);
+  assert.doesNotMatch(css, /@media\(max-width:720px\)\{[^}]*\.craft-hint\{[^}]*top:\s*\d+px/);
+  assert.match(css, /--clareira-hud-stack-top:112px/);
+});
+
+test('a pilha do HUD fica abaixo do Menu e à esquerda do minimapa nas telas de 320 e 390 px', () => {
+  // Menu: topo 59 + altura 44 = 103 px; a pilha começa em 112 px.
+  assert.ok(112 >= 59 + 44, 'a pilha começa abaixo do botão Menu');
+  // Minimapa: a última regra de largura para ≤720px vale (clamp(138px,40vw,164px)), colado à direita com 9 px de margem.
+  const widthRules = [...css.matchAll(/@media\(max-width:720px\)\{[^@]*?\.shell\.is-authenticated \.mini-map\{[^}]*?width:clamp\((\d+)px,(\d+)vw,(\d+)px\)/g)];
+  const [, lo, vw, hi] = widthRules.at(-1).slice(0, 4).map(Number);
+  assert.deepEqual([lo, vw, hi], [138, 40, 164], 'regra efetiva do minimapa no celular');
+  for (const width of [320, 390]) {
+    const miniLeft = width - 9 - Math.min(hi, Math.max(lo, width * vw / 100));
+    const stackRight = 8 + Math.min(214, width - 190);
+    assert.ok(stackRight <= miniLeft, `${width}px: a pilha (até ${stackRight}) não encosta no minimapa (desde ${miniLeft})`);
+  }
+  // O texto do guia é limitado a 3 linhas no celular, para não cobrir o personagem nem bloquear toques no mundo.
+  assert.match(css, /\.craft-hint-text\{display:-webkit-box;[^}]*-webkit-line-clamp:3/);
+});

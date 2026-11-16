@@ -3,6 +3,8 @@ import { lodgingStorageKey } from '../game/lodging-catalog.mjs';
 import { PRESET_REMOVE_MESSAGE, isPresetFurniture, placedFurnitureCount, withPresetFurniture } from '../game/room-presets.mjs';
 import { INVENTORY_ACTIONS, applyInventoryCommand } from '../game/inventory-prediction.mjs';
 import { applyRoomChestMove } from './room-chest-actions.mjs';
+import { openLairTreasure } from './lair-treasure-actions.mjs';
+import { LAIRS, createLairGuards, lairView } from '../game/lairs.mjs';
 import { roomChestId } from '../database/room-chest-store.mjs';
 import { cleanMovementDiagnosticEvent, MAX_MOVEMENT_DIAGNOSTIC_MESSAGE_BYTES } from '../game/movement-diagnostics.mjs';
 import { cleanPerformanceReport } from '../game/performance-telemetry.mjs';
@@ -665,6 +667,8 @@ export function createPrototypeServer({
   const firesByDimension = new Map();
   const wildlifeByDimension = new Map();
   const generatedWildlifeZones = new Set();
+  const generatedLairs = new Set();
+  const lairCycles = new Map(Object.values(LAIRS).map(lair=>[lair.id,{clearedAt:null,respawnAt:null,contributors:new Set()}]));
   const fireWrites = new Map();
   const campfireActionQueues = new Map();
   let fireLifecycleTimer = null;
@@ -809,6 +813,18 @@ export function createPrototypeServer({
     activateWorld(dimensionId);
     const dimension=dimensionById(dimensions,dimensionId);
     const population=wildlifeFor(dimensionId);
+    if(dimensionId==='surface')for(const lair of Object.values(LAIRS)){
+      const cycle=lairCycles.get(lair.id);
+      const contains=area.left<=lair.center.x&&area.right>=lair.center.x&&area.top<=lair.center.y&&area.bottom>=lair.center.y;
+      if(!contains)continue;
+      const guards=[...population.values()].filter(animal=>animal.lairId===lair.id);
+      if(!generatedLairs.has(lair.id)){for(const animal of createLairGuards(lair,now()))population.set(animal.id,animal);generatedLairs.add(lair.id);}
+      else if(!guards.some(animal=>animal.health>0)&&cycle.respawnAt&&now()>=cycle.respawnAt
+          &&![...peers.values()].some(player=>player.location==='clearing'&&(player.dimensionId||'surface')==='surface'&&Math.hypot(player.position.x-lair.center.x,player.position.y-lair.center.y)<30)){
+        for(const animal of createLairGuards(lair,now()))population.set(animal.id,animal);cycle.respawnAt=null;cycle.clearedAt=null;cycle.contributors.clear();
+      }
+    }
+    const commonCount=()=>[...population.values()].filter(animal=>!animal.lairId).length;
     const minZoneX=Math.max(0,Math.floor(area.left/WILDLIFE_ZONE_SIZE));
     const maxZoneX=Math.min(Math.ceil(WORLD_SIZE/WILDLIFE_ZONE_SIZE)-1,Math.floor(area.right/WILDLIFE_ZONE_SIZE));
     const minZoneY=Math.max(0,Math.floor(area.top/WILDLIFE_ZONE_SIZE));
@@ -816,7 +832,7 @@ export function createPrototypeServer({
     for(let zoneY=minZoneY;zoneY<=maxZoneY;zoneY+=1)for(let zoneX=minZoneX;zoneX<=maxZoneX;zoneX+=1){
       const zoneKey=`${dimensionId}:${zoneX}:${zoneY}`;
       if(generatedWildlifeZones.has(zoneKey))continue;
-      if(population.size>=WILDLIFE_POPULATION_LIMIT)continue;
+      if(commonCount()>=WILDLIFE_POPULATION_LIMIT)continue;
       generatedWildlifeZones.add(zoneKey);
       const nearPlayers=[...peers.values()].filter(player=>player.location==='clearing'&&(player.dimensionId||'surface')===dimensionId);
       const bounds={left:zoneX*WILDLIFE_ZONE_SIZE,right:(zoneX+1)*WILDLIFE_ZONE_SIZE,
@@ -859,7 +875,7 @@ export function createPrototypeServer({
           }
           return null;
         }});
-      for(const animal of spawned.slice(0,Math.max(0,WILDLIFE_POPULATION_LIMIT-population.size)))population.set(animal.id,animal);
+      for(const animal of spawned.slice(0,Math.max(0,WILDLIFE_POPULATION_LIMIT-commonCount())))population.set(animal.id,animal);
     }
   };
   let worldSyncTimer = null;
@@ -1143,6 +1159,12 @@ export function createPrototypeServer({
       lodgingLease: viewer.lodgingLease || null,
       dimensions: dimensionsForPlayer(viewer),
       recurringLeasesAvailable: storage.recurringLeasesAvailable === true,
+      lairs: viewer.location==='clearing'&&(viewer.dimensionId||'surface')==='surface' ? Object.values(LAIRS).filter(lair=>Math.hypot(lair.center.x-viewer.position.x,lair.center.y-viewer.position.y)<=viewer.aoiRadius).map(lair=>{
+        const population=wildlifeFor('surface');const guards=[...population.values()].filter(animal=>animal.lairId===lair.id);const cycle=lairCycles.get(lair.id);
+        const alive=guards.some(animal=>animal.health>0);if(!alive&&!cycle.clearedAt){cycle.clearedAt=now();cycle.respawnAt=now()+lair.respawnMs;}
+        const ownClaim=(viewer.lairClaims||[]).find(claim=>claim.lairId===lair.id);
+        const state=alive?'guarded':ownClaim&&ownClaim.availableAt>now()?'cooldown':cycle.respawnAt&&cycle.respawnAt<=now()?'empty':'ready';
+        return lairView(lair,{guards,state,readyAt:state==='cooldown'?ownClaim.availableAt:null});}) : [],
       cabinKeys: (viewer.cabinKeys || []).map(({ buildingId, isOwner }) => ({ buildingId, isOwner })),
       issuedCabinKeys: viewer.issuedCabinKeys || [],
       cabinOccupancy,
@@ -1661,7 +1683,8 @@ export function createPrototypeServer({
       : `Visitante ${id.slice(0, 3)}`;
     let lodgingClaim = null, lodgingLease = null;
     let lodgingClaims = [], lodgingLeases = [];
-    let cabinKeys = [], issuedCabinKeys = [];
+    let cabinKeys = [], issuedCabinKeys = [], lairClaims = [];
+    if (!profile.guest) { try { lairClaims = await storage.lairClaims.list(profile.id); } catch (error) { process.stderr.write(`Could not load lair claims: ${error.message}\n`); } }
     let contractState = { dayKey:resourceContractDayKey(), completed:[] };
     if (!profile.guest) {
       try { [cabinKeys, issuedCabinKeys] = await Promise.all([storage.getCabinKeys(profile.id), storage.getIssuedCabinKeys(profile.id)]); }
@@ -1829,7 +1852,7 @@ export function createPrototypeServer({
       roomKey,
       roomKind: roomDetails(roomKey).kind,
       roomBuildingId: roomDetails(roomKey).buildingId,
-      lodgingClaim, lodgingLease, lodgingClaims, lodgingLeases, cabinKeys, issuedCabinKeys, roomLodgingMode: activeRoomDetails.kind === 'lodging' ? activeRoomMode : null,
+      lodgingClaim, lodgingLease, lodgingClaims, lodgingLeases, cabinKeys, issuedCabinKeys, lairClaims, roomLodgingMode: activeRoomDetails.kind === 'lodging' ? activeRoomMode : null,
       contractState,
       dimensionId,
       discoveredDimensionIds, canStaffTravelDimensions,
@@ -2249,7 +2272,7 @@ export function createPrototypeServer({
         notice(socket,'A fagulha deixou um galho e uma folha para você. O Bosque das Brasas espera.','chime',{arrivalReady:true});
         broadcast(false);return;
       }
-      if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftAxe', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'chestMove', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeBuyGear', 'equipItem', 'unequipItem', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew', 'setSkyOverride', 'clearSkyOverrides'].includes(message.name)) return;
+      if (message.type !== 'action' || !['collect', 'hunt', 'openTreasure', 'work', 'craftAxe', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'chestMove', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeBuyGear', 'equipItem', 'unequipItem', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew', 'setSkyOverride', 'clearSkyOverrides'].includes(message.name)) return;
       if (message.name === 'allocateAttribute') {
         const key = typeof message.attribute === 'string' ? message.attribute : '';
         if (!ATTRIBUTE_KEYS.includes(key)) { notice(socket, 'Esse atributo não existe.'); return; }
@@ -2355,7 +2378,7 @@ export function createPrototypeServer({
         const damage = combatTechnique
           ? ability.damage + weaponDamage + attributeAttackBonus(player.inventory.attributes,player.inventory.learnedAbilities)
           : ability.damage + attributeSpellDamageBonus(player.inventory.attributes);
-        const result = await huntWildlifeTarget({ player, animal, population, now:now(), persist:persistPlayer,
+        const result = await huntWildlifeTarget({ player, animal, population, now:now(), persist:persistPlayer, onHit:(hit,attacker)=>{if(hit.lairId)lairCycles.get(hit.lairId)?.contributors.add(attacker.id);},
           rangeOverride:ability.range, damageOverride:damage, weaponOverride:combatTechnique?null:'spell',
           hasClearPath:(from,to,definition)=>hasClearInteractionPath(from,to,{targetRadius:definition.stats.radius,
             fires:[...firesFor(player.dimensionId||'surface').values()],ignoreWildlife:animal.id}), });
@@ -2500,11 +2523,21 @@ export function createPrototypeServer({
         return;
       }
 
+      if(message.name==='openTreasure'){
+        const lair=LAIRS[message.lairId];if(!lair){notice(socket,'Esse baú não existe.');return;}
+        const guards=[...wildlifeFor(lair.dimensionId).values()];const cycle=lairCycles.get(lair.id);
+        if(!cycle.respawnAt&&!guards.some(animal=>animal.lairId===lair.id&&animal.health>0))cycle.respawnAt=now()+lair.respawnMs;
+        const result=await openLairTreasure({player,lair,state:{guards,contributors:cycle.contributors},store:storage.lairClaims,storage,now:now(),actionId:randomUUID(),
+          runExclusive:fn=>{const key=player.accountId;const previous=progressWrites.get(key)||Promise.resolve();const next=previous.catch(()=>{}).then(fn);progressWrites.set(key,next);return next.finally(()=>{if(progressWrites.get(key)===next)progressWrites.delete(key);});},
+          hasClearPath:()=>hasClearInteractionPath(player.position,lair.chest,{targetRadius:0.3,fires:[...firesFor('surface').values()]})});
+        const messages={conta:'Você precisa de uma conta para abrir o baú.',local:'O baú só pode ser aberto no bosque da superfície.',caido:'Você precisa se levantar antes de abrir o baú.',guardas:'Os guardiões ainda vigiam o baú.',contribuicao:'Você precisa ter acertado um guardião deste covil.',inventario:'Libere um espaço no Inventário antes de abrir o baú.',recarregando:`O baú volta a encher em ${Math.max(1,Math.ceil(((result.availableAt||now())-now())/1000))} segundos.`, 'falha-salvamento':'Não consegui salvar a recompensa; nada foi cobrado.',longe:'Chegue mais perto do baú para abri-lo.'};
+        if(result.ok){notice(socket,result.sword?'+2 pratas e Espada curta de ferro.':'+2 pratas.','chime');broadcast();}else notice(socket,messages[result.reason]||'Não foi possível abrir o baú.');return;
+      }
       if(message.name==='hunt'){
         if(player.location!=='clearing'){notice(socket,'A fauna vive no bosque, não nos quartos.');return;}
         const population=wildlifeFor(player.dimensionId||'surface');
         const animal=population.get(typeof message.animalId==='string'?message.animalId:'');
-        const result=await huntWildlifeTarget({player,animal,population,now:now(),persist:persistPlayer,
+        const result=await huntWildlifeTarget({player,animal,population,now:now(),persist:persistPlayer, onHit:(hit,attacker)=>{if(hit.lairId)lairCycles.get(hit.lairId)?.contributors.add(attacker.id);},
           hasClearPath:(from,to,definition)=>hasClearInteractionPath(from,to,{targetRadius:definition.stats.radius,
             fires:[...firesFor(player.dimensionId).values()]})});
         if(result.status==='missing'||result.status==='too-far'){

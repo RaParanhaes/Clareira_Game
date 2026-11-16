@@ -7,7 +7,7 @@ export const GEAR_ITEM_PRESENTATION = Object.freeze({
 });
 export const GEAR_ITEM_USE = Object.freeze({
   shortSword: ['Arma', 'Deixe na barra rápida: causa 3 de dano nos animais, mais que a faca.'],
-  leatherJerkin: ['Armadura', 'Vista pelo botão abaixo. Quando vestido, dá 2 de defesa.'],
+  leatherJerkin: ['Armadura', 'Vista pelo botão abaixo. Quando vestido, reduz 2 do dano de animais.'],
 });
 
 // Texto do botão da ficha do item para armaduras guardadas na mochila.

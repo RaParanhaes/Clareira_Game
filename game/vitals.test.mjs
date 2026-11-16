@@ -5,6 +5,19 @@ import {
 } from './vitals.mjs';
 import { createVitalsHud, vitalsHudState, wakeText } from './vitals-hud.mjs';
 import { WILDLIFE_BY_ID } from './wildlife.mjs';
+import { armorDefense } from './equipment.mjs';
+import { equipItem } from './equipment-actions.mjs';
+import { createInventory } from './inventory.mjs';
+
+test('gibão vestido reduz o golpe do urso de 10 para 8; guardado na mochila não protege', () => {
+  const bear = WILDLIFE_BY_ID.get('bear');
+  assert.equal(damageFromAttack(bear.attack, armorDefense(createInventory())), 10);
+  const inventory = createInventory({ slots: [{ itemId: 'leatherJerkin', quantity: 1 }] });
+  assert.equal(damageFromAttack(bear.attack, armorDefense(inventory)), 10, 'na mochila não defende');
+  assert.equal(equipItem(inventory, 'leatherJerkin').ok, true);
+  assert.equal(damageFromAttack(bear.attack, armorDefense(inventory)), 8, 'vestido defende');
+  assert.equal(damageFromAttack({ force: .35 }, armorDefense(inventory)), 1, 'dano mínimo continua 1');
+});
 
 test('vida máxima cresce com o nível', () => {
   assert.equal(maxHealth(1), 42);

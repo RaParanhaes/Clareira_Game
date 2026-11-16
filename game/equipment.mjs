@@ -19,7 +19,7 @@ export const GEAR_PRICES = Object.freeze({ shortSword: 1500, leatherJerkin: 1200
 export const GEAR_LABELS = Object.freeze({ shortSword: 'Espada curta', leatherJerkin: 'Gibão de couro' });
 export const GEAR_BLURBS = Object.freeze({
   shortSword: 'Dano 3 contra animais. Deixe na barra rápida para usar.',
-  leatherJerkin: 'Defesa 2. Vista pelo Inventário.',
+  leatherJerkin: 'Reduz 2 do dano de animais. Vista pelo Inventário.',
 });
 
 export function isWeapon(itemId) { return Object.hasOwn(WEAPON_SPECS, itemId); }
@@ -33,7 +33,8 @@ export function selectedItemId(inventory) {
 
 export function weaponDamage(inventory) { return weaponDamageFor(selectedItemId(inventory)); }
 
-// Sem uso ainda: a branch de vida liga isto a playerDefense(player) numa linha.
+// Soma a defesa das armaduras vestidas (só o slot de corpo; a mochila não conta).
+// O servidor usa isto em playerDefense(player), que reduz o dano de fauna.
 export function armorDefense(inventory) {
   let total = 0;
   for (const slot of EQUIPMENT_SLOTS) {

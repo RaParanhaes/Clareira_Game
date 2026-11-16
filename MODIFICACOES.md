@@ -4,6 +4,7 @@ Uma linha por área. Atualizado a cada integração. O histórico completo está
 
 | Data | Área | Hash | Resumo | Evidências |
 |---|---|---|---|---|
+| 2026-11-15 | Interface: HUD de vida e guia (celular) | este commit | Barra de vida e aviso "Próximo passo" empilhados numa coluna (`.hud-stack`) abaixo do Menu e à esquerda do minimapa, sem sobreposição em 320 e 390 px; texto do guia limitado a 3 linhas no celular, para não cobrir o personagem nem bloquear toques no mundo | `~/clareira-evidencias/2026-11-15-main-integrada/` |
 | 2026-11-15 | Mundo: pedras perto da vila | ver `git log` (commit "mundo: pedras soltas perto da vila para o primeiro machado") | 6 pedras, 4 gravetos, 2 galhos fortes e 2 cipós soltos num anel rente às trilhas do ponto de chegada, determinísticos por semente, com ids fixos que reaparecem pela regra comum | `~/clareira-evidencias/2026-11-15-world-pedras-perto-da-vila/` |
 | 2026-11-15 | Interface: carga e CSP | c81ed85, d7402c8, 09fc833 | Sem estilo inline bloqueado pela CSP na carga; teclas só liberadas quando a tela de carga sai; modelos de aviso fora do download de runtime | `~/clareira-evidencias/2026-11-15-ui-carga-e-csp/` |
 | 2026-11-09 | Mundo: móveis do quarto | ver `git log` (commit "mundo: móveis predefinidos") | Predefinidos dos quartos privados são móveis movíveis e giráveis, mas não retiráveis | `logs/2026-11-09-world-moveis-predefinidos/` (na VPS) |

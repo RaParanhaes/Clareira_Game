@@ -1451,7 +1451,17 @@ dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header
 .vitals-label{position:absolute;inset:0;display:grid;place-items:center;color:var(--clareira-parchment,#f3e5c6);font-size:10px;font-weight:700;letter-spacing:.04em;text-shadow:0 1px 2px var(--clareira-ink,#111a35)}
 .vitals-note{max-width:min(78vw,300px);margin:0;padding:7px 11px;border:1px solid var(--clareira-edge,#d5bb8050);border-radius:4px 12px 4px 12px;background:color-mix(in srgb,var(--clareira-surface,#142833) 93%,transparent);color:var(--clareira-parchment,#f3e5c6);font-size:12px;line-height:1.35;text-align:center;box-shadow:0 8px 24px color-mix(in srgb,var(--clareira-ink,#111a35) 55%,transparent)}
 .vitals-note[hidden]{display:none}
-@media(max-width:720px){.vitals-hud{top:112px;left:10px;justify-items:start;transform:none}.vitals-bar{width:112px;height:14px}.vitals-note{max-width:210px;font-size:11px;text-align:left}}
+/* Pilha de avisos do HUD: no desktop os filhos mantêm a posição própria; no celular a vida e o
+   "Próximo passo" ficam empilhados na mesma coluna, sem se cobrir, abaixo do Menu e à esquerda do minimapa. */
+:root{--clareira-hud-stack-top:112px;--clareira-hud-stack-gap:6px}
+.hud-stack{display:contents}
+@media(max-width:720px){
+  .hud-stack{position:absolute;z-index:7;top:var(--clareira-hud-stack-top);left:8px;display:flex;flex-direction:column;align-items:flex-start;gap:var(--clareira-hud-stack-gap);width:min(214px,calc(100vw - 190px));pointer-events:none}
+  .hud-stack>.vitals-hud,.hud-stack>.craft-hint{position:static;inset:auto;transform:none;max-width:100%}
+  .hud-stack>.vitals-hud{justify-items:start;padding-left:2px}
+  .vitals-bar{width:112px;height:14px}
+  .vitals-note{max-width:100%;font-size:11px;text-align:left}
+}
 /* Ajuda e menu no celular (fix/ui-tutorial-e-celular): o essencial primeiro, custos recolhidos,
    textos conforme o modo de entrada e menu com rótulos. A consulta é a mesma de TOUCH_INPUT_QUERY. */
 .help-touch-only{display:none}
@@ -1519,8 +1529,8 @@ dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header
 .craft-recipe-note{color:color-mix(in srgb,var(--clareira-parchment) 72%,transparent);font-size:10px;line-height:1.4}
 .craft-recipe-button{justify-self:start;min-height:32px;padding:4px 12px;border:2px solid var(--clareira-afterglow);background:var(--clareira-ember);color:var(--clareira-ink);font:700 11px/1 'Trebuchet MS',system-ui,sans-serif;cursor:pointer}
 @media(max-width:720px){
-  .craft-hint{left:8px;right:auto;bottom:auto;top:112px;transform:none;max-width:min(214px,calc(100vw - 190px))}
   .craft-hint-open{padding:4px 7px;font-size:11px}
+  .craft-hint-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden}
   .craft-recipe-list{grid-template-columns:minmax(0,1fr)}
   .crafting-guide-next p{font-size:12px}
 }

@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import { PLACE_SERVICES, SERVICE_SECTIONS, EXTERIOR_JOB_SERVICES, placeServicePoints, nearestPlaceService,
   placeServiceAllowsAction } from './place-services.mjs';
 import { VILLAGE_JOB_POINTS } from './village-jobs.mjs';
+import { VILLAGE_JOB_POINT_LABELS } from './village-jobs-client.mjs';
+
+test('client point labels mirror the catalog labels', () => {
+  for (const point of VILLAGE_JOB_POINTS) assert.equal(VILLAGE_JOB_POINT_LABELS[point.id], point.label, point.id);
+});
 
 const surface = { location: 'clearing', dimensionId: 'surface' };
 const pointOf = (points, jobPointId) => points.find(point => point.jobPointId === jobPointId);

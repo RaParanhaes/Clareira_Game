@@ -8,7 +8,7 @@
 export const VILLAGE_JOB_POINT_LABELS = Object.freeze({
   board: 'Quadro da Recepção',
   delivery: 'Entrega da Pousada dos Pinheiros',
-  hearth: 'Fogueira das Brasas',
+  hearth: 'Fogueira da vila',
 });
 
 const JOB_DIRECTIONS = Object.freeze({
@@ -107,4 +107,12 @@ export function villageJobTurnsLine(job) {
   const remaining = Number.isFinite(job.remaining) ? job.remaining : 0;
   const limit = Number.isFinite(job.dailyLimit) ? job.dailyLimit : remaining;
   return `Turnos de hoje: ${remaining} de ${limit} restantes.`;
+}
+
+// Pacote avulso {type:'villageJobs', villageJobs}: devolve o snapshot a aplicar
+// (pode ser null para limpar), ou undefined quando não há o campo ou o pacote
+// é de outro tipo. O cliente aplica o mesmo snapshot que o pacote normal de estado.
+export function villageJobsPacketSnapshot(message) {
+  if (message?.type !== 'villageJobs' || !Object.hasOwn(message, 'villageJobs')) return undefined;
+  return message.villageJobs || null;
 }

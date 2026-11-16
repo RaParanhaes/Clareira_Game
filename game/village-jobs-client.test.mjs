@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   formatBronze, normalizeVillageJobs, villageJobRemainingMs, villageJobProgress, formatJobCountdown,
   villageJobStageLabel, villageJobStartState, villageJobFinishState, villageJobCancelAvailable,
-  villageJobPaymentNotice, villageJobTurnsLine, villageJobDirections,
+  villageJobPaymentNotice, villageJobTurnsLine, villageJobDirections, villageJobsPacketSnapshot,
 } from './village-jobs-client.mjs';
 
 const carrier = { id: 'carrier', label: 'Carregador', startPointId: 'board', finishPointId: 'delivery',
@@ -80,4 +80,12 @@ test('labels, directions and quota line are plain text for both jobs', () => {
   assert.ok(villageJobDirections(firekeeper).start.includes('fogueira'));
   assert.deepEqual(villageJobDirections({ id: 'other' }), { start: '', finish: '' });
   assert.equal(villageJobTurnsLine(carrier), 'Turnos de hoje: 3 de 3 restantes.');
+});
+
+test('a dedicated villageJobs packet yields the snapshot to apply; other packets and missing fields yield nothing (B1)', () => {
+  assert.deepEqual(villageJobsPacketSnapshot({ type: 'villageJobs', villageJobs: idle }), idle);
+  assert.equal(villageJobsPacketSnapshot({ type: 'villageJobs', villageJobs: null }), null, 'explicit null clears the panel');
+  assert.equal(villageJobsPacketSnapshot({ type: 'villageJobs' }), undefined, 'no field: nothing to apply');
+  assert.equal(villageJobsPacketSnapshot({ type: 'state', villageJobs: idle }), undefined, 'state packets keep their own path');
+  assert.equal(villageJobsPacketSnapshot(null), undefined);
 });

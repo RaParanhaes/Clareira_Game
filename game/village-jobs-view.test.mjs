@@ -137,3 +137,37 @@ test('ticker runs one frame at a time, stops when update asks, and never double-
   assert.equal(cancelled.length, 1, 'stop cancels the scheduled frame once');
   assert.equal(frames.size, 0);
 });
+
+test('away from the finish point the countdown still asks for ticks until readyAt (B2)', () => {
+  const { refs } = renderAt('board', snapshotWith(working), 5000);
+  assert.equal(refs.finish, null, 'no finish button at the board');
+  assert.equal(updateVillageJobTemporal(refs, { nowMs: 9000 }), true, 'counting down: keep ticking');
+  assert.equal(refs.countdown.textContent, '0:02');
+  assert.equal(updateVillageJobTemporal(refs, { nowMs: 11000 }), false, 'ready: ticker can stop');
+});
+
+test('the real ticker keeps running at the board until readyAt and then stops by itself (B2)', () => {
+  const { refs } = renderAt('board', snapshotWith(working), 5000);
+  const realNow = Date.now;
+  let now = 5000;
+  Date.now = () => now;
+  try {
+    const pending = [];
+    const raf = callback => { pending.push(callback); return pending.length; };
+    const ticker = createVillageJobTicker(ms => updateVillageJobTemporal(refs, { nowMs: ms }), { raf, caf: () => {} });
+    ticker.start();
+    assert.equal(pending.length, 1);
+    let frames = 0;
+    while (pending.length && frames < 50) {
+      now += 1000;
+      frames += 1;
+      pending.shift()();
+    }
+    assert.equal(now, 11000, 'the ticker stops exactly at readyAt, not at the first tick');
+    assert.equal(frames, 6, 'one frame per second from 6s to 11s');
+    assert.equal(ticker.running, false);
+    assert.equal(refs.countdown.textContent, 'Pronto');
+  } finally {
+    Date.now = realNow;
+  }
+});

@@ -743,7 +743,8 @@ export function createPrototypeServer({
     return firesByDimension.get(dimensionId);
   };
   const progressWrites = new Map();
-  const villageJobs = createVillageJobsServer({ storage, isHearthLit: (dimensionId, at) => {
+  // `now` é o mesmo relógio do servidor (Date.now em produção); os testes o controlam para virar o dia e medir o tempo mínimo.
+  const villageJobs = createVillageJobsServer({ now, storage, isHearthLit: (dimensionId, at) => {
     const fire = [...firesFor(dimensionId).values()].find(item => item.permanent && item.id === 'arrival');
     return Boolean(fire && campfireRemainingMs(fire, at) > 0);
   }, queueWrite: (profileId, task) => {
@@ -1106,9 +1107,10 @@ export function createPrototypeServer({
     const vitals = playerVitals(player), max = maxHealth(player.inventory?.level);
     const result = applyDamage(vitals, damageFromAttack({ force: Number(event.force) || 0 }, playerDefense(player)), at, max);
     if (result.damage <= 0) return 0;
-    villageJobs.cancelForProfile(player.accountId);
     vitals.waking = vitals.waking || result.fainted;
     if (result.fainted) {
+      // Só desmaio cancela o turno de ofício; dano comum não interrompe o trabalho.
+      villageJobs.cancelForProfile(player.accountId);
       player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq; player.moving = false;
       player.position.vx = 0; player.position.vy = 0; player.sitting = false; player.emote = null;
       // Uma viagem já iniciada é cancelada: caído, o jogador não troca de dimensão.
@@ -1143,6 +1145,7 @@ export function createPrototypeServer({
       inventoryState: { seq: viewer.inventorySeq || 0, inventory: inventorySnapshot(viewer.inventory) },
       flightPilotAllowed: viewer.flightPilotEnabled === true,
       vitals: playerVitalsSnapshot(viewer),
+      villageJobs: villageJobs.state(viewer),
       roomOwnerName: viewer.roomState.name,
       roomCanEdit: canEditCurrentRoom(viewer),
       canOwnerVisitHomes: viewer.canOwnerVisitHomes === true,
@@ -1275,7 +1278,7 @@ export function createPrototypeServer({
       'inventoryState', 'flightPilotAllowed', 'roomOwnerName', 'roomCanEdit', 'canOwnerVisitHomes', 'roomKey', 'roomKind', 'roomBuildingId',
       'roomLodgingMode', 'lodgingClaim', 'lodgingClaims', 'lodgingLeases', 'lodgingLease', 'recurringLeasesAvailable', 'cabinKeys',
       'issuedCabinKeys', 'cabinOccupancy', 'propertyListings', 'propertyRentalListings', 'propertyRequests', 'resourceContracts', 'marketQuotes', 'objectCatalog',
-      'governmentTaxPanel', 'resourceContractsRequireAccount', 'arrivalTutorial', 'dimensions', 'vitals',
+      'governmentTaxPanel', 'resourceContractsRequireAccount', 'arrivalTutorial', 'dimensions', 'vitals', 'villageJobs',
     ],
   });
   let pendingBroadcast = null;
@@ -1289,11 +1292,7 @@ export function createPrototypeServer({
       const refresh = pendingBroadcastRefreshWorld;
       pendingBroadcastRefreshWorld = false;
       streamSnapshots(peers, (player, includeWorld, includeWildlife) => {
-        const state = snapshot(player, includeWorld, includeWildlife);
-        void villageJobs.snapshot(player).then(villageJobsState => {
-          if (player.socket.readyState === WebSocket.OPEN) player.socket.send(JSON.stringify({ type:'villageJobs', villageJobs:villageJobsState }));
-        }).catch(() => {});
-        return state;
+        return snapshot(player, includeWorld, includeWildlife);
       }, now(), refresh);
     });
   };
@@ -1902,6 +1901,7 @@ export function createPrototypeServer({
     registration?.update({ location: player.location, contextId: playerContextId(player) });
     if(player.accountId && storage.getPropertyRequests) player.propertyRequests=await storage.getPropertyRequests(player.accountId);
     peers.set(socket, player);
+    villageJobs.invalidate(player.accountId);
     releaseAdmission();
     releaseAccountAdmission();
     indexPlayer(socket, player);
@@ -2270,7 +2270,7 @@ export function createPrototypeServer({
         broadcast(false);return;
       }
       if (message.type === 'action' && ['villageJobStart','villageJobFinish','villageJobCancel'].includes(message.name)) {
-        const result = await villageJobs.handle({ ...player, inventorySnapshot:() => inventorySnapshot(player.inventory) }, message);
+        const result = await villageJobs.handle(player, message, { inventorySnapshot:() => inventorySnapshot(player.inventory) });
         if (result?.notice) notice(socket, result.notice, result.ok ? 'chime' : 'soft', { villageJobResult:result });
         if (result?.ok) broadcast(false);
         return;

@@ -61,6 +61,7 @@ import { createPlacePanel } from './place-panel.mjs';
 import { createVillageJobHud } from './village-jobs-view.mjs';
 import { drawVillageJobMark, villageJobMarkThing } from './village-jobs-render.mjs';
 import { VILLAGE_JOB_POINTS } from './village-jobs.mjs';
+import { villageJobsPacketSnapshot } from './village-jobs-client.mjs';
 import { attachDialogDrag } from './dialog-drag.mjs';
 attachDialogDrag(document);
 const SVG_NS='http://www.w3.org/2000/svg';
@@ -367,6 +368,12 @@ let activeLodgingLease = null;
 let lodgingClaims = [], lodgingLeases = [], propertyRequests = [], propertyRentalListings = [];
 let villageJobs = null;
 const villageJobHud = createVillageJobHud();
+// Mesma atualização para o pacote normal de estado e para o pacote avulso villageJobs.
+function applyVillageJobsSnapshot(snapshot) {
+  villageJobs = snapshot || null;
+  const jobNotice = villageJobHud.update(villageJobs);
+  if (jobNotice) announce(jobNotice, 4500);
+}
 let recurringLeasesAvailable = false;
 let worldRoomLodgingMode = null;
 let cabinKeys = [], issuedCabinKeys = [], cabinOccupancy = [], propertyListings = [];
@@ -2313,6 +2320,11 @@ function connect() {
       if (message.sound) playEffect(message.sound);
       return;
     }
+    if (message.type === 'villageJobs') {
+      const jobsSnapshot = villageJobsPacketSnapshot(message);
+      if (jobsSnapshot !== undefined) applyVillageJobsSnapshot(jobsSnapshot);
+      return;
+    }
     if (message.type !== 'state') return;
     loadingReceivedStates++;loadingProcessingPhase=2;
     const statePayloadChars=typeof event.data==='string'?event.data.length:0;
@@ -2505,11 +2517,7 @@ function connect() {
     if (Object.hasOwn(message, 'propertyRentalListings')) propertyRentalListings=message.propertyRentalListings || [];
     if (Object.hasOwn(message, 'lodgingClaims')) lodgingClaims = message.lodgingClaims || [];
     if (Object.hasOwn(message, 'lodgingLeases')) lodgingLeases = message.lodgingLeases || [];
-    if (Object.hasOwn(message, 'villageJobs')) {
-      villageJobs = message.villageJobs || null;
-      const jobNotice = villageJobHud.update(villageJobs);
-      if (jobNotice) announce(jobNotice, 4500);
-    }
+    if (Object.hasOwn(message, 'villageJobs')) applyVillageJobsSnapshot(message.villageJobs);
     if (Object.hasOwn(message, 'lodgingClaim')) activeLodgingClaim = message.lodgingClaim || null;
     if (Object.hasOwn(message, 'lodgingLease')) activeLodgingLease = message.lodgingLease || null;
     if (typeof message.recurringLeasesAvailable === 'boolean') recurringLeasesAvailable = message.recurringLeasesAvailable;

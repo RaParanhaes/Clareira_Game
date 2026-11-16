@@ -78,11 +78,13 @@ export function updateVillageJobTemporal(refs, { guest = false, busy = false, no
   const remaining = villageJobRemainingMs(active, nowMs);
   const text = formatJobCountdown(remaining);
   if (countdown.textContent !== text) countdown.textContent = text;
-  if (!finish) return false;
   const state = villageJobFinishState({ active, pointId, nowMs, nearPoint: true, guest });
-  const disabled = busy || !state.enabled;
-  if (finish.disabled !== disabled) finish.disabled = disabled;
+  if (finish) {
+    const disabled = busy || !state.enabled;
+    if (finish.disabled !== disabled) finish.disabled = disabled;
+  }
   if (reason.textContent !== state.reason) reason.textContent = state.reason;
+  // A contagem continua em qualquer ponto até readyAt, mesmo sem botão Concluir.
   return remaining > 0;
 }
 

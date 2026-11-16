@@ -1,4 +1,5 @@
 import { GAME_DAY_DURATION_MS } from '../game/day-night.mjs';
+import { villageJobClaimMatchesCatalog } from '../game/village-jobs.mjs';
 import { randomBytes, randomUUID } from 'node:crypto';
 import {
   EMPTY_INVENTORY, hashPassword, normalizeUsername, tokenDigest,
@@ -133,6 +134,18 @@ async function sessionForToken(executor, token) {
   if (typeof token !== 'string' || token.length < 40 || token.length > 100) return null;
   const result = await executor.query(SESSION_QUERY, [Buffer.from(tokenDigest(token), 'hex')]);
   return result.rows[0] || null;
+}
+
+// Resposta de replay: a carteira é a atual, lida no mesmo cliente/transação que achou a conclusão.
+async function villageReplay(client, profileId, row) {
+  const inventory = await loadInventory(client, profileId);
+  return {
+    wallet: Object.fromEntries(CURRENCY_KEYS.map(key => [key, inventory[key] || 0])),
+    replay: true,
+    jobId: row.job_id,
+    amount: Number(row.amount_bronze),
+    paidAt: new Date(row.paid_at).getTime(),
+  };
 }
 
 async function loadInventory(pool, accountId) {
@@ -525,15 +538,15 @@ export function createPostgresStore(pool) {
       }
       const values = validateInventory(inventory);
       if (claim && (typeof claim.runId !== 'string' || !/^[0-9a-f-]{36}$/i.test(claim.runId)
-          || !['carrier','firekeeper'].includes(claim.jobId) || !/^\d{4}-\d{2}-\d{2}$/.test(claim.dayKey)
-          || amount !== 150)) throw Object.assign(new Error('Conclusão de ofício inválida.'), { status:400 });
+          || !villageJobClaimMatchesCatalog(claim, amount) || !/^\d{4}-\d{2}-\d{2}$/.test(claim.dayKey)))
+        throw Object.assign(new Error('Conclusão de ofício inválida.'), { status:400 });
       return withTransaction(pool, async client => {
         await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', ['lodging-profile', profileId]);
         if (claim) {
           const replay = await client.query('SELECT job_id, amount_bronze, paid_at FROM village_job_completions WHERE profile_id=$1 AND run_id=$2', [profileId, claim.runId]);
-          if (replay.rows[0]) return { replay:true, jobId:replay.rows[0].job_id, amount: Number(replay.rows[0].amount_bronze), paidAt:new Date(replay.rows[0].paid_at).getTime() };
+          if (replay.rows[0]) return villageReplay(client, profileId, replay.rows[0]);
           const quota = await client.query('SELECT count(*)::integer AS completed FROM village_job_completions WHERE profile_id=$1 AND job_id=$2 AND game_day=$3::date', [profileId, claim.jobId, claim.dayKey]);
-          if (Number(quota.rows[0]?.completed || 0) >= 3) throw Object.assign(new Error('A cota deste ofício já foi completada hoje.'), { status:409 });
+          if (Number(quota.rows[0]?.completed || 0) >= claim.dailyLimit) throw Object.assign(new Error('A cota deste ofício já foi completada hoje.'), { status:409, code:'village_quota' });
           await client.query('INSERT INTO village_job_completions (profile_id, run_id, job_id, game_day, amount_bronze) VALUES ($1,$2,$3,$4::date,$5)', [profileId, claim.runId, claim.jobId, claim.dayKey, amount]);
         }
         const wallet = await loadInventory(client, profileId);
@@ -542,7 +555,18 @@ export function createPostgresStore(pool) {
         const nextWallet = walletFromValue(nextValue);
         await storeWallet(client, profileId, nextWallet);
         await writeProgress(client, profileId, values);
-        return nextWallet;
+        if (!claim) return nextWallet;
+        return { wallet:nextWallet, replay:false, jobId:claim.jobId, amount, paidAt:Date.now() };
+      });
+    },
+
+    // Replay sem turno ativo: lê o ledger e a carteira atual na mesma transação (sobrevive a reinício).
+    async getVillageJobReplay(profileId, runId) {
+      if (typeof profileId !== 'string' || !/^[0-9a-f-]{36}$/i.test(profileId) || typeof runId !== 'string' || !/^[0-9a-f-]{36}$/i.test(runId)) return null;
+      return withTransaction(pool, async client => {
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', ['lodging-profile', profileId]);
+        const replay = await client.query('SELECT job_id, amount_bronze, paid_at FROM village_job_completions WHERE profile_id=$1 AND run_id=$2', [profileId, runId]);
+        return replay.rows[0] ? villageReplay(client, profileId, replay.rows[0]) : null;
       });
     },
 

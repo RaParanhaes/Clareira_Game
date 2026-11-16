@@ -5,6 +5,7 @@ import { AXE_TOOL_IDS } from './tool-progression.mjs';
 export const WEAPON_SPECS = Object.freeze({
   knife: Object.freeze({ label: 'faca simples', damage: 1 }),
   shortSword: Object.freeze({ label: 'espada curta', damage: 3 }),
+  ironShortSword: Object.freeze({ label: 'espada curta de ferro', damage: 4 }),
   ...Object.fromEntries(AXE_TOOL_IDS.map(id => [id, Object.freeze({ label: 'machado', damage: 2 })])),
 });
 
@@ -13,12 +14,13 @@ export const ARMOR_SPECS = Object.freeze({
 });
 
 export const EQUIPMENT_SLOTS = Object.freeze(['body']);
-export const GEAR_ITEM_IDS = Object.freeze(['shortSword', 'leatherJerkin']);
+export const GEAR_ITEM_IDS = Object.freeze(['shortSword', 'ironShortSword', 'leatherJerkin']);
 // Preços em bronzes (100 bronzes = 1 prata).
 export const GEAR_PRICES = Object.freeze({ shortSword: 1500, leatherJerkin: 1200 });
-export const GEAR_LABELS = Object.freeze({ shortSword: 'Espada curta', leatherJerkin: 'Gibão de couro' });
+export const GEAR_LABELS = Object.freeze({ shortSword: 'Espada curta', ironShortSword: 'Espada curta de ferro', leatherJerkin: 'Gibão de couro' });
 export const GEAR_BLURBS = Object.freeze({
   shortSword: 'Dano 3 contra animais. Deixe na barra rápida para usar.',
+  ironShortSword: 'Dano 4 contra animais. Deixe na barra rápida para usar.',
   leatherJerkin: 'Reduz 2 do dano de animais. Vista pelo Inventário.',
 });
 

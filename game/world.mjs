@@ -31,6 +31,7 @@ export { WORLD_CHUNK_SIZE };
 export { SOLID_WATER };
 import { WORLD_SIZE } from './world-scale.mjs';
 import { insideBoundaryWall, clampInsideBoundaryWall } from './world-boundary.mjs';
+import { LAIRS } from './lairs.mjs';
 export { WORLD_SIZE };
 export const WORLD_RESOURCE_GENERATION_VERSION = 4;
 export { DIMENSION_COORDINATE_OFFSET, WORLD_COORDINATE_VERSION };
@@ -670,11 +671,25 @@ function hasBuildingCollision(position, radius) {
   });
 }
 
+// Morro do covil: os obstáculos de LAIRS bloqueiam só na superfície. Cliente e servidor
+// usam esta mesma função, então o contorno da encosta vale nos dois lados.
+function hasLairObstacleCollision(position, radius) {
+  if (!isSurfaceDimension()) return false;
+  for (const lair of Object.values(LAIRS)) {
+    for (const obstacle of lair.obstacles) {
+      const dx = position.x - obstacle.x, dy = position.y - obstacle.y, reach = obstacle.radius + radius;
+      if (dx * dx + dy * dy < reach * reach) return true;
+    }
+  }
+  return false;
+}
+
 export function canOccupy(position, radius = PLAYER_RADIUS, height = 0, { ignoreFires = false, absoluteFeetZ = null } = {}) {
   if (!insideBoundaryWall(position, radius, WORLD_SIZE)) return false;
   const surfaceDimension = isSurfaceDimension();
   if (hasBuildingCollision(position, radius)) return false;
   if (hasTreeCollision(position,radius,absoluteFeetZ)) return false;
+  if (hasLairObstacleCollision(position, radius)) return false;
   // Fire is dynamic world state. Movement and interaction check the live fire
   // collection explicitly; this terrain predicate must not invent a spawn fire.
   // Deep water is swimmable; the depth changes movement and animation, not collision.

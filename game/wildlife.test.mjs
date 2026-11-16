@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createInventory, INVENTORY_ITEM_KEYS } from './inventory.mjs';
 import { AXE_TOOL_IDS } from './tool-progression.mjs';
 import { huntWildlifeTarget } from './wildlife-hunt.mjs';
+import { LAIRS, createLairGuards } from './lairs.mjs';
 import {
   createWildlifeForZone, playerPerception, stepWildlifePopulation,
   wildlifeStage, WILDLIFE_BY_ID, WILDLIFE_SPECIES, wildlifeCollisionBodies,
@@ -67,7 +68,7 @@ test('animais não atravessam uma pessoa parada e conseguem sair de uma sobrepos
 });
 
 test('all wildlife loot fits the player inventory and has complete life metadata', () => {
-  assert.equal(WILDLIFE_SPECIES.length, 23);
+  assert.equal(WILDLIFE_SPECIES.length, 24);
   for (const definition of WILDLIFE_SPECIES) {
     assert.ok(definition.lifeGoal);
     assert.ok(definition.shelter);
@@ -165,6 +166,37 @@ test('territorial animals cannot hit a player through a tree', () => {
   assert.equal(attackEvent.reach, WILDLIFE_BY_ID.get('bear').attack.reach);
   assert.ok(openPlayer.position.vx > 0);
   assert.equal(openPlayer.position.crouching,false);
+});
+
+test('guardas do covil atacam, perseguem dentro da coleira e retornam ao posto fora dela',()=>{
+  const makePlayer=(x,y)=>({id:'visitor',location:'clearing',dimensionId:'surface',moving:false,
+    position:{x,y,vx:0,vy:0,running:false,crouching:false}});
+  const run=(guard,player)=>stepWildlifePopulation(new Map([[guard.id,guard]]),{dimensionId:'surface',players:[player],
+    now:10000,deltaSeconds:.03,worldSize:1000,isOccluded:()=>false});
+  const post=LAIRS.ninho.guards[0];
+  const attacker=createLairGuards(LAIRS.ninho,10000)[0];
+  const oneTile=makePlayer(attacker.x+1,attacker.y);
+  const attackEvents=run(attacker,oneTile);
+  assert.ok(attackEvents.some(event=>event.type==='player-attacked'&&event.animalId===attacker.id));
+
+  const pursuer=createLairGuards(LAIRS.ninho,10000)[0];pursuer.x=post.x+8;
+  const nearby=makePlayer(post.x-8,post.y);
+  // Dormindo no posto, o guardião ignora quem está a 8 tiles (fora do despertar de 4).
+  run(pursuer,nearby);
+  assert.equal(pursuer.awake,false);
+  assert.notEqual(pursuer.state,'em-alerta');
+  // Desperto, ele persegue dentro da coleira.
+  pursuer.awake=true;pursuer.thinkAt=0;
+  run(pursuer,nearby);
+  assert.equal(pursuer.state,'em-alerta');
+  assert.equal(pursuer.targetX,nearby.position.x);
+
+  const returning=createLairGuards(LAIRS.ninho,10000)[0];returning.x=post.x+4;returning.y=post.y;
+  const beyondLeash=makePlayer(post.x+LAIRS.ninho.leash+1,post.y);
+  run(returning,beyondLeash);
+  assert.equal(returning.state,'voltando-ao-abrigo');
+  assert.equal(returning.targetX,post.x);
+  assert.equal(returning.targetY,post.y);
 });
 
 test('raptors defend their nest only when the player approaches it', () => {
@@ -360,4 +392,10 @@ test('cobertura do abrigo chega ao cliente e à família sem expor um marcador d
     assert.equal(canObserveWildlifeShelter(home,{x:70,y:76}),false);
     assert.equal(canObserveWildlifeShelter({...home,cover:null},{x:53,y:76}),false);
   }
+});
+
+test('monstros não entram na fauna aleatória e caveWarden não fica recolhido', async()=>{
+  const {wildlifePoolForTheme,wildlifeIsActive}=await import('./wildlife.mjs');
+  assert.equal(wildlifePoolForTheme('forest').some(definition=>definition.id==='caveWarden'),false);
+  assert.equal(wildlifeIsActive(WILDLIFE_BY_ID.get('caveWarden'),12),true);
 });

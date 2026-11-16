@@ -17,7 +17,8 @@ import { loadAccountRoom, saveAccountRoom } from './room-store.mjs';
 import { createJsonPlayerLocationStore } from './player-location-store.mjs';
 import { createJsonWorldStore } from './world-store.mjs';
 import { createJsonDimensionStore } from './dimension-store.mjs';
-import { LODGING_OFFER_BY_KEY, lodgingRoomKey } from '../game/lodging-catalog.mjs';
+import { LODGING_OFFER_BY_KEY, currencyValue, lodgingRoomKey } from '../game/lodging-catalog.mjs';
+import { createInventory } from '../game/inventory.mjs';
 import { getCampfireGatheringCount } from '../game/social.mjs';
 import { WILDLIFE_BY_ID } from '../game/wildlife.mjs';
 import { DEFAULT_DIMENSIONS } from '../game/dimensions.mjs';
@@ -2285,4 +2286,108 @@ test('viagem entre dimensões é recusada para quem não é da equipe nem aprend
   player.send(JSON.stringify({ type: 'dimensionTravel', dimensionId: 'breu', requestId: 'plain-traveler-denied' }));
   const notice = await noticePromise;
   assert.match(notice.text, /Teleporte Universal/);
+});
+
+
+
+// Covil do Ninho, ponta a ponta no servidor: o "E" perto de um guardião causa dano, três guardiões
+// derrotados liberam o baú, o baú paga 200 bronzes e a Espada curta de ferro uma vez só, e a
+// segunda tentativa responde com a recarga em mm:ss.
+test('covil: E perto do guardião causa dano, três guardiões liberam o baú uma vez e a recarga vem em mm:ss', async t => {
+  const stateDirectory = await mkdtemp(path.join(os.tmpdir(), 'clareira-covil-'));
+  // Conta de fixture (senha só do teste): a carteira JSON exige a conta registrada no arquivo de contas.
+  await createAccountStore({ directory: stateDirectory }).register({ username: 'covil_teste', password: 'covil-teste-fixture' });
+  const accountId = JSON.parse(await readFile(path.join(stateDirectory, 'accounts.json'), 'utf8')).accounts.find(item => item.username === 'covil_teste').id;
+  const profile = { id: accountId, username: 'covil_teste', guest: false,
+    inventory: createInventory({ slots: [{ itemId: 'shortSword', quantity: 1 }], selectedSlot: 0 }) };
+  const room = createTestServer(t, { ambientCampfire: false, port: 0, stateDirectory, allowedOrigin: TEST_ORIGIN,
+    databaseUrl: null, redisUrl: null, resolveSession: async token => token === 'covil-account' ? { profile } : null });
+  const address = await room.listen();
+  t.after(() => room.close());
+  // Posto à frente do guardião do meio (566, 142.3), a 1,2 de distância.
+  await createJsonPlayerLocationStore(stateDirectory).savePlayerLocation(accountId, {
+    location: 'clearing', dimensionId: 'surface', x: 566, y: 143.5, worldVersion: WORLD_COORDINATE_VERSION });
+  const player = openTestPlayer(address, 'covil-account');
+  t.after(() => player.terminate());
+  const welcome = waitFor(player, message => message.type === 'welcome', 2500, 'covil welcome');
+  await new Promise((resolve, reject) => { player.once('open', resolve); player.once('error', reject); });
+  const { id: selfId } = await welcome;
+  const guard = (state, index) => state.animals?.find(animal => animal.id === `lair:ninho:${index}`);
+  const self = state => state.players.find(item => item.id === selfId);
+  const near = (at, target, gap) => Math.hypot(at.x - target.x, at.y - target.y) <= gap;
+  const nextState = (predicate, timeout = 3000, description = 'state') =>
+    waitFor(player, message => message.type === 'state' && predicate(message), timeout, description);
+  const nextNotice = (predicate, description) =>
+    waitFor(player, message => message.type === 'notice' && predicate(message.text || ''), 3000, description);
+  const swordCount = state => state.inventoryState?.inventory?.ironShortSword || 0;
+  const wallet = state => currencyValue({ gold: state.inventoryState?.inventory?.gold || 0,
+    silver: state.inventoryState?.inventory?.silver || 0, bronze: state.inventoryState?.inventory?.bronze || 0 });
+
+  const initial = await nextState(message => guard(message, 0) && guard(message, 2), 4000, 'lair guards in the snapshot');
+  assert.equal(guard(initial, 2).health, 6);
+
+  // Anda com o movimento do cliente até ficar a até 1,3 do guardião (o alcance do E) e para ao chegar.
+  const reachGuard = async (index, gap = 1.3) => {
+    const current = await nextState(() => true, 3000, 'player and guard before walking');
+    const target = guard(current, index);
+    if (!target || near(self(current), target, gap)) return;
+    player.send(JSON.stringify({ type: 'input', ...directionToward(self(current), target) }));
+    await nextState(message => !guard(message, index) || near(self(message), guard(message, index), gap), 10000, 'player within E reach');
+    player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
+  };
+
+  // E (ação hunt) com a espada. O servidor limita a frequência de ações ("Espera só um instante") e o
+  // guardião empurra o jogador; por isso a cada tentativa o jogador volta ao alcance e o E é refeito.
+  const defeatGuard = async index => {
+    const outcomes = [];
+    for (let attempt = 0; attempt < 14; attempt += 1) {
+      const current = await nextState(() => true, 3000, 'guard snapshot');
+      if (!guard(current, index)) return outcomes;
+      await reachGuard(index);
+      const reply = waitFor(player, message => message.type === 'notice' && /ferido|1 osso|Chegue mais perto|Espera só/.test(message.text || ''), 3000, 'hunt reply');
+      player.send(JSON.stringify({ type: 'action', name: 'hunt', animalId: `lair:ninho:${index}` }));
+      const { text } = await reply;
+      if (/Espera só/.test(text)) { await new Promise(resolve => setTimeout(resolve, 450)); continue; }
+      outcomes.push(text);
+      if (/1 osso/.test(text)) return outcomes;
+      if (/ferido/.test(text)) {
+        const damaged = await nextState(message => guard(message, index) && guard(message, index).health < 6, 3000, 'guard health after E');
+        assert.ok(guard(damaged, index).health < 6, 'E perto do guardião causa dano');
+      }
+    }
+    return outcomes;
+  };
+  const allOutcomes = [];
+  for (const index of [2, 0, 1]) {
+    const outcomes = await defeatGuard(index);
+    allOutcomes.push(...outcomes);
+    assert.ok(outcomes.some(text => /1 osso/.test(text)), `guardião ${index} derrotado`);
+  }
+  assert.ok(allOutcomes.some(text => /ferido/.test(text)), 'algum golpe E feriu o guardião');
+
+  // Baú: sem guardiões vivos, ao alcance e com contribuição. Paga 200 bronzes e a espada uma vez só.
+  const chest = { x: 566, y: 134.6 };
+  const walkToChest = async () => {
+    const current = await nextState(() => true, 3000, 'player before the chest');
+    player.send(JSON.stringify({ type: 'input', ...directionToward(self(current), chest) }));
+    await nextState(message => near(self(message), chest, 0.4), 10000, 'player reaches the chest');
+    player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
+  };
+  await walkToChest();
+  const before = await nextState(() => true, 3000, 'inventory before chest');
+  const bronzeBefore = wallet(before);
+  const reward = nextNotice(text => /\+2 pratas e Espada curta de ferro/.test(text), 'first chest reward');
+  player.send(JSON.stringify({ type: 'action', name: 'openTreasure', lairId: 'ninho' }));
+  assert.match((await reward).text, /\+2 pratas e Espada curta de ferro/);
+  const opened = await nextState(message => swordCount(message) === 1, 3000, 'sword in inventory');
+  assert.equal(wallet(opened) - bronzeBefore, 200, 'o baú paga 200 bronzes');
+
+  // Intervalo entre ações: o servidor recusa ação repetida em instantes ('Espera só um instante').
+  await new Promise(resolve => setTimeout(resolve, 700));
+  const cooldown = nextNotice(text => /O baú volta a encher em \d\d:\d\d/.test(text), 'second chest attempt cooldown');
+  player.send(JSON.stringify({ type: 'action', name: 'openTreasure', lairId: 'ninho' }));
+  assert.match((await cooldown).text, /O baú volta a encher em \d\d:\d\d/);
+  const after = await nextState(() => true, 3000, 'inventory after second attempt');
+  assert.equal(wallet(after) - bronzeBefore, 200, 'a segunda tentativa não paga de novo');
+  assert.equal(swordCount(after), 1, 'a espada não é dada de novo');
 });

@@ -55,6 +55,18 @@ export const CLAREIRA = Object.freeze({
     flameSpark: '#fff5cf',
     smoke: '#d3bdad',
   }),
+  // Covil da Caverna do Ninho: pedra escura da boca e madeira/ferro/ouro do baú.
+  lair: Object.freeze({
+    rim: '#4b5159', cavity: '#15171b', floor: '#24272e', recessA: '#3a4a52', recessB: '#34404a',
+    stone: '#6f747c', stoneLight: '#8d939b', stoneShade: '#4d525a', stoneEdge: '#585e66', chip: '#828991',
+    keystone: '#9aa0a8', threshold: '#5d636b', thresholdLight: '#858b93', thresholdShade: '#3f444b',
+    woodDeep: '#2b1d12', woodRim: '#6e4424', woodTop: '#a06b3d', woodBand: '#a8713f', wood: '#8a5a33', woodFoot: '#5b3a22',
+    iron: '#3c3f44', gold: '#f2c14e', goldLight: '#ffe08a',
+    // Morro de ardósia com musgo e terra batida na entrada.
+    slate: '#3d454e', slateLight: '#5d6670', slateShade: '#2a3038', slateEdge: '#1e232a',
+    moss: '#5b7448', mossLight: '#7f9a5e', mossDark: '#3b4f32',
+    dirt: '#7b5f42', dirtLight: '#96775a', dirtShade: '#5a4330',
+  }),
   avatars: Object.freeze([
     Object.freeze({ coat: '#72966b', shade: '#42654c', hair: '#493b31', hat: '#d6ba75', scarf: '#d77f62', stitch: '#f2d181' }),
     Object.freeze({ coat: '#ca8766', shade: '#8d594d', hair: '#523f42', hat: '#e2bf7d', scarf: '#8db99a', stitch: '#f6d895' }),

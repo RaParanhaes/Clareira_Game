@@ -11,6 +11,7 @@ import { createDatabasePool } from './pool.mjs';
 import { createPostgresStore } from './store.mjs';
 import { createStaffManagementStore } from './staff-management.mjs';
 import { createRoomChestStore } from './room-chest-store.mjs';
+import { createJsonLairClaimStore, createLairClaimStore } from './lair-claim-store.mjs';
 import { createJsonCampfireStore, createJsonWorldStore } from '../scripts/world-store.mjs';
 import { createJsonPlayerLocationStore } from '../scripts/player-location-store.mjs';
 import { createJsonDimensionStore } from '../scripts/dimension-store.mjs';
@@ -25,6 +26,7 @@ export function createStorageAdapter({
     const interactions = createJsonInteractionStore(directory);
     return {
       accounts,
+      lairClaims: createJsonLairClaimStore(directory),
       ...interactions,
       ...createJsonObjectStore(directory),
       ...createJsonWorldStore(directory),
@@ -49,7 +51,8 @@ export function createStorageAdapter({
       // JSON: credita primeiro e grava depois (uma queda no meio favorece o jogador; aceito, JSON só serve a testes).
       creditWalletAndSaveProgress: async (accountId, amount, inventory) => {
         const wallet = await accounts.creditWallet(accountId, amount);
-        await saveAccountProgress(directory, accountId, inventory);
+        try { await saveAccountProgress(directory, accountId, inventory); }
+        catch (error) { await accounts.debitWallet(accountId, amount).catch(() => {}); throw error; }
         return wallet;
       },
       loadRoom: accountId => loadAccountRoom(directory, accountId),
@@ -92,9 +95,10 @@ export function createStorageAdapter({
     ...createPropertyMarketStatisticsStore(pool),
     staffManagement: createStaffManagementStore(pool),
     roomChests: createRoomChestStore(pool),
+    lairClaims: createLairClaimStore(pool),
     ready: async () => {
       const { rows } = await pool.query('SELECT max(version) AS version FROM schema_migrations');
-      if (Number(rows[0]?.version) < 36) throw new Error('Aplique todas as migrações PostgreSQL antes de iniciar o jogo.');
+      if (Number(rows[0]?.version || 0) < 38) throw new Error('Aplique todas as migrações PostgreSQL antes de iniciar o jogo.');
     },
     close: async () => {
       if (ownsPool) await pool.end();

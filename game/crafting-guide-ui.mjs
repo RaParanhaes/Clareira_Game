@@ -2,6 +2,7 @@
 // e a seção "Receitas" no Inventário. A lógica vive em crafting-guide.mjs;
 // aqui só se monta o DOM, e só se mexe nele quando o texto muda.
 import { craftingGuide } from './crafting-guide.mjs';
+import { isTouchInput } from './input-mode.mjs';
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -49,7 +50,7 @@ export function createCraftingGuideView({ hint, panel, onOpen, onCraft, onDismis
     guideFor: craftingGuide,
     // `visible` diz se o aviso do mundo deve aparecer agora (bosque, sem dispensa).
     update(inventory, { visible = true, dismissedStage = '', canCraft = true } = {}) {
-      const guide = craftingGuide(inventory);
+      const guide = craftingGuide(inventory, { touch: isTouchInput() });
       const showHint = visible && guide.showHint && dismissedStage !== guide.stage;
       const nextHintKey = `${showHint}|${guide.stage}|${guide.text}`;
       if (hint && nextHintKey !== hintKey) {

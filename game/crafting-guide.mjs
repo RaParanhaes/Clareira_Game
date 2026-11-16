@@ -54,21 +54,23 @@ function missingLine(status) {
 
 // Como conseguir o que falta. Galho e pedra se recolhem com E; cipó exige a
 // faca equipada (servidor: "Equipe a faca na barra rápida para cortar cipó").
-function nextMaterialHint(status, inventory) {
+function nextMaterialHint(status, inventory, touch = false) {
+  const use = touch ? 'toque em Usar' : 'E';
   const loose = status.missing.filter(material => material.itemId !== 'vines').map(material => material.label);
   const needsVines = status.missing.some(material => material.itemId === 'vines');
   const parts = [];
-  if (loose.length) parts.push(`recolha ${loose.join(' e ')} no bosque (E)`);
+  if (loose.length) parts.push(touch ? `recolha ${loose.join(' e ')} no bosque (${use})` : `recolha ${loose.join(' e ')} no bosque (E)`);
   if (needsVines) {
     parts.push(countOf(inventory, 'knife') > 0
-      ? 'corte o cipó com a faca equipada (1–9, depois E)'
+      ? (touch ? 'corte o cipó com a faca equipada na barra rápida (depois toque em Usar)' : 'corte o cipó com a faca equipada (1–9, depois E)')
       : 'sem a faca não há cipó; a recepção também vende a ferramenta pronta');
   }
   const sentence = parts.join('; ');
   return sentence ? `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}.` : '';
 }
 
-export function craftingGuide(inventory = {}) {
+// `touch`: no celular o texto fala em toque (Montar agora, Usar), no teclado em H, P e E.
+export function craftingGuide(inventory = {}, { touch = false } = {}) {
   const axe = axeToolFor(inventory);
   const pickaxe = pickaxeToolFor(inventory);
   const recipes = [
@@ -84,14 +86,14 @@ export function craftingGuide(inventory = {}) {
     stage = 'axe';
     const recipe = axeRecipe;
     title = 'Faça um machado de pedra';
-    if (recipe.ready) { text = `Você tem tudo: aperte H no bosque para amarrar o machado.`; key = 'H'; }
-    else text = `Faltam ${missingLine(recipe)}. ${nextMaterialHint(recipe, inventory)}`;
+    if (recipe.ready) { text = touch ? 'Você tem tudo: toque em Montar agora, nas receitas do Inventário, para amarrar o machado.' : 'Você tem tudo: aperte H no bosque para amarrar o machado.'; key = 'H'; }
+    else text = `Faltam ${missingLine(recipe)}. ${nextMaterialHint(recipe, inventory, touch)}`;
   } else if (!pickaxe) {
     stage = 'pickaxe';
     const recipe = pickaxeRecipe;
     title = 'Agora, uma picareta de pedra';
-    if (recipe.ready) { text = `Você tem tudo: aperte P no bosque para montar a picareta.`; key = 'P'; }
-    else text = `Faltam ${missingLine(recipe)}. ${nextMaterialHint(recipe, inventory)}`;
+    if (recipe.ready) { text = touch ? 'Você tem tudo: toque em Montar agora, nas receitas do Inventário, para montar a picareta.' : 'Você tem tudo: aperte P no bosque para montar a picareta.'; key = 'P'; }
+    else text = `Faltam ${missingLine(recipe)}. ${nextMaterialHint(recipe, inventory, touch)}`;
   } else {
     stage = 'mine';
     title = 'Ferramentas prontas';

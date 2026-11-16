@@ -3,10 +3,13 @@ import { ARMOR_SPECS, GEAR_BLURBS, GEAR_LABELS, GEAR_PRICES, isArmor, normalizeE
 export const EQUIPMENT_SLOT_LABELS = Object.freeze({ body: 'Corpo' });
 export const GEAR_ITEM_PRESENTATION = Object.freeze({
   shortSword: [GEAR_LABELS.shortSword, 'shortSword'],
+  // Rótulo literal: o da espada de ferro vem do baú do covil e ainda não está em GEAR_LABELS.
+  ironShortSword: ['Espada curta de ferro', 'ironShortSword'],
   leatherJerkin: [GEAR_LABELS.leatherJerkin, 'leatherJerkin'],
 });
 export const GEAR_ITEM_USE = Object.freeze({
   shortSword: ['Arma', 'Deixe na barra rápida: causa 3 de dano nos animais, mais que a faca.'],
+  ironShortSword: ['Arma', 'Deixe na barra rápida: causa 4 de dano nos animais, mais que a espada curta.'],
   leatherJerkin: ['Armadura', 'Vista pelo botão abaixo. Quando vestido, dá 2 de defesa.'],
 });
 

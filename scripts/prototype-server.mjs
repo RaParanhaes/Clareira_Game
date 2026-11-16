@@ -745,8 +745,9 @@ export function createPrototypeServer({
   const progressWrites = new Map();
   // `now` é o mesmo relógio do servidor (Date.now em produção); os testes o controlam para virar o dia e medir o tempo mínimo.
   const villageJobs = createVillageJobsServer({ now, storage, isHearthLit: (dimensionId, at) => {
-    const fire = [...firesFor(dimensionId).values()].find(item => item.permanent && item.id === 'arrival');
-    return Boolean(fire && campfireRemainingMs(fire, at) > 0);
+    // A chave do Map é o id da fogueira; o objeto recém-criado da chegada não o repete como campo.
+    const fire = firesFor(dimensionId).get('arrival');
+    return Boolean(fire?.permanent === true && campfireRemainingMs(fire, at) > 0);
   }, queueWrite: (profileId, task) => {
     const previous = progressWrites.get(profileId) || Promise.resolve();
     const next = previous.catch(() => {}).then(task);

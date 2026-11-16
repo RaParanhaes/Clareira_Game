@@ -51,17 +51,17 @@ function makeClock() {
 const self = (state, name) => state?.players?.find(player => player.name === name);
 const carrier = state => state?.villageJobs?.jobs.find(job => job.id === 'carrier');
 
-async function openRoom({ port, directory, now }) {
+async function openRoom({ port, directory, now, ambientCampfire = false }) {
   const accounts = createAccountStore({ directory });
-  const room = createPrototypeServer({ host: '127.0.0.1', port, allowedOrigin: ORIGIN, stateDirectory: directory, ambientCampfire: false, now, resolveSession: token => accounts.getSession(token) });
+  const room = createPrototypeServer({ host: '127.0.0.1', port, allowedOrigin: ORIGIN, stateDirectory: directory, ambientCampfire, now, resolveSession: token => accounts.getSession(token) });
   await room.listen();
   return { room, accounts, port };
 }
 
 // Conta real: cadastro pelo mesmo armazenamento de contas e posição inicial no quadro (fixture de sandbox).
-async function newAccount({ accounts, directory, label, offset = { x: 0, y: 0 } }) {
+async function newAccount({ accounts, directory, label, offset = { x: 0, y: 0 }, base = POINT.board }) {
   const created = await accounts.register({ username: `ofc${label}${Math.random().toString(36).slice(2, 8)}`, password: PASSWORD });
-  await createJsonPlayerLocationStore(directory).savePlayerLocation(created.profile.id, { location: 'clearing', dimensionId: 'surface', x: POINT.board.x + offset.x, y: POINT.board.y + offset.y, worldVersion: WORLD_COORDINATE_VERSION });
+  await createJsonPlayerLocationStore(directory).savePlayerLocation(created.profile.id, { location: 'clearing', dimensionId: 'surface', x: base.x + offset.x, y: base.y + offset.y, worldVersion: WORLD_COORDINATE_VERSION });
   return { token: created.token, id: created.profile.id, name: created.profile.username };
 }
 
@@ -372,6 +372,31 @@ test('two accounts credit in parallel on the JSON adapter without losing a credi
     assert.equal(mine.length, 4);
     assert.equal(new Set(mine.map(row => row.runId)).size, 4);
   } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+// Fogueira real do mundo (ambientCampfire ligado, sem mock de isHearthLit): o ajudante do fogo
+// precisa começar e concluir com a fogueira permanente da chegada na superfície.
+test('firekeeper with the real surface hearth: starts and completes on the permanent arrival fire', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'clareira-oficio-fogo-'));
+  const clock = makeClock();
+  let room = null, session = null;
+  try {
+    room = await openRoom({ port: 19657, directory, now: clock.now, ambientCampfire: true });
+    const me = await newAccount({ accounts: room.accounts, directory, label: 'f', base: POINT.hearth });
+    session = await connect(room.port, me);
+    await waitState(session, 'estado com ofícios da conta', st => self(st, me.name) && st.villageJobs?.requiresAccount === false);
+    const started = await act(session, { name: 'villageJobStart', jobId: 'firekeeper' });
+    assert.equal(started.ok, true, started.notice);
+    assert.equal(started.active.stage, 'working');
+    clock.advance(10_500);
+    const finished = await act(session, { name: 'villageJobFinish', runId: started.active.runId });
+    assert.equal(finished.ok, true, finished.notice);
+    assert.equal(value(finished.wallet), REWARD);
+  } finally {
+    await closeSession(session);
+    await room?.room.close();
     await rm(directory, { recursive: true, force: true });
   }
 });

@@ -1,7 +1,7 @@
 // Prova real no navegador dos ofícios da vila (carregador e ajudante do fogo).
 // Uma fase por chamada, sempre sequencial sob lock global e com limite de tempo:
 //   flock <browser.lock> timeout 300 node scripts/browser-village-jobs-check.mjs [worktree] [porta=19600] --viewport=1440|390|320
-// Cada fase grava candidate-<viewport>-report.md e .json; a fase falha se qualquer etapa essencial não ocorreu.
+// Cada fase grava final-<viewport>-report.md e .json; a fase falha se qualquer etapa essencial não ocorreu.
 //
 // Regras deste script:
 // - Conta real nova por fase (cadastro em /auth/register); visitante só na fase 1440, para a consulta.
@@ -36,7 +36,7 @@ const PORT = Number(POSITIONAL[1] || 19600);
 if (PORT < 19600 || PORT + 1 > 19899) throw new Error(`porta ${PORT} fora da faixa 19600–19899`);
 const BASE = `http://127.0.0.1:${PORT}`;
 const SANDBOX = path.join(path.dirname(WT), 'sandbox.mjs');
-const EVID = '/home/rafael/clareira-evidencias/2026-11-16-world-oficios-da-vila';
+const EVID = '/home/rafael/clareira-evidencias/2026-11-16-world-oficios-da-vila/prova-final';
 const CHROME = '/home/rafael/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome';
 
 // Instante fixo da prova (mesmo startedAt da baseline): 2026-11-16T22:16:53.633Z (19:16:53 em UTC-3).
@@ -72,7 +72,7 @@ const RETURN_TRAIL = [
 const HEARTH_WAYPOINT = { x: 90.8, y: 93 };
 // Etapas essenciais por fase: a fase só passa se todas ocorreram (cada etapa = verificação aprovada).
 const ESSENTIAL = {
-  1440: ['visitante-consulta', 'painel-abre', 'escape-fecha', 'botao-fecha', 'turno-carrier', 'caminhada-entrega', 'pagamento-carrier', 'carteira-visivel'],
+  1440: ['visitante-consulta', 'painel-abre', 'escape-fecha', 'botao-fecha', 'turno-carrier', 'caminhada-entrega', 'pagamento-carrier', 'carteira-visivel', 'caminhada-fogueira', 'turno-fogo', 'pagamento-fogo'],
   390: ['painel-abre', 'turno-carrier', 'toque-ida', 'toque-entrega', 'pagamento-carrier', 'toque-retorno-fogueira', 'turno-fogo', 'pagamento-fogo'],
   320: ['painel-abre', 'overflow-320', 'turno-carrier', 'toque-ida', 'toque-entrega', 'pagamento-carrier'],
 };
@@ -249,7 +249,7 @@ const layoutDom = page => page.evaluate(() => {
 });
 
 async function shot(page, n, label) {
-  const file = path.join(EVID, `candidate-${VP.name}-${n}-${label}.png`);
+  const file = path.join(EVID, `final-${VP.name}-${n}-${label}.png`);
   await page.screenshot({ path: file });
   report.screenshots.push({ vp: VP.name, label, file });
   log(`captura ${path.basename(file)}`);
@@ -261,6 +261,12 @@ async function openPanel(page) {
   if (VP.mobile) await page.locator('[data-action="context"]').first().tap();
   else { await page.locator('#world').focus(); await page.keyboard.press('e'); }
   await page.waitForSelector('#lodging-dialog[open]', { timeout: 8000 });
+  // No Quadro da Recepção o painel abre na lista de serviços; "Trabalhos da vila" é um deles (data-service-section="jobs").
+  const jobsChoice = page.locator('#lodging-dialog [data-service-section="jobs"]');
+  if (await jobsChoice.count()) {
+    if (VP.mobile) await jobsChoice.first().tap(); else await jobsChoice.first().click();
+    await page.waitForSelector('#lodging-dialog .village-job-card', { timeout: 8000 });
+  }
 }
 
 async function ensurePanel(page) {
@@ -376,8 +382,32 @@ async function waitArrival(page, target, tolerance, timeoutMs = 30000) {
 }
 
 // Mobile: um toque no canvas, fora do HUD, e espera a chegada pelo pathfinding normal.
-async function tapGo(page, target) {
+// Maior ponto da reta from→to (passo 0,5 tile) que ainda cai no canvas, fora do HUD. Null se nenhum.
+async function visibleAlong(page, from, to) {
+  const d = Math.hypot(to.x - from.x, to.y - from.y);
+  let best = null;
+  for (let step = 0.5; step <= d; step += 0.5) {
+    const p = { x: from.x + (to.x - from.x) * step / d, y: from.y + (to.y - from.y) * step / d };
+    const sc = await screenOf(page, p.x, p.y);
+    if (sc.inside && sc.onCanvas) best = p; else if (best) break;
+  }
+  return best;
+}
+
+// Alvo fora da tela do celular (ex.: ida-3 em 390 px): toca primeiro um ponto visível na direção dele, e repete.
+async function tapGo(page, target, depth = 0) {
   await closeIfOpen(page);
+  const direct = await screenOf(page, target.x, target.y);
+  if (!(direct.inside && direct.onCanvas) && depth < 6) {
+    const pos = (await readState(page)).position;
+    const via = await visibleAlong(page, pos, target);
+    if (via && Math.hypot(via.x - pos.x, via.y - pos.y) > 0.6) {
+      log(`${target.label} fora da tela: passo intermediário visível`, { via: { x: Number(via.x.toFixed(2)), y: Number(via.y.toFixed(2)) } });
+      const hop = await tapGo(page, { x: via.x, y: via.y, radius: 0.5, label: `${target.label} (passo)` }, depth + 1);
+      if (!hop.ok) return hop;
+      return tapGo(page, target, depth + 1);
+    }
+  }
   const s = await screenOf(page, target.x, target.y);
   const onGround = check(VP.name, `toque para ${target.label} cai no canvas, fora do HUD`, s.inside && s.onCanvas, s);
   if (!onGround) return { ok: false, distance: null };
@@ -425,7 +455,8 @@ async function startJob(page, jobId) {
   if (VP.mobile) await btn.tap(); else await btn.click();
   const started = await page.waitForSelector('.village-job-active', { timeout: 8000 }).then(() => true, () => false);
   const after = await panelDom(page);
-  check(VP.name, `${jobId}: turno iniciado no servidor (card ativo)`, started, { status: after.status, toast: after.toast, cards: after.cards.map(c => c.text) });
+  const diag = started ? null : await readState(page);
+  check(VP.name, `${jobId}: turno iniciado no servidor (card ativo)`, started, { status: after.status, toast: after.toast, cards: after.cards.map(c => c.text), clientState: diag });
   return started;
 }
 
@@ -445,7 +476,16 @@ async function finishJob(page, pointId, expectLabel) {
     const again = page.locator('[data-service-action="villageJobFinish"]').first();
     if ((await again.count()) && !(await again.isDisabled())) { if (VP.mobile) await again.tap(); else await again.click(); }
   }
-  for (let t = 0; t < 50; t++) { if ((await readState(page)).balance !== before) break; await sleep(300); }
+  // O relógio do navegador (tempo real) e o do servidor da sandbox (data fixa) não batem: "Pronto" pode aparecer
+  // antes de readyAt. Então repete a conclusão a cada 1,5 s até o servidor aceitar; o pagamento só entra uma vez.
+  for (let t = 0; t < 100; t++) {
+    if ((await readState(page)).balance !== before) break;
+    if (t % 5 === 4) {
+      const again = page.locator('[data-service-action="villageJobFinish"]').first();
+      if ((await again.count()) && !(await again.isDisabled())) { if (VP.mobile) await again.tap(); else await again.click(); }
+    }
+    await sleep(300);
+  }
   await sleep(2500); // deixa qualquer clique repetido chegar ao servidor
   const after = (await readState(page)).balance;
   const dom = await panelDom(page);
@@ -468,8 +508,13 @@ async function runDesktop() {
     if (check(VP.name, 'painel no quadro lista 2 ofícios', dom.cards.length === 2, dom.cards.map(c => c.text))) stage('painel-abre');
     await shot(page, 2, 'painel-dois-oficios');
     report.layout.push({ vp: VP.name, phase: 'painel-aberto', ...(await layoutDom(page)) });
-    await closePanel(page, 'escape');
-    if (check(VP.name, 'Escape fecha o painel', !(await isDialogOpen(page)))) stage('escape-fecha');
+    // Escape volta uma tela (panel-controller.mjs): dos trabalhos para a lista de serviços; o diálogo continua aberto.
+    await page.keyboard.press('Escape');
+    const backToServices = await page.waitForSelector('#lodging-dialog [data-service-section="jobs"]', { timeout: 5000 }).then(() => true, () => false);
+    check(VP.name, 'Escape volta dos trabalhos para a lista de serviços (diálogo segue aberto)', backToServices && await isDialogOpen(page));
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('#lodging-dialog')?.open, null, { timeout: 5000 }).catch(() => {});
+    if (check(VP.name, 'segundo Escape fecha o painel', !(await isDialogOpen(page)))) stage('escape-fecha');
     await openPanel(page);
     await closePanel(page, 'button');
     if (check(VP.name, 'botão Fechar fecha o painel', !(await isDialogOpen(page)))) stage('botao-fecha');
@@ -479,15 +524,36 @@ async function runDesktop() {
       stage('turno-carrier');
       await ensurePanel(page);
       await shot(page, 3, 'turno-em-andamento');
-      await closePanel(page, 'escape');
+      await closePanel(page, 'button');
       await shot(page, 4, 'turno-andamento-hud');
       if (await routeKeyboard(page, [...TRAIL, DELIVERY_LEG()])) stage('caminhada-entrega');
       else check(VP.name, 'chegou à entrega por teclado', false);
       await waitReady(page);
+      await ensurePanel(page);
+      await shot(page, '5a', 'carteira-antes-pagamento');
       if (await finishJob(page, 'delivery', 'Entregar caixa')) stage('pagamento-carrier');
       await shot(page, 5, 'pagamento-carteira');
       const wallet = (await panelDom(page)).wallet;
       if (check(VP.name, 'carteira mostrada no painel', wallet.startsWith('Carteira:'), wallet)) stage('carteira-visivel');
+      // Ajudante do fogo no mesmo fluxo de teclado: volta ao quadro, anda até a fogueira e conclui o turno.
+      if (overBudget()) skip('ajudante do fogo (1440)');
+      else {
+        if (await routeKeyboard(page, [...RETURN_TRAIL, HEARTH_LEG()])) stage('caminhada-fogueira');
+        await openPanel(page);
+        const fire = await startJob(page, 'firekeeper');
+        if (fire) {
+          stage('turno-fogo');
+          await ensurePanel(page);
+          await shot(page, 6, 'turno-fogo');
+          await closePanel(page, 'button');
+          await waitReady(page).catch(() => check(VP.name, 'indicador de pronto aparece no fogo', false));
+          if (await finishJob(page, 'hearth', 'Receber pagamento')) stage('pagamento-fogo');
+          await ensurePanel(page); // o painel segue aberto após o pagamento
+          await shot(page, 7, 'pagamento-carteira-fogo');
+          check(VP.name, 'carteira mostrada no painel (fogo)', (await panelDom(page)).wallet.startsWith('Carteira:'), (await panelDom(page)).wallet);
+          await closePanel(page, 'button');
+        }
+      }
     }
   } catch (error) {
     check(VP.name, 'fluxo de teclado sem exceção', false, String(error?.message || error));
@@ -522,6 +588,8 @@ async function runMobile({ withFirekeeper }) {
       if (await routeTap(page, TRAIL)) stage('toque-ida');
       if (await routeTap(page, [DELIVERY_LEG()])) stage('toque-entrega');
       await waitReady(page).catch(() => check(VP.name, 'indicador de pronto aparece na entrega', false));
+      await ensurePanel(page);
+      await shot(page, '5a', 'carteira-antes-pagamento');
       if (await finishJob(page, 'delivery', 'Entregar caixa')) stage('pagamento-carrier');
       await shot(page, 5, 'pagamento-carteira');
       const wallet = (await panelDom(page)).wallet;
@@ -541,7 +609,7 @@ async function runMobile({ withFirekeeper }) {
           await closePanel(page, 'button');
           await waitReady(page).catch(() => check(VP.name, 'indicador de pronto aparece no fogo', false));
           if (await finishJob(page, 'hearth', 'Receber pagamento')) stage('pagamento-fogo');
-          await openPanel(page);
+          await ensurePanel(page); // o painel segue aberto após o pagamento
           await shot(page, 7, 'pagamento-carteira-fogo');
           check(VP.name, 'carteira mostrada no painel (fogo)', (await panelDom(page)).wallet.startsWith('Carteira:'), (await panelDom(page)).wallet);
           await closePanel(page, 'button');
@@ -616,8 +684,8 @@ async function finish(exitCode) {
     `Tempo: cada fase tem limite de ${DEADLINE_MS / 1000} s dentro do comando de 300 s. Etapas que não rodarem por tempo entram em skipped e em etapas essenciais faltando, o que reprova a fase.`,
     'Nenhuma aprovação é declarada por este script: o resultado é prova automatizada para revisão do dono.',
   ];
-  const json = path.join(EVID, `candidate-${VP.name}-report.json`);
-  const md = path.join(EVID, `candidate-${VP.name}-report.md`);
+  const json = path.join(EVID, `final-${VP.name}-report.json`);
+  const md = path.join(EVID, `final-${VP.name}-report.md`);
   const lines = [
     `# Prova candidata — ofícios da vila (navegador real), viewport ${VP.name}`, '',
     `- Commit: \`${commit}\``, `- Worktree: \`${WT}\``,

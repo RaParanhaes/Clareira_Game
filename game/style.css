@@ -1536,10 +1536,15 @@ dialog.is-dragging :is(.inventory-dialog-head,.lodging-heading,.world-map-header
 }
 .icon-sprite{position:absolute}
 /* Ofícios da vila: indicador fora do diálogo e cartões do painel comum. */
+body:has(#lodging-dialog[open]) .village-job-progress{display:none}
 .village-job-progress{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:12;min-width:180px;max-width:min(92vw,320px);padding:6px 10px;border:1px solid var(--clareira-edge);background:var(--clareira-ink);color:var(--clareira-parchment);font:700 12px/1.3 'Trebuchet MS',system-ui,sans-serif;pointer-events:none}
 .village-job-progress[hidden]{display:none}
 .village-job-progress-bar{height:6px;margin-top:4px;background:var(--clareira-leaf);max-width:100%}
 .village-job-card button{min-height:44px;min-width:44px;padding:8px 12px;border:2px solid var(--clareira-afterglow);background:var(--clareira-ember);color:var(--clareira-ink);font:700 13px/1.2 'Trebuchet MS',system-ui,sans-serif;cursor:pointer}
 .village-job-card button:disabled{opacity:.6;cursor:not-allowed}
 .village-job-card small,.village-job-payment{overflow-wrap:anywhere}
-@media(max-width:360px){.village-job-progress{top:6px;font-size:11px}}
+/* Celular: a faixa sai do topo (nome do local à esquerda, minimapa à direita) e fica acima da linha de ações. */
+@media(max-width:720px){.village-job-progress{top:auto;bottom:calc(env(safe-area-inset-bottom) + 250px);max-width:min(92vw,300px)}}
+@media(max-width:360px){.village-job-progress{font-size:11px}}
+/* Painel de trabalhos: a lista rola e o último cartão fica alcançável, com respiro abaixo. */
+@media(max-width:740px){#lodging-dialog .service-panel-body{padding-bottom:calc(24px + env(safe-area-inset-bottom));scroll-padding-bottom:24px}}

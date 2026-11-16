@@ -4139,7 +4139,7 @@ function lairChestAtPointer(event) {
 
 // Toque no baú: ao alcance envia a intenção (o servidor decide); fora dele caminha até o baú.
 function touchLairChest(lair) {
-  announce(lairPromptText(lair, clientServerTime()));
+  announce(lairPromptText(lair, rawGameDayTimestampMs()));
   const near = nearestLairChest();
   if (near?.id === lair.id) sendPlayerCommand({ type: 'action', name: 'openTreasure', lairId: lair.id });
   else requestWalkPath({ x: lair.chest.x, y: lair.chest.y });
@@ -4261,7 +4261,7 @@ function updateContextActionLabel() {
     return;
   }
   const lair = nearestLairChest();
-  if (lair) { describe(lairPromptText(lair, clientServerTime())); return; }
+  if (lair) { describe(lairPromptText(lair, rawGameDayTimestampMs())); return; }
   const animal = nearestWildlifeTarget();
   if (animal) {
     const species = WILDLIFE_BY_ID.get(animal.speciesId);
@@ -7036,7 +7036,7 @@ function updateObjective() {
     : door.private ? `${door.name}: porta trancada. Use E com sua chave para entrar; a placa fica do lado de fora.` : `A porta de ${door.name} está aqui. Pressione E para entrar.`)
     : worldLocation === 'room' && worldRoomKind === 'lobby' ? 'Explore o estabelecimento e vá ao balcão para ver os serviços. E perto da porta sai.'
       : worldLocation === 'room' ? 'Explore o quarto. E perto da porta muda de local.'
-      : nearLair ? lairStatusText(nearLair, clientServerTime())
+      : nearLair ? lairStatusText(nearLair, rawGameDayTimestampMs())
       : nearbyAnimal ? nearbyAnimalText
       : getObjectiveText(localPosition, [...resources.values()], localInventory, objectiveFires, roomStateAvailable);
   if(ui.objective.textContent !== text) ui.objective.textContent = text;

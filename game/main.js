@@ -36,6 +36,7 @@ import { FALLEN_TREE_HALF_LENGTH, FALLEN_TREE_HEIGHT, FALLEN_TREE_RADIUS } from 
 import { assetScenesFor, createAssetLoader } from './content-assets.mjs';
 import { furnitureVisual,furnitureUse,roomFurnitureBedOccupantDepth,roomFurnitureDepthAnchor,roomFurnitureDrawLayers,roomFurnitureFootprintRadius,roomFurnitureRadius } from './furniture.mjs';
 import { compareSceneDepth } from './depth-order.mjs';
+import { LAIR_CHEST_PATH_RADIUS, drawLairChest, drawLairMouthLayer, findLairChestAtPoint, findNearestLairChest, lairPromptText, lairSceneThings, lairStatusText } from './lair-art.mjs';
 import { contentById } from './content-catalog.mjs';
 import { MEDIEVAL_FURNITURE, MEDIEVAL_FURNITURE_CATEGORIES } from './medieval-furniture.mjs';
 import { mergeQueuedState } from './state-inbox.mjs';
@@ -365,6 +366,7 @@ let lodgingClaims = [], lodgingLeases = [], propertyRequests = [], propertyRenta
 let recurringLeasesAvailable = false;
 let worldRoomLodgingMode = null;
 let cabinKeys = [], issuedCabinKeys = [], cabinOccupancy = [], propertyListings = [];
+let lairs = [];
 const warmedCabinsNearby=new Set();
 let resourceContracts = [];
 let marketQuotes = {};
@@ -2503,6 +2505,7 @@ function connect() {
     if (typeof message.recurringLeasesAvailable === 'boolean') recurringLeasesAvailable = message.recurringLeasesAvailable;
     if (Object.hasOwn(message, 'roomLodgingMode')) worldRoomLodgingMode = message.roomLodgingMode || null;
     if (Array.isArray(message.cabinKeys)) cabinKeys = message.cabinKeys;
+    if (Array.isArray(message.lairs)) lairs = message.lairs;
     if (Array.isArray(message.issuedCabinKeys)) issuedCabinKeys = message.issuedCabinKeys;
     if (Array.isArray(message.cabinOccupancy)) cabinOccupancy = message.cabinOccupancy;
     if (Array.isArray(message.propertyListings)) propertyListings = message.propertyListings;
@@ -3034,6 +3037,10 @@ function setWalkDestination(event) {
     if(roomBuildMode==='use'){walkToAndUseRoomFurniture(item);return;}
     sendPlayerCommand({type:'action',name:{remove:'removeFurniture',rotate:'rotateFurniture'}[roomBuildMode],id:item.id});
     roomBuildMode=null;ui.roomBuildOptions.hidden=true;ui.roomBuildToggle.setAttribute('aria-expanded','false');updateRoomBuildButtons();updateRoomObjectCard(item);return;
+  }
+  if (worldLocation === 'clearing') {
+    const chestLair = lairChestAtPointer(event);
+    if (chestLair) { touchLairChest(chestLair); return; }
   }
   const editing=worldLocation==='room'&&(roomBuildMode==='place'||roomBuildMode==='move'&&roomMovingId);
   const targetStarted=renderProfiler?performance.now():0;
@@ -4115,6 +4122,29 @@ function nearestWildlifeTarget(position=localPosition,maxDistance=1.45) {
   return nearest?{...nearest,distance:gap}:null;
 }
 
+// Baú do covil alcançável: mesmo raio e mesmo caminho que o servidor confere.
+function nearestLairChest(position=localPosition) {
+  if (worldLocation !== 'clearing') return null;
+  return findNearestLairChest(lairs, position, {
+    hasPath: (from, to) => hasClearInteractionPath(from, to, { fires: [...fires.values()], targetRadius: LAIR_CHEST_PATH_RADIUS }),
+  });
+}
+
+// Baú sob o ponteiro: só o próprio baú; a boca e as sombras não recebem toque.
+function lairChestAtPointer(event) {
+  const bounds = canvas.getBoundingClientRect();
+  return findLairChestAtPoint(lairs, { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
+    chest => point(chest.x, chest.y), spriteScale);
+}
+
+// Toque no baú: ao alcance envia a intenção (o servidor decide); fora dele caminha até o baú.
+function touchLairChest(lair) {
+  announce(lairPromptText(lair, clientServerTime()));
+  const near = nearestLairChest();
+  if (near?.id === lair.id) sendPlayerCommand({ type: 'action', name: 'openTreasure', lairId: lair.id });
+  else requestWalkPath({ x: lair.chest.x, y: lair.chest.y });
+}
+
 function nearestVisitTarget() {
   if (worldLocation !== 'clearing') return null;
   let nearest = null;
@@ -4230,6 +4260,8 @@ function updateContextActionLabel() {
     describe(description);
     return;
   }
+  const lair = nearestLairChest();
+  if (lair) { describe(lairPromptText(lair, clientServerTime())); return; }
   const animal = nearestWildlifeTarget();
   if (animal) {
     const species = WILDLIFE_BY_ID.get(animal.speciesId);
@@ -4299,6 +4331,12 @@ function action(name) {
     }
     if (useNearestRoomFurniture()) return;
     if (worldLocation === 'room') { announce('Aproxime-se da porta, de um móvel utilizável ou de um ponto de atendimento.'); return; }
+    const lair = nearestLairChest();
+    if (lair) {
+      // Perto do baú a intenção sempre vai ao servidor, que decide. O snapshot só dá o texto da dica.
+      sendPlayerCommand({ type: 'action', name: 'openTreasure', lairId: lair.id });
+      return;
+    }
     if(nearestWildlifeTarget()){action('hunt');return;}
     const target = nearestVisitTarget();
     if (target) {
@@ -6977,6 +7015,7 @@ function updateObjective() {
   const nearReceptionService = Boolean(nearestReceptionService());
   const objectiveFires=[...fires.values()];
   const nearbyAnimal=nearestWildlifeTarget(localRenderPosition,5.5);
+  const nearLair=nearestLairChest();
   const nearbySpecies=nearbyAnimal&&WILDLIFE_BY_ID.get(nearbyAnimal.speciesId);
   const shelterNames={burrow:'toca',cave:'caverna',thicket:'moita',den:'covil','tree-hollow':'oco de árvore','root-hollow':'raízes','high-nest':'ninho alto','canopy-nest':'copa','hedge-nest':'cerca viva','pond-edge':'beira d’água','warm-rock':'pedras quentes','open-meadow':'campo aberto','barn-edge':'abrigo do rebanho','rock-shelter':'abrigo de pedra','tall-grass':'capim alto'};
   const nearbyAnimalText=nearbyAnimal?`${nearbySpecies?.label||'Animal'} · ${nearbyAnimal.lifeStage} · ${nearbyAnimal.state.replaceAll('-',' ')}. ${(nearbySpecies?.lifeGoal||'explorar o bosque').split(',')[0]}. Abrigo: ${shelterNames[nearbySpecies?.shelter]||'vegetação'}. ${nearbyAnimal.awareness?`Notou você por ${nearbyAnimal.awareness}.`:'Agache com C para se aproximar em silêncio.'}`:'';
@@ -6994,6 +7033,7 @@ function updateObjective() {
     : door.private ? `${door.name}: porta trancada. Use E com sua chave para entrar; a placa fica do lado de fora.` : `A porta de ${door.name} está aqui. Pressione E para entrar.`)
     : worldLocation === 'room' && worldRoomKind === 'lobby' ? 'Explore o estabelecimento e vá ao balcão para ver os serviços. E perto da porta sai.'
       : worldLocation === 'room' ? 'Explore o quarto. E perto da porta muda de local.'
+      : nearLair ? lairStatusText(nearLair, clientServerTime())
       : nearbyAnimal ? nearbyAnimalText
       : getObjectiveText(localPosition, [...resources.values()], localInventory, objectiveFires, roomStateAvailable);
   if(ui.objective.textContent !== text) ui.objective.textContent = text;
@@ -7144,6 +7184,7 @@ function drawScene() {
         sortX:anchor.x+(nest?.01:-.01),sortY:anchor.y+(nest?.01:-.01),shelter});
     }
   }
+  if(worldLocation==='clearing')for(const thing of lairSceneThings(lairs))things.push(thing);
   if(worldLocation==='clearing')for(const animal of wildlife.values()){
     const position=renderedWildlifePosition(animal)||animal;
     things.push({type:'animal',x:position.x,y:position.y,animal:{...animal,...position}});
@@ -7332,6 +7373,8 @@ function drawScene() {
     if (thing.type === 'world-rock') drawWorldRock(thing.rock);
     if (thing.type === 'resource') drawResource(thing.resource, nearest?.id === thing.resource.id, worldClock);
     if (thing.type === 'wildlife-shelter') drawWildlifeShelter(thing.shelter,worldClock);
+    if (thing.type === 'lair-mouth') drawLairMouthLayer(ctx, point(thing.x, thing.y), thing.layer, spriteScale, resourceGeometryCache);
+    if (thing.type === 'lair-chest') drawLairChest(ctx, point(thing.x, thing.y), thing.state, spriteScale, resourceGeometryCache);
     if (thing.type === 'animal') drawWildlife(thing.animal,worldClock,nearestAnimal?.id===thing.animal.id);
     if (thing.type === 'tutorial-guide') drawTutorialGuide(thing.guide,worldClock);
     if (thing.type === 'fire') {

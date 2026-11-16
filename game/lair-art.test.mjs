@@ -28,19 +28,28 @@ test('a boca tem âncora de contato com o chão dentro da grade e nenhuma camada
   }
 });
 
-test('a soleira da frente cobre o contato com o chão, e o fundo também chega até ele', () => {
-  assert.ok(colorAt(lairMouthRects('front'), LAIR_MOUTH.anchorX, LAIR_MOUTH.anchorY), 'os lábios cobrem o ponto de contato');
-  assert.ok(colorAt(lairMouthRects('back'), LAIR_MOUTH.anchorX, LAIR_MOUTH.anchorY), 'o fundo chega até o chão');
+test('a terra batida da entrada chega ao contato com o chão, na camada de trás', () => {
+  assert.equal(colorAt(lairMouthRects('back'), LAIR_MOUTH.anchorX, LAIR_MOUTH.anchorY), CLAREIRA.lair.dirt);
 });
 
-test('o personagem aparece entre as camadas: o fundo cobre o vão e os lábios não', () => {
+test('o personagem aparece entre as camadas: a boca cobre o vão e os aros ficam à frente', () => {
   const back = lairMouthRects('back');
   const front = lairMouthRects('front');
-  assert.ok(colorAt(back, 48, 60), 'o fundo da caverna cobre o vão');
-  assert.equal(colorAt(front, 48, 60), null, 'os lábios não cobrem o centro do vão');
-  assert.ok(colorAt(front, 12, 60), 'o pilar esquerdo fica à frente');
-  assert.ok(colorAt(front, 84, 60), 'o pilar direito fica à frente');
-  assert.ok(colorAt(front, 48, 16), 'a verga fica à frente');
+  assert.ok(colorAt(back, 48, 60), 'a boca escura cobre o vão');
+  assert.equal(colorAt(front, 48, 60), null, 'os aros não cobrem o centro do vão');
+  assert.equal(colorAt(front, 48, 45), null, 'o vão sob o arco continua livre');
+  assert.ok(colorAt(front, 34, 60), 'o aro esquerdo fica à frente, na borda da boca');
+  assert.ok(colorAt(front, 61, 60), 'o aro direito fica à frente, na borda da boca');
+  assert.ok(colorAt(front, 48, 35), 'a pedra-chave fica à frente, no topo do arco');
+});
+
+test('o morro é de ardósia com musgo no topo, e a boca é um arco escavado, não um retângulo', () => {
+  const back = lairMouthRects('back');
+  assert.equal(colorAt(back, 48, 7), CLAREIRA.lair.moss, 'musgo no topo do morro');
+  assert.equal(colorAt(back, 48, 70), CLAREIRA.lair.cavity, 'boca escura no meio da encosta');
+  assert.equal(colorAt(back, 48, 41), CLAREIRA.lair.slateShade, 'o arco começa a fechar acima da boca');
+  assert.notEqual(colorAt(back, 30, 41), CLAREIRA.lair.cavity, 'fora do arco a encosta é pedra, não vão');
+  assert.notEqual(colorAt(back, 36, 41), CLAREIRA.lair.cavity, 'canto alto da caixa não é vão');
 });
 
 test('a origem da boca coloca a âncora no ponto de contato projetado', () => {

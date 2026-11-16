@@ -72,7 +72,7 @@ const species = [
   {
     id:'firefly', label:'Vagalume', form:'firefly', habitats:['forest','dark','magic','energy'], diet:'nectar-and-pollen', shelter:'tall-grass', activity:'nocturnal', lifeGoal:'acender luzes no entardecer, encontrar parceiros e polinizar flores', defense:'apaga o brilho e se esconde na relva; não ataca', attack:null, senses:{sight:3,hearing:2,smell:2,night:3,cone:3.1}, stats:{speed:1.2,radius:.06,health:1,maturityDays:1,lifespanDays:7,gestationDays:1,litter:[8,20]}, drops:[['glowDust',1]], colors:{body:'#4c4936',shadow:'#292b25',light:'#9ca856',accent:'#f0e58c',mark:'#24251e'}, size:[7,6], predators:['frog'], aggression:'timid'
   },  {
-    id:'caveWarden', label:'Guardião da pedra', form:'bear', habitats:['forest'], diet:'embers', shelter:'cave', activity:'nocturnal', lifeGoal:'vigiar o baú e afastar intrusos do covil', defense:'avança sobre qualquer intruso dentro do covil', attack:{mode:'swipe',when:'intruder',reach:1.3,force:1.6,cooldownMs:1800}, senses:{sight:10,hearing:10,smell:4,night:1.2,cone:3}, stats:{speed:2.4,radius:.48,health:6,maturityDays:1,lifespanDays:9999,gestationDays:1,litter:[1,1]}, drops:[['bone',1]], colors:{body:'#59636c',shadow:'#30373d',light:'#929ba0',accent:'#e5793e',mark:'#ef6c35'}, size:[27,22], predators:[], aggression:'monster', isMonster:true, alwaysActive:true, fixed:true
+    id:'caveWarden', label:'Guardião da pedra', form:'bear', habitats:['forest'], diet:'embers', shelter:'cave', activity:'nocturnal', lifeGoal:'vigiar o baú e afastar intrusos do covil', defense:'avança sobre qualquer intruso dentro do covil', attack:{mode:'swipe',when:'intruder',reach:1.3,force:1,cooldownMs:2200}, senses:{sight:10,hearing:10,smell:4,night:1.2,cone:3}, stats:{speed:2.4,radius:.48,health:6,maturityDays:1,lifespanDays:9999,gestationDays:1,litter:[1,1]}, drops:[['bone',1]], colors:{body:'#59636c',shadow:'#30373d',light:'#929ba0',accent:'#e5793e',mark:'#ef6c35'}, size:[27,22], predators:[], aggression:'monster', isMonster:true, alwaysActive:true, fixed:true
   },
   {
     id:'ashWraith', label:'Cinza-viva', form:'ashWraith', habitats:['inferno'], diet:'embers', shelter:'warm-rock', activity:'nocturnal', lifeGoal:'guardar fendas vulcânicas e perseguir intrusos', defense:'avança com golpes de brasa e recua para as rochas quentes', attack:{mode:'ember-swipe',when:'intruder',reach:1.25,force:2.1,cooldownMs:1700}, senses:{sight:10,hearing:8,smell:2,night:2.2,cone:3.1}, stats:{speed:3.1,radius:.3,health:10,maturityDays:1,lifespanDays:9999,gestationDays:1,litter:[1,1]}, drops:[['cinderShard',1],['emberCore',1,0.08]], colors:{body:'#783d32',shadow:'#352829',light:'#e27b42',accent:'#ffd36e',mark:'#241e24'}, size:[20,22], predators:[], aggression:'monster', isMonster:true
@@ -403,11 +403,16 @@ function chooseBehavior(animal, definition, context, events) {
   animal.sheltered=false;
   const fixedPost=definition.fixed?{x:animal.homeX??animal.shelterX,y:animal.homeY??animal.shelterY}:null;
   const fixedLeash=definition.fixed?(LAIRS[animal.lairId]?.leash??0):0;
+  const fixedWake=definition.fixed?(LAIRS[animal.lairId]?.wakeRadius??0):0;
+  // Guardião fixo dorme no posto até um jogador entrar no raio de despertar (wakeRadius).
+  // Desperto, persegue dentro da coleira (leash) e volta a dormir quando ninguém fica nela.
+  const guardReach=animal.awake?fixedLeash:fixedWake;
   const player=definition.fixed
-    ?closest(context.players,animal,Infinity,candidate=>distance(candidate.position||candidate,fixedPost)<=fixedLeash)
+    ?closest(context.players,animal,Infinity,candidate=>distance(candidate.position||candidate,fixedPost)<=guardReach)
     :closest(context.players, animal, Math.max(definition.senses.sight, definition.senses.hearing, definition.senses.smell) + 1,
       candidate => playerPerception(animal, candidate, definition, {isOccluded:context.isOccluded,windNoise:context.windNoise,night:context.night}).seen);
   if(definition.fixed){
+    animal.awake=Boolean(player);
     const post=fixedPost;
     if(player){
       const target=player.item,p=target.position||target,attack=definition.attack;

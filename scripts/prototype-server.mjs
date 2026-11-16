@@ -4,7 +4,7 @@ import { PRESET_REMOVE_MESSAGE, isPresetFurniture, placedFurnitureCount, withPre
 import { INVENTORY_ACTIONS, applyInventoryCommand } from '../game/inventory-prediction.mjs';
 import { applyRoomChestMove } from './room-chest-actions.mjs';
 import { openLairTreasure } from './lair-treasure-actions.mjs';
-import { LAIRS, createLairGuards, lairView } from '../game/lairs.mjs';
+import { LAIRS, createLairGuards, formatLairCountdown, lairView } from '../game/lairs.mjs';
 import { roomChestId } from '../database/room-chest-store.mjs';
 import { cleanMovementDiagnosticEvent, MAX_MOVEMENT_DIAGNOSTIC_MESSAGE_BYTES } from '../game/movement-diagnostics.mjs';
 import { cleanPerformanceReport } from '../game/performance-telemetry.mjs';
@@ -2532,7 +2532,7 @@ export function createPrototypeServer({
         const result=await openLairTreasure({player,lair,state:{guards,contributors:cycle.contributors},store:storage.lairClaims,storage,now:now(),actionId:randomUUID(),
           runExclusive:fn=>{const key=player.accountId;const previous=progressWrites.get(key)||Promise.resolve();const next=previous.catch(()=>{}).then(fn);progressWrites.set(key,next);return next.finally(()=>{if(progressWrites.get(key)===next)progressWrites.delete(key);});},
           hasClearPath:()=>hasClearInteractionPath(player.position,lair.chest,{targetRadius:0.3,fires:[...firesFor('surface').values()]})});
-        const messages={conta:'Você precisa de uma conta para abrir o baú.',local:'O baú só pode ser aberto no bosque da superfície.',caido:'Você precisa se levantar antes de abrir o baú.',guardas:'Os guardiões ainda vigiam o baú.',contribuicao:'Você precisa ter acertado um guardião deste covil.',inventario:'Libere um espaço no Inventário antes de abrir o baú.',recarregando:`O baú volta a encher em ${Math.max(1,Math.ceil(((result.availableAt||now())-now())/1000))} segundos.`, 'falha-salvamento':'Não consegui salvar a recompensa; nada foi cobrado.',longe:'Chegue mais perto do baú para abri-lo.'};
+        const messages={conta:'Você precisa de uma conta para abrir o baú.',local:'O baú só pode ser aberto no bosque da superfície.',caido:'Você precisa se levantar antes de abrir o baú.',guardas:'Os guardiões ainda vigiam o baú.',contribuicao:'Você precisa ter acertado um guardião deste covil.',inventario:'Libere um espaço no Inventário antes de abrir o baú.',recarregando:`O baú volta a encher em ${formatLairCountdown((result.availableAt||now())-now())}.`, 'falha-salvamento':'Não consegui salvar a recompensa; nada foi cobrado.',longe:'Chegue mais perto do baú para abri-lo.'};
         if(result.ok){notice(socket,result.sword?'+2 pratas e Espada curta de ferro.':'+2 pratas.','chime');broadcast();}else notice(socket,messages[result.reason]||'Não foi possível abrir o baú.');return;
       }
       if(message.name==='hunt'){

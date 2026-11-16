@@ -6966,7 +6966,10 @@ function drawWildlife(animal,time,highlight=false) {
   if(highlight){
     ctx.strokeStyle=CLAREIRA.signature.afterglow;ctx.lineWidth=Math.max(1,.8/spriteScale);
     ctx.beginPath();ctx.ellipse(0,0,width*.68,height*.2,0,0,Math.PI*2);ctx.stroke();
-    const text=definition.label+(animal.lifeStage==='filhote'?' · filhote':'');
+    // O corpo espelha ao andar para a esquerda; o rótulo volta à escala normal para não sair invertido.
+    if((animal.vx||0)<-.04)ctx.scale(-1,1);
+    // Guardião fixo é adulto: nunca recebe o sufixo de filhote.
+    const text=definition.label+(!definition.fixed&&animal.lifeStage==='filhote'?' · filhote':'');
     ctx.font=`bold ${Math.max(6,6.4/spriteScale)}px system-ui`;ctx.textAlign='center';
     const textWidth=ctx.measureText(text).width;
     pixel(-textWidth/2-2,-height*1.48,textWidth+4,8,'#192621');

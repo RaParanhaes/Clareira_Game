@@ -1,10 +1,11 @@
 import { CLAREIRA } from './theme.mjs';
+import { formatLairCountdown } from './lairs.mjs';
 
-// Covil da Caverna do Ninho: boca procedural em duas camadas e baú.
-// Sem DOM no carregamento do módulo; só as funções de pintura tocam o canvas.
+// Covil da Caverna do Ninho: morro de ardósia com boca escavada na encosta, em duas
+// camadas, e baú. Sem DOM no carregamento do módulo; só as funções de pintura tocam o canvas.
 
-// Boca em grade lógica de 96×88. A âncora (48, 84) é o contato com o chão,
-// no mesmo eixo de pivô dos personagens (célula 96×96, pivô em y 84).
+// Grade lógica de 96×88. A âncora (48, 84) é o contato com o chão, no mesmo eixo de
+// pivô dos personagens (célula 96×96, pivô em y 84).
 export const LAIR_MOUTH = Object.freeze({ width: 96, height: 88, anchorX: 48, anchorY: 84 });
 export const LAIR_INTERACT_RADIUS = 1.8;
 export const LAIR_CHEST_PATH_RADIUS = 0.3;
@@ -18,58 +19,139 @@ export const LAIR_CHEST_CLOSED = Object.freeze({
 // Versão aberta procedural, grade 24×24, contato em (12, 24).
 export const LAIR_CHEST_OPEN = Object.freeze({ width: 24, height: 24, anchorX: 12, anchorY: 24 });
 
-const ARCH_CENTER_Y = 52;
-const ARCH_TOP_Y = 18;
-const ARCH_RADIUS_X = 30;
-const CENTER_X = 48;
+const CENTER_X = LAIR_MOUTH.anchorX;
+const GROUND_Y = LAIR_MOUTH.anchorY;
+const MOUND_TOP_Y = 6;
+const MOUND_BASE_HALF = 40; // meia largura do morro no chão (x 8–88)
+const MOUND_TOP_HALF = 18;  // e no topo
+const CAVE_TOP_Y = 40;      // ponta do arco da boca
+const CAVE_SPRING_Y = 56;   // onde o arco vira parede reta
+const CAVE_HALF_W = 13;     // meia largura interna da boca
+const LIP_WIDTH = 3;        // espessura do aro de pedra à frente
+const FLOOR_Y = 74;         // a partir daqui o chão da gruta fica mais claro
+const DIRT_TOP_Y = 77;      // faixa de terra batida na entrada
+const STRATUM_EVERY = 7;    // estratos horizontais na encosta
 
-function archHalfWidth(y) {
-  if (y >= ARCH_CENTER_Y) return ARCH_RADIUS_X;
-  const t = (ARCH_CENTER_Y - y) / (ARCH_CENTER_Y - ARCH_TOP_Y);
-  return ARCH_RADIUS_X * Math.sqrt(Math.max(0, 1 - t * t));
+const rect = (x, y, w, h, color) => ({ x, y, w, h, color });
+
+// Ruído determinístico por linha: -1, 0 ou 1. Mesma entrada, mesmo desenho (cache estável).
+function rowJitter(y, salt) {
+  const n = Math.sin((y + 1) * 12.9898 + salt * 78.233) * 43758.5453;
+  return Math.floor((n - Math.floor(n)) * 3) - 1;
 }
 
-// Fundo da caverna: fica ATRÁS do personagem. Aro de pedra, interior escuro e
-// uma faixa mais clara no chão da gruta.
-function backRects() {
+// Meia largura do morro em y: base larga no chão, topo mais estreito, bordas irregulares.
+function moundHalfWidth(y) {
+  const t = Math.min(1, Math.max(0, (GROUND_Y - y) / (GROUND_Y - MOUND_TOP_Y)));
+  return MOUND_BASE_HALF - (MOUND_BASE_HALF - MOUND_TOP_HALF) * t ** 1.4 + rowJitter(y, 2);
+}
+
+// Meia largura interna da boca em y (0 acima da ponta do arco).
+function caveHalfWidth(y) {
+  if (y < CAVE_TOP_Y) return 0;
+  if (y >= CAVE_SPRING_Y) return CAVE_HALF_W;
+  const t = (CAVE_SPRING_Y - y) / (CAVE_SPRING_Y - CAVE_TOP_Y);
+  return CAVE_HALF_W * Math.sqrt(Math.max(0, 1 - t * t));
+}
+
+// Parede da boca com bordas irregulares. Camada de fundo e aro usam esta mesma linha,
+// então as duas camadas encaixam sem fresta.
+function caveEdge(y) {
+  const half = caveHalfWidth(y);
+  return half > 0 ? Math.max(1, Math.round(half + rowJitter(y, 5))) : 0;
+}
+
+// Fundo da caverna (ATRÁS do personagem): o morro, a terra da entrada e a boca escura.
+function moundRects() {
+  const S = CLAREIRA.lair;
   const rects = [];
-  for (let y = ARCH_TOP_Y; y <= LAIR_MOUTH.anchorY; y += 1) {
-    const outer = Math.round(archHalfWidth(y + 0.5));
-    if (outer <= 0) continue;
-    const inner = Math.max(0, outer - 4);
-    rects.push({ x: CENTER_X - outer, y, w: outer * 2, h: 1, color: CLAREIRA.lair.rim });
-    if (inner > 0) rects.push({ x: CENTER_X - inner, y, w: inner * 2, h: 1, color: y >= 74 ? CLAREIRA.lair.floor : CLAREIRA.lair.cavity });
+  for (let y = MOUND_TOP_Y; y < GROUND_Y; y += 1) {
+    const half = Math.round(moundHalfWidth(y));
+    const left = CENTER_X - half;
+    const width = half * 2;
+    rects.push(rect(left, y, width, 1, S.slate));
+    rects.push(rect(left, y, 5, 1, S.slateLight));              // face iluminada à esquerda
+    rects.push(rect(left + width - 7, y, 7, 1, S.slateShade));  // face em sombra à direita
+    if (y % STRATUM_EVERY === 3) rects.push(rect(left + 6, y, width - 14, 1, S.slateShade));
+    rects.push(rect(left, y, 1, 1, S.slateEdge), rect(left + width - 1, y, 1, 1, S.slateEdge));
   }
-  rects.push({ x: 40, y: 38, w: 3, h: 2, color: CLAREIRA.lair.recessA }, { x: 56, y: 46, w: 2, h: 2, color: CLAREIRA.lair.recessB });
+  // Musgo: manto no topo e gotas escorrendo pela borda esquerda da encosta.
+  for (let y = MOUND_TOP_Y; y < 30; y += 1) {
+    const half = Math.round(moundHalfWidth(y));
+    if (y < MOUND_TOP_Y + 3) rects.push(rect(CENTER_X - half + 2, y, half * 2 - 4, 1, S.moss));
+    else if (y % 3 === 0) rects.push(rect(CENTER_X - half + 2 + (y % 4), y, 2, 1, S.mossDark));
+    if (y > MOUND_TOP_Y + 3 && y % 4 === 1) rects.push(rect(CENTER_X - half + 3, y, 2, 1, S.mossLight));
+  }
   return rects;
 }
 
-// Lábios de pedra: ficam À FRENTE do personagem. O vão central fica sem
-// cobertura, para o personagem aparecer entre as duas camadas.
-function frontRects() {
+// Terra batida na frente da boca: faixa que se alarga até o contato com o chão.
+function dirtRects() {
+  const S = CLAREIRA.lair;
   const rects = [];
-  // Pilares laterais, com luz à esquerda e sombra à direita.
-  rects.push({ x: 8, y: 36, w: 16, h: 49, color: CLAREIRA.lair.stone }, { x: 8, y: 36, w: 3, h: 49, color: CLAREIRA.lair.stoneLight }, { x: 21, y: 36, w: 3, h: 49, color: CLAREIRA.lair.stoneShade });
-  rects.push({ x: 72, y: 36, w: 16, h: 49, color: CLAREIRA.lair.stone }, { x: 85, y: 36, w: 3, h: 49, color: CLAREIRA.lair.stoneShade }, { x: 72, y: 36, w: 3, h: 49, color: CLAREIRA.lair.stoneLight });
-  rects.push({ x: 10, y: 50, w: 4, h: 3, color: CLAREIRA.lair.stoneEdge }, { x: 19, y: 66, w: 3, h: 2, color: CLAREIRA.lair.chip }, { x: 74, y: 58, w: 4, h: 3, color: CLAREIRA.lair.stoneEdge }, { x: 80, y: 72, w: 3, h: 2, color: CLAREIRA.lair.chip });
-  // Verga e pedra-chave no topo.
-  rects.push({ x: 12, y: 14, w: 72, h: 8, color: CLAREIRA.lair.stone }, { x: 12, y: 14, w: 72, h: 1, color: CLAREIRA.lair.stoneLight }, { x: 12, y: 21, w: 72, h: 1, color: CLAREIRA.lair.stoneShade });
-  rects.push({ x: 44, y: 10, w: 8, h: 4, color: CLAREIRA.lair.keystone });
-  // Lábios que acompanham o arco externo.
-  for (let y = 22; y < 36; y += 1) {
-    const outer = Math.round(archHalfWidth(y + 0.5));
-    if (outer <= 0) continue;
-    rects.push({ x: CENTER_X - outer - 3, y, w: 6, h: 1, color: CLAREIRA.lair.stone });
-    rects.push({ x: CENTER_X + outer - 3, y, w: 6, h: 1, color: CLAREIRA.lair.stone });
+  for (let y = DIRT_TOP_Y; y <= GROUND_Y; y += 1) {
+    const half = 24 + (y - DIRT_TOP_Y);
+    rects.push(rect(CENTER_X - half, y, half * 2, 1, S.dirt));
+    rects.push(rect(CENTER_X - half + 3 + ((y * 7) % 18), y, 3, 1, S.dirtLight));
+    rects.push(rect(CENTER_X + half - 6 - ((y * 5) % 12), y, 4, 1, S.dirtShade));
   }
-  // Soleira no chão: a última linha é a âncora de contato.
-  rects.push({ x: 6, y: 80, w: 84, h: 5, color: CLAREIRA.lair.threshold }, { x: 6, y: 80, w: 84, h: 1, color: CLAREIRA.lair.thresholdLight }, { x: 6, y: 84, w: 84, h: 1, color: CLAREIRA.lair.thresholdShade });
   return rects;
+}
+
+// Vão escuro escavado na encosta: arco irregular, parede em sombra e chão da gruta.
+// Vem depois da terra, então a boca fica por cima da faixa de terra.
+function caveRects() {
+  const S = CLAREIRA.lair;
+  const rects = [];
+  for (let y = CAVE_TOP_Y; y < GROUND_Y; y += 1) {
+    const edge = caveEdge(y);
+    if (edge <= 0) continue;
+    const color = y >= FLOOR_Y ? S.floor : y < CAVE_TOP_Y + 4 ? S.slateShade : S.cavity;
+    rects.push(rect(CENTER_X - edge, y, edge * 2, 1, color));
+  }
+  // Fendas da parede, para o fundo não ser um buraco liso.
+  rects.push(rect(38, 50, 3, 2, S.recessA), rect(57, 60, 2, 2, S.recessB), rect(42, 66, 2, 1, S.recessB));
+  return rects;
+}
+
+// Aro de pedra à frente do personagem: só nas bordas da boca. O vão central fica
+// sem cobertura, para o personagem aparecer entre as duas camadas.
+function lipRects() {
+  const S = CLAREIRA.lair;
+  const rects = [];
+  for (let y = CAVE_TOP_Y - LIP_WIDTH; y < GROUND_Y - 1; y += 1) {
+    const edge = caveEdge(y);
+    if (edge > 0) {
+      rects.push(rect(CENTER_X - edge - LIP_WIDTH, y, LIP_WIDTH - 1, 1, S.slateLight));
+      rects.push(rect(CENTER_X - edge - 1, y, 1, 1, S.slateEdge));
+      rects.push(rect(CENTER_X + edge, y, 1, 1, S.slateEdge));
+      rects.push(rect(CENTER_X + edge + 1, y, LIP_WIDTH - 1, 1, S.slateShade));
+    } else {
+      rects.push(rect(CENTER_X - LIP_WIDTH, y, LIP_WIDTH * 2, 1, S.slate)); // ponta do arco
+    }
+  }
+  // Pedra-chave no topo do arco.
+  rects.push(rect(CENTER_X - 5, CAVE_TOP_Y - 6, 10, 4, S.slateLight));
+  rects.push(rect(CENTER_X - 5, CAVE_TOP_Y - 3, 10, 1, S.slateShade));
+  return rects;
+}
+
+// Pedras soltas em volta da entrada, longe do vão: [x, y, largura, altura] na grade.
+const LOOSE_STONES = Object.freeze([[10, 76, 7, 5], [20, 82, 6, 3], [25, 70, 3, 2], [71, 81, 7, 4], [79, 74, 6, 5], [86, 80, 4, 3]]);
+
+function stoneRects([x, y, w, h]) {
+  const S = CLAREIRA.lair;
+  return [
+    rect(x, y, w, h, S.slate),
+    rect(x, y, w, 1, S.slateLight),
+    rect(x, y + h - 1, w, 1, S.slateShade),
+    rect(x + 1, y, 2, 1, S.mossDark),
+  ];
 }
 
 export function lairMouthRects(layer) {
-  if (layer === 'back') return backRects();
-  if (layer === 'front') return frontRects();
+  if (layer === 'back') return [...moundRects(), ...dirtRects(), ...caveRects()];
+  if (layer === 'front') return [...lipRects(), ...LOOSE_STONES.flatMap(stoneRects)];
   throw new Error(`Camada de boca desconhecida: ${layer}`);
 }
 
@@ -196,16 +278,11 @@ export function findNearestLairChest(lairs, position, { hasPath, radius = LAIR_I
   return nearest ? { ...nearest, distance: gap } : null;
 }
 
-function formatRemaining(ms) {
-  const seconds = Math.max(0, Math.ceil(ms / 1000));
-  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
-}
-
 // Texto do botão de ação (aria-label/title) para o baú próximo.
 export function lairPromptText(lair, now) {
   if (lair?.state === 'guarded') return 'Guardiões vigiam o baú';
   if (lair?.state === 'ready') return 'Abrir o baú do covil';
-  if (lair?.state === 'cooldown') return Number.isFinite(lair.readyAt) ? `Baú vazio · volta em ${formatRemaining(lair.readyAt - now)}` : 'Baú vazio · volta em breve';
+  if (lair?.state === 'cooldown') return Number.isFinite(lair.readyAt) ? `Baú vazio · volta em ${formatLairCountdown(lair.readyAt - now)}` : 'Baú vazio · volta em breve';
   if (lair?.state === 'empty') return 'Baú vazio';
   return 'Baú do covil';
 }
@@ -215,7 +292,7 @@ export function lairPromptText(lair, now) {
 export function lairStatusText(lair, now) {
   if (lair?.state === 'guarded') return 'Os guardiões ainda vigiam o baú.';
   if (lair?.state === 'ready') return 'O covil está limpo. Pressione E ou toque em Usar para abrir o baú.';
-  if (lair?.state === 'cooldown') return Number.isFinite(lair.readyAt) ? `O baú volta a encher em ${formatRemaining(lair.readyAt - now)}.` : 'O baú volta a encher em breve.';
+  if (lair?.state === 'cooldown') return Number.isFinite(lair.readyAt) ? `O baú volta a encher em ${formatLairCountdown(lair.readyAt - now)}.` : 'O baú volta a encher em breve.';
   if (lair?.state === 'empty') return 'O baú está vazio por enquanto.';
   return '';
 }

@@ -181,6 +181,12 @@ test('guardas do covil atacam, perseguem dentro da coleira e retornam ao posto f
 
   const pursuer=createLairGuards(LAIRS.ninho,10000)[0];pursuer.x=post.x+8;
   const nearby=makePlayer(post.x-8,post.y);
+  // Dormindo no posto, o guardião ignora quem está a 8 tiles (fora do despertar de 4).
+  run(pursuer,nearby);
+  assert.equal(pursuer.awake,false);
+  assert.notEqual(pursuer.state,'em-alerta');
+  // Desperto, ele persegue dentro da coleira.
+  pursuer.awake=true;pursuer.thinkAt=0;
   run(pursuer,nearby);
   assert.equal(pursuer.state,'em-alerta');
   assert.equal(pursuer.targetX,nearby.position.x);

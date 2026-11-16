@@ -78,6 +78,16 @@ Ferramentas dentro do jogo também permitem consultar histórico de sanções e 
 
 Revisão por função (29/10): o servidor rejeita vendas fora do intervalo inteiro 1–50, sem converter silenciosamente a quantidade. Renovação de diária, retirada de anúncio e revogação de chave também exigem revisão. Campos de política fiscal preservam edição, validam mínimo/base/máximo e somem ao perder autoridade. Na moderação, mudar os dados ou a permissão invalida a revisão; pedidos têm prazo de 15 s e nunca repetem medidas automaticamente. Matriz, escopo e evidências: [auditoria de funções comerciais e administrativas](audits/2026-10-29-commerce-functions.md).
 
+## Ofícios da vila (quadro, entrega e fogueira)
+
+Três pontos externos na clareira, fora de `PLACE_SERVICES` (que o catálogo de objetos reconstrói): `board` (Quadro da Recepção, à frente da Recepção), `delivery` (Entrega da Pousada dos Pinheiros) e `hearth` (Fogueira das Brasas). Os pontos e raios vêm de `game/village-jobs.mjs` (`VILLAGE_JOB_POINTS`); `EXTERIOR_JOB_SERVICES` em `game/place-services.mjs` os transforma em serviços de seção `jobs`. Não abrem janela ao caminhar: E ou o botão de toque abre o painel comum.
+
+- Carregador (`carrier`): começa no quadro, entrega na Pousada. Conclusão só no destino indicado pelo snapshot.
+- Ajudante do fogo (`firekeeper`): começa e termina na fogueira.
+- `game/village-jobs-client.mjs` contém só regras de apresentação (estado de botões, contagem, aviso de pagamento) sobre o snapshot `villageJobs`. O cliente não calcula pagamento, cota ou conclusão; o servidor valida tudo.
+- `game/village-jobs-view.mjs` monta a página `jobs` do painel comum e o indicador de progresso fora do diálogo (contagem em 1 Hz enquanto há turno, só para exibição). `game/village-jobs-render.mjs` desenha o quadro, a entrega e o anel de progresso no mundo.
+- Ações: `villageJobStart {jobId}`, `villageJobFinish {runId}`, `villageJobCancel {runId}`. Cancelar não tem custo. Pagamento aparece como aviso do servidor (`lastPayment`), uma vez por `runId`.
+
 ## Calendário e negociação de imóveis
 
 Compras, propostas privadas, anúncios de aluguel, várias propriedades/quartos e prazos devem cumprir [Tempo do jogo e propriedades](GAME-TIME-AND-HOUSING.md). Cada contrato deve ter seleção explícita de unidade e renovação própria; possuir outro imóvel não impede comprar.

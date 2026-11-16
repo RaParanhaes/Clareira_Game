@@ -518,14 +518,24 @@ export function createPostgresStore(pool) {
     },
 
     // Estorno atômico: credita a carteira e grava a mochila viva (sem o item) na mesma transação.
-    async creditWalletAndSaveProgress(profileId, amount, inventory) {
+    async creditWalletAndSaveProgress(profileId, amount, inventory, claim = null) {
       if (typeof profileId !== 'string' || !/^[0-9a-f-]{36}$/i.test(profileId)
           || !Number.isSafeInteger(amount) || amount < 1 || amount > 999_999) {
         throw Object.assign(new Error('Este estorno não pôde ser concluído.'), { status: 400 });
       }
       const values = validateInventory(inventory);
+      if (claim && (typeof claim.runId !== 'string' || !/^[0-9a-f-]{36}$/i.test(claim.runId)
+          || !['carrier','firekeeper'].includes(claim.jobId) || !/^\d{4}-\d{2}-\d{2}$/.test(claim.dayKey)
+          || amount !== 150)) throw Object.assign(new Error('Conclusão de ofício inválida.'), { status:400 });
       return withTransaction(pool, async client => {
         await client.query('SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))', ['lodging-profile', profileId]);
+        if (claim) {
+          const replay = await client.query('SELECT job_id, amount_bronze, paid_at FROM village_job_completions WHERE profile_id=$1 AND run_id=$2', [profileId, claim.runId]);
+          if (replay.rows[0]) return { replay:true, jobId:replay.rows[0].job_id, amount: Number(replay.rows[0].amount_bronze), paidAt:new Date(replay.rows[0].paid_at).getTime() };
+          const quota = await client.query('SELECT count(*)::integer AS completed FROM village_job_completions WHERE profile_id=$1 AND job_id=$2 AND game_day=$3::date', [profileId, claim.jobId, claim.dayKey]);
+          if (Number(quota.rows[0]?.completed || 0) >= 3) throw Object.assign(new Error('A cota deste ofício já foi completada hoje.'), { status:409 });
+          await client.query('INSERT INTO village_job_completions (profile_id, run_id, job_id, game_day, amount_bronze) VALUES ($1,$2,$3,$4::date,$5)', [profileId, claim.runId, claim.jobId, claim.dayKey, amount]);
+        }
         const wallet = await loadInventory(client, profileId);
         const nextValue = currencyValue(wallet) + amount;
         if (nextValue > MAX_WALLET_VALUE) throw Object.assign(new Error('A carteira atingiu o limite técnico de armazenamento.'), { status: 409 });
@@ -534,6 +544,12 @@ export function createPostgresStore(pool) {
         await writeProgress(client, profileId, values);
         return nextWallet;
       });
+    },
+
+    async getVillageJobCompletions(profileId, dayKey) {
+      if (typeof profileId !== 'string' || !/^[0-9a-f-]{36}$/i.test(profileId)) return [];
+      const { rows } = await pool.query('SELECT run_id, job_id, game_day::text AS day_key, amount_bronze, paid_at FROM village_job_completions WHERE profile_id=$1 AND game_day=$2::date ORDER BY paid_at', [profileId, dayKey]);
+      return rows.map(row => ({ runId:row.run_id, jobId:row.job_id, dayKey:row.day_key, amount:Number(row.amount_bronze), paidAt:new Date(row.paid_at).getTime() }));
     },
 
     async saveProgressAndDiscoverDimension(accountId, inventory, dimensionId, discoverySource = 'knowledge') {

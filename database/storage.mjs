@@ -1,3 +1,5 @@
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { createHousingMarketStore } from './housing-market.mjs';
 import { createPropertyMarketStatisticsStore } from './property-market-statistics.mjs';
 import {createPostgresObjectStore} from './object-store.mjs';
@@ -22,6 +24,12 @@ export function createStorageAdapter({
 } = {}) {
   if (!databaseUrl && !providedPool) {
     const accounts = createAccountStore({ directory });
+    const villageLedger = new Map();
+    const villageLocks = new Map();
+    const villageLedgerPath = path.join(directory, 'village-job-ledger.json');
+    let villageLedgerLoaded = false;
+    const ensureVillageLedger = async () => { if(villageLedgerLoaded)return; try { const rows=JSON.parse(await readFile(villageLedgerPath,'utf8')); for(const row of rows) villageLedger.set(`${row.profileId}:${row.runId}`,row); } catch(error) { if(error.code!=='ENOENT') throw error; } villageLedgerLoaded=true; };
+    const persistVillageLedger = async () => { await mkdir(directory,{recursive:true,mode:0o700}); const temporary=`${villageLedgerPath}.${process.pid}.tmp`; await writeFile(temporary,JSON.stringify([...villageLedger.values()]),{mode:0o600}); await rename(temporary,villageLedgerPath); };
     const interactions = createJsonInteractionStore(directory);
     return {
       accounts,
@@ -47,11 +55,41 @@ export function createStorageAdapter({
         }
       },
       // JSON: credita primeiro e grava depois (uma queda no meio favorece o jogador; aceito, JSON só serve a testes).
-      creditWalletAndSaveProgress: async (accountId, amount, inventory) => {
+      creditWalletAndSaveProgress: async (accountId, amount, inventory, claim = null) => {
+        if (claim) {
+          if (amount !== 150 || !['carrier','firekeeper'].includes(claim.jobId)
+              || typeof claim.runId !== 'string' || !/^[0-9a-f-]{36}$/i.test(claim.runId)
+              || !/^\d{4}-\d{2}-\d{2}$/.test(claim.dayKey)) throw Object.assign(new Error('Conclusão de ofício inválida.'), { status:400 });
+          await ensureVillageLedger();
+          const previous = villageLocks.get(accountId) || Promise.resolve();
+          let release;
+          const turn = new Promise(resolve => { release = resolve; });
+          villageLocks.set(accountId, previous.then(() => turn));
+          await previous;
+          try {
+            const key = `${accountId}:${claim.runId}`;
+            const replay = villageLedger.get(key);
+            if (replay) return { replay:true, ...replay };
+            const count = [...villageLedger.values()].filter(row => row.profileId === accountId && row.jobId === claim.jobId && row.dayKey === claim.dayKey).length;
+            if (count >= 3) throw Object.assign(new Error('A cota deste ofício já foi completada hoje.'), { status:409 });
+            const wallet = await accounts.creditWallet(accountId, amount);
+            try { await saveAccountProgress(directory, accountId, inventory); }
+            catch (error) { await accounts.debitWallet(accountId, amount).catch(() => {}); throw error; }
+            const row = { profileId:accountId, jobId:claim.jobId, dayKey:claim.dayKey, amount, paidAt:Date.now() };
+            villageLedger.set(key, { ...row, runId:claim.runId });
+            try { await persistVillageLedger(); } catch(error) {
+              villageLedger.delete(key);
+              await accounts.debitWallet(accountId, amount).catch(() => {});
+              throw error;
+            }
+            return { wallet, replay:false, paidAt:row.paidAt };
+          } finally { release(); }
+        }
         const wallet = await accounts.creditWallet(accountId, amount);
         await saveAccountProgress(directory, accountId, inventory);
         return wallet;
       },
+      getVillageJobCompletions: async (profileId, dayKey) => { await ensureVillageLedger(); return [...villageLedger.values()].filter(row => row.profileId === profileId && row.dayKey === dayKey).map(({ profileId:_profileId, ...row }) => row); },
       loadRoom: accountId => loadAccountRoom(directory, accountId),
       saveRoom: (accountId, furniture) => saveAccountRoom(directory, accountId, furniture),
       loadAppearance: accountId => loadAppearance(directory, accountId),
@@ -94,7 +132,7 @@ export function createStorageAdapter({
     roomChests: createRoomChestStore(pool),
     ready: async () => {
       const { rows } = await pool.query('SELECT max(version) AS version FROM schema_migrations');
-      if (Number(rows[0]?.version) < 36) throw new Error('Aplique todas as migrações PostgreSQL antes de iniciar o jogo.');
+      if (Number(rows[0]?.version) < 39) throw new Error('Aplique todas as migrações PostgreSQL antes de iniciar o jogo.');
     },
     close: async () => {
       if (ownsPool) await pool.end();

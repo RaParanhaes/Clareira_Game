@@ -16,18 +16,27 @@ export async function openLairTreasure({ player, lair, state, store, storage, no
     const before = inventorySnapshot(player.inventory);
     const reserved = await store.reserve(player.accountId, lair.id, { actionId, now, cooldownMs:lair.cooldownMs });
     if (!reserved.ok) return { ok:false, reason:'recarregando', availableAt:reserved.availableAt };
-    if (itemNeeded) addInventoryItem(player.inventory, 'ironShortSword', 1);
+    if (itemNeeded && addInventoryItem(player.inventory, 'ironShortSword', 1) !== 1) {
+      restoreInventory(player.inventory, before);
+      try { await store.release(player.accountId, lair.id, actionId); }
+      catch (releaseError) { console.error('Falha ao liberar claim do baú após falha de inventário.', releaseError); }
+      return { ok:false, reason:'inventario' };
+    }
     try {
       const wallet = await storage.creditWalletAndSaveProgress(player.accountId, lair.reward.bronze, inventorySnapshot(player.inventory));
       if (wallet) Object.assign(player.inventory, wallet.wallet || wallet);
       player.lairClaims = [...(player.lairClaims || []).filter(claim => claim.lairId !== lair.id),
         { lairId:lair.id, claimedAt:now, availableAt:reserved.availableAt, claimCount:1, lastActionId:actionId }];
-      state.contributors.clear();
       return { ok:true, availableAt:reserved.availableAt, sword:itemNeeded };
     } catch (error) {
       restoreInventory(player.inventory, before);
-      await store.release(player.accountId, lair.id, actionId);
-      return { ok:false, reason:'falha-salvamento', error };
+      let releaseError;
+      try { await store.release(player.accountId, lair.id, actionId); }
+      catch (caughtReleaseError) {
+        releaseError=caughtReleaseError;
+        console.error('Falha ao liberar claim do baú após erro no salvamento.', caughtReleaseError);
+      }
+      return { ok:false, reason:'falha-salvamento', error, ...(releaseError?{releaseError}:{}) };
     }
   });
 }

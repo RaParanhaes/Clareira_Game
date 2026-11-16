@@ -3,6 +3,7 @@ import { incomingKnockbackMultiplier } from './progression.mjs';
 export const WILDLIFE_ZONE_SIZE = 24;
 export const WILDLIFE_POPULATION_LIMIT = 60;
 import { GAME_DAY_DURATION_MS } from './day-night.mjs';
+import { LAIRS } from './lairs.mjs';
 
 const species = [
   {
@@ -400,11 +401,21 @@ function chooseBehavior(animal, definition, context, events) {
     animal.vx=0;animal.vy=0;return;
   }
   animal.sheltered=false;
-  const player = closest(context.players, animal, Math.max(definition.senses.sight, definition.senses.hearing, definition.senses.smell) + 1,
-    candidate => playerPerception(animal, candidate, definition, {isOccluded:context.isOccluded,windNoise:context.windNoise,night:context.night}).seen);
+  const fixedPost=definition.fixed?{x:animal.homeX??animal.shelterX,y:animal.homeY??animal.shelterY}:null;
+  const fixedLeash=definition.fixed?(LAIRS[animal.lairId]?.leash??0):0;
+  const player=definition.fixed
+    ?closest(context.players,animal,Infinity,candidate=>distance(candidate.position||candidate,fixedPost)<=fixedLeash)
+    :closest(context.players, animal, Math.max(definition.senses.sight, definition.senses.hearing, definition.senses.smell) + 1,
+      candidate => playerPerception(animal, candidate, definition, {isOccluded:context.isOccluded,windNoise:context.windNoise,night:context.night}).seen);
   if(definition.fixed){
-    const post={x:animal.homeX??animal.shelterX,y:animal.homeY??animal.shelterY};
-    if(player&&player.distance<=definition.senses.sight){animal.state='vigiando';animal.targetX=post.x;animal.targetY=post.y;return;}
+    const post=fixedPost;
+    if(player){
+      const target=player.item,p=target.position||target,attack=definition.attack;
+      animal.targetX=p.x;animal.targetY=p.y;
+      animal.state=player.distance<=attack.reach?'atacando':'em-alerta';
+      if(player.distance<=attack.reach&&!context.isOccluded(animal,p))handleAnimalAttack(animal,target,definition,context,events);
+      return;
+    }
     if(Math.hypot(animal.x-post.x,animal.y-post.y)>1.5){animal.state='voltando-ao-abrigo';animal.targetX=post.x;animal.targetY=post.y;}
     else {animal.state='vigiando';animal.targetX=post.x;animal.targetY=post.y;animal.vx=0;animal.vy=0;}
     return;

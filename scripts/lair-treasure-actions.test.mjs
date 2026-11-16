@@ -47,3 +47,44 @@ test('dois envios concorrentes pagam uma vez',async()=>{
   const s=setup();const results=await Promise.all([run(s),run(s,{actionId:'claim-action-2'})]);
   assert.equal(results.filter(result=>result.ok).length,1);assert.equal(s.paid,200);
 });
+
+test('A e B podem sacar sem apagar as contribuições um do outro',async()=>{
+  const s=setup();s.state.contributors.add('player-2');
+  const second={...s.player,id:'player-2',accountId:'profile-2',inventory:createInventory(),lairClaims:[]};
+  const firstResult=await run(s,{actionId:'claim-a'});
+  const secondResult=await openLairTreasure({player:second,lair:s.lair,state:s.state,store:s.store,storage:s.storage,
+    now:1000,actionId:'claim-b'});
+  assert.equal(firstResult.ok,true);assert.equal(secondResult.ok,true);
+  assert.deepEqual([...s.state.contributors].sort(),['player-1','player-2']);
+});
+
+test('inclusão recusada restaura mochila e libera o claim sem anunciar espada',async()=>{
+  const s=setup();
+  const initial=inventorySnapshot(s.player.inventory);
+  const reserve=s.store.reserve;
+  s.store.reserve=async(...args)=>{
+    const result=await reserve(...args);
+    s.player.inventory.slots=Array.from({length:27},()=>({itemId:'knife',quantity:1}));
+    return result;
+  };
+  const result=await run(s);
+  assert.equal(result.ok,false);assert.equal(result.reason,'inventario');
+  assert.equal(result.sword,undefined);
+  assert.deepEqual(inventorySnapshot(s.player.inventory),initial);
+  assert.equal(s.claims.size,0);
+  assert.equal(s.paid,0);
+});
+
+test('erro ao liberar após falha de gravação é registrado e retornado',async()=>{
+  const s=setup({failCredit:true}),before=inventorySnapshot(s.player.inventory);
+  s.store.release=async()=>{throw Error('release failed');};
+  const originalError=console.error,logged=[];
+  console.error=(...args)=>logged.push(args);
+  try {
+    const result=await run(s);
+    assert.equal(result.reason,'falha-salvamento');
+    assert.equal(result.releaseError.message,'release failed');
+    assert.equal(logged.length,1);
+    assert.deepEqual(inventorySnapshot(s.player.inventory),before);
+  } finally { console.error=originalError; }
+});

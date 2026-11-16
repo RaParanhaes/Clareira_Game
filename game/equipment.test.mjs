@@ -11,6 +11,7 @@ test('weapon damage follows the selected hotbar item', () => {
   const inventory = createInventory({ slots: [{ itemId: 'knife', quantity: 1 }, { itemId: 'shortSword', quantity: 1 }, { itemId: 'stoneAxe', quantity: 1 }] });
   assert.equal(WEAPON_SPECS.knife.damage, 1);
   assert.equal(WEAPON_SPECS.shortSword.damage, 3);
+  assert.equal(WEAPON_SPECS.ironShortSword.damage, 4);
   inventory.selectedSlot = 0; assert.equal(weaponDamage(inventory), 1);
   inventory.selectedSlot = 1; assert.equal(weaponDamage(inventory), 3);
   inventory.selectedSlot = 2; assert.equal(weaponDamage(inventory), 2);
@@ -30,6 +31,7 @@ test('armorDefense reads only the equipped slot, not the bag', () => {
 
 test('gear items stack to one and equipment survives snapshot, restore and row round trips', () => {
   assert.equal(INVENTORY_STACK_LIMITS.shortSword, 1);
+  assert.equal(INVENTORY_STACK_LIMITS.ironShortSword, 1);
   assert.equal(INVENTORY_STACK_LIMITS.leatherJerkin, 1);
   const inventory = createInventory({ slots: [{ itemId: 'shortSword', quantity: 1 }, { itemId: 'leatherJerkin', quantity: 1 }], selectedSlot: 0 });
   assert.equal(addInventoryItem(inventory, 'shortSword', 1), 1, 'segunda espada ocupa outro espaço, nunca empilha');
@@ -63,6 +65,7 @@ test('unequip refuses when the bag is full and keeps the armor worn', () => {
 test('purchase check blocks duplicates, including worn items, and unknown goods', () => {
   assert.equal(gearPurchaseCheck(createInventory(), 'shortSword').price, GEAR_PRICES.shortSword);
   assert.equal(gearPurchaseCheck(createInventory(), 'xpPotionI').ok, false);
+  assert.equal(gearPurchaseCheck(createInventory(), 'ironShortSword').ok, false, 'a recompensa não aparece na loja');
   assert.equal(gearPurchaseCheck(createInventory({ equipment: { body: 'leatherJerkin' } }), 'leatherJerkin').ok, false);
   assert.equal(gearPurchaseCheck(createInventory({ slots: [{ itemId: 'shortSword', quantity: 1 }] }), 'shortSword').ok, false);
 });
@@ -276,4 +279,12 @@ test('hunting accepts the short sword and hits for 3', async () => {
   assert.equal((await huntWildlifeTarget({ player: mk('knife'), animal: knife, population: new Map([[knife.id, knife]]) })).damage, 1);
   const stone = animal(); stone.speciesId = speciesId; stone.health = 50;
   assert.equal((await huntWildlifeTarget({ player: mk('stone'), animal: stone, population: new Map([[stone.id, stone]]) })).status, 'no-tool');
+});
+
+test('hunting accepts the iron short sword and deals four damage', async () => {
+  const inventory=createInventory({slots:[{itemId:'ironShortSword',quantity:1}],selectedSlot:0});
+  const {WILDLIFE_BY_ID}=await import('./wildlife.mjs');const speciesId=[...WILDLIFE_BY_ID.keys()][0];
+  const animal={id:'iron-test',speciesId,dimensionId:'surface',x:.5,y:0,health:50,sheltered:false};
+  const result=await huntWildlifeTarget({player:{inventory,position:{x:0,y:0},dimensionId:'surface'},animal,population:new Map([[animal.id,animal]])});
+  assert.equal(result.damage,4);
 });

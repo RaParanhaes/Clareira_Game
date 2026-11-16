@@ -10,7 +10,7 @@ const HUNT_REACH = 1.45;
 
 export async function huntWildlifeTarget({
   player, animal, population, hasClearPath=()=>true, now=Date.now(), persist=async()=>{},
-  rangeOverride=null, damageOverride=null, weaponOverride=null,
+  rangeOverride=null, damageOverride=null, weaponOverride=null, onHit=()=>{},
 }) {
   const definition=animal&&WILDLIFE_BY_ID.get(animal.speciesId);
   if(!animal||!definition||animal.dimensionId!==(player.dimensionId||'surface')||animal.health<=0||animal.sheltered)
@@ -35,6 +35,7 @@ export async function huntWildlifeTarget({
     animal.sheltered=false;animal.thinkAt=now;
     animal.targetX=animal.x;
     animal.targetY=animal.y;
+    onHit(animal, player);
     return {status:'injured',definition,health:animal.health,damage};
   }
 
@@ -58,5 +59,6 @@ export async function huntWildlifeTarget({
     return {status:'save-failed',definition};
   }
   population?.delete(animal.id);
+  onHit(animal, player);
   return {status:'killed',definition,loot};
 }

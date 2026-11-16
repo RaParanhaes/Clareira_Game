@@ -52,6 +52,7 @@ export const INVENTORY_STACK_LIMITS = Object.freeze({
   xpPotionIII: 1,
   xpPotionIV: 1,
   shortSword: 1,
+  ironShortSword: 1,
   leatherJerkin: 1,
 });
 

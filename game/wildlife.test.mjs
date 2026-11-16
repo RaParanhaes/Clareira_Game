@@ -67,7 +67,7 @@ test('animais não atravessam uma pessoa parada e conseguem sair de uma sobrepos
 });
 
 test('all wildlife loot fits the player inventory and has complete life metadata', () => {
-  assert.equal(WILDLIFE_SPECIES.length, 23);
+  assert.equal(WILDLIFE_SPECIES.length, 24);
   for (const definition of WILDLIFE_SPECIES) {
     assert.ok(definition.lifeGoal);
     assert.ok(definition.shelter);
@@ -360,4 +360,10 @@ test('cobertura do abrigo chega ao cliente e à família sem expor um marcador d
     assert.equal(canObserveWildlifeShelter(home,{x:70,y:76}),false);
     assert.equal(canObserveWildlifeShelter({...home,cover:null},{x:53,y:76}),false);
   }
+});
+
+test('monstros não entram na fauna aleatória e caveWarden não fica recolhido', async()=>{
+  const {wildlifePoolForTheme,wildlifeIsActive}=await import('./wildlife.mjs');
+  assert.equal(wildlifePoolForTheme('forest').some(definition=>definition.id==='caveWarden'),false);
+  assert.equal(wildlifeIsActive(WILDLIFE_BY_ID.get('caveWarden'),12),true);
 });

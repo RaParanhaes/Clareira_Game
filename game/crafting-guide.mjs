@@ -70,7 +70,8 @@ function nextMaterialHint(status, inventory, touch = false) {
 }
 
 // `touch`: no celular o texto fala em toque (Montar agora, Usar), no teclado em H, P e E.
-export function craftingGuide(inventory = {}, { touch = false } = {}) {
+// `inClearing`: só no bosque se monta; fora dele o texto manda voltar.
+export function craftingGuide(inventory = {}, { touch = false, inClearing = true } = {}) {
   const axe = axeToolFor(inventory);
   const pickaxe = pickaxeToolFor(inventory);
   const recipes = [
@@ -86,13 +87,15 @@ export function craftingGuide(inventory = {}, { touch = false } = {}) {
     stage = 'axe';
     const recipe = axeRecipe;
     title = 'Faça um machado de pedra';
-    if (recipe.ready) { text = touch ? 'Você tem tudo: toque em Montar agora, nas receitas do Inventário, para amarrar o machado.' : 'Você tem tudo: aperte H no bosque para amarrar o machado.'; key = 'H'; }
+    if (recipe.ready && !inClearing) { text = 'Você tem tudo: volte ao bosque para montar o machado.'; key = 'H'; }
+    else if (recipe.ready) { text = touch ? 'Você tem tudo: toque em Montar agora, nas receitas do Inventário, para amarrar o machado.' : 'Você tem tudo: aperte H no bosque para amarrar o machado.'; key = 'H'; }
     else text = `Faltam ${missingLine(recipe)}. ${nextMaterialHint(recipe, inventory, touch)}`;
   } else if (!pickaxe) {
     stage = 'pickaxe';
     const recipe = pickaxeRecipe;
     title = 'Agora, uma picareta de pedra';
-    if (recipe.ready) { text = touch ? 'Você tem tudo: toque em Montar agora, nas receitas do Inventário, para montar a picareta.' : 'Você tem tudo: aperte P no bosque para montar a picareta.'; key = 'P'; }
+    if (recipe.ready && !inClearing) { text = 'Você tem tudo: volte ao bosque para montar a picareta.'; key = 'P'; }
+    else if (recipe.ready) { text = touch ? 'Você tem tudo: toque em Montar agora, nas receitas do Inventário, para montar a picareta.' : 'Você tem tudo: aperte P no bosque para montar a picareta.'; key = 'P'; }
     else text = `Faltam ${missingLine(recipe)}. ${nextMaterialHint(recipe, inventory, touch)}`;
   } else {
     stage = 'mine';

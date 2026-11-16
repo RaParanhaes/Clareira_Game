@@ -50,7 +50,7 @@ export function createCraftingGuideView({ hint, panel, onOpen, onCraft, onDismis
     guideFor: craftingGuide,
     // `visible` diz se o aviso do mundo deve aparecer agora (bosque, sem dispensa).
     update(inventory, { visible = true, dismissedStage = '', canCraft = true } = {}) {
-      const guide = craftingGuide(inventory, { touch: isTouchInput() });
+      const guide = craftingGuide(inventory, { touch: isTouchInput(), inClearing: canCraft });
       const showHint = visible && guide.showHint && dismissedStage !== guide.stage;
       const nextHintKey = `${showHint}|${guide.stage}|${guide.text}`;
       if (hint && nextHintKey !== hintKey) {

@@ -1,3 +1,5 @@
+import { CLAREIRA } from './theme.mjs';
+
 // Covil da Caverna do Ninho: boca procedural em duas camadas e baú.
 // Sem DOM no carregamento do módulo; só as funções de pintura tocam o canvas.
 
@@ -35,10 +37,10 @@ function backRects() {
     const outer = Math.round(archHalfWidth(y + 0.5));
     if (outer <= 0) continue;
     const inner = Math.max(0, outer - 4);
-    rects.push({ x: CENTER_X - outer, y, w: outer * 2, h: 1, color: '#4b5159' });
-    if (inner > 0) rects.push({ x: CENTER_X - inner, y, w: inner * 2, h: 1, color: y >= 74 ? '#24272e' : '#15171b' });
+    rects.push({ x: CENTER_X - outer, y, w: outer * 2, h: 1, color: CLAREIRA.lair.rim });
+    if (inner > 0) rects.push({ x: CENTER_X - inner, y, w: inner * 2, h: 1, color: y >= 74 ? CLAREIRA.lair.floor : CLAREIRA.lair.cavity });
   }
-  rects.push({ x: 40, y: 38, w: 3, h: 2, color: '#3a4a52' }, { x: 56, y: 46, w: 2, h: 2, color: '#34404a' });
+  rects.push({ x: 40, y: 38, w: 3, h: 2, color: CLAREIRA.lair.recessA }, { x: 56, y: 46, w: 2, h: 2, color: CLAREIRA.lair.recessB });
   return rects;
 }
 
@@ -47,21 +49,21 @@ function backRects() {
 function frontRects() {
   const rects = [];
   // Pilares laterais, com luz à esquerda e sombra à direita.
-  rects.push({ x: 8, y: 36, w: 16, h: 49, color: '#6f747c' }, { x: 8, y: 36, w: 3, h: 49, color: '#8d939b' }, { x: 21, y: 36, w: 3, h: 49, color: '#4d525a' });
-  rects.push({ x: 72, y: 36, w: 16, h: 49, color: '#6f747c' }, { x: 85, y: 36, w: 3, h: 49, color: '#4d525a' }, { x: 72, y: 36, w: 3, h: 49, color: '#8d939b' });
-  rects.push({ x: 10, y: 50, w: 4, h: 3, color: '#585e66' }, { x: 19, y: 66, w: 3, h: 2, color: '#828991' }, { x: 74, y: 58, w: 4, h: 3, color: '#585e66' }, { x: 80, y: 72, w: 3, h: 2, color: '#828991' });
+  rects.push({ x: 8, y: 36, w: 16, h: 49, color: CLAREIRA.lair.stone }, { x: 8, y: 36, w: 3, h: 49, color: CLAREIRA.lair.stoneLight }, { x: 21, y: 36, w: 3, h: 49, color: CLAREIRA.lair.stoneShade });
+  rects.push({ x: 72, y: 36, w: 16, h: 49, color: CLAREIRA.lair.stone }, { x: 85, y: 36, w: 3, h: 49, color: CLAREIRA.lair.stoneShade }, { x: 72, y: 36, w: 3, h: 49, color: CLAREIRA.lair.stoneLight });
+  rects.push({ x: 10, y: 50, w: 4, h: 3, color: CLAREIRA.lair.stoneEdge }, { x: 19, y: 66, w: 3, h: 2, color: CLAREIRA.lair.chip }, { x: 74, y: 58, w: 4, h: 3, color: CLAREIRA.lair.stoneEdge }, { x: 80, y: 72, w: 3, h: 2, color: CLAREIRA.lair.chip });
   // Verga e pedra-chave no topo.
-  rects.push({ x: 12, y: 14, w: 72, h: 8, color: '#6f747c' }, { x: 12, y: 14, w: 72, h: 1, color: '#8d939b' }, { x: 12, y: 21, w: 72, h: 1, color: '#4d525a' });
-  rects.push({ x: 44, y: 10, w: 8, h: 4, color: '#9aa0a8' });
+  rects.push({ x: 12, y: 14, w: 72, h: 8, color: CLAREIRA.lair.stone }, { x: 12, y: 14, w: 72, h: 1, color: CLAREIRA.lair.stoneLight }, { x: 12, y: 21, w: 72, h: 1, color: CLAREIRA.lair.stoneShade });
+  rects.push({ x: 44, y: 10, w: 8, h: 4, color: CLAREIRA.lair.keystone });
   // Lábios que acompanham o arco externo.
   for (let y = 22; y < 36; y += 1) {
     const outer = Math.round(archHalfWidth(y + 0.5));
     if (outer <= 0) continue;
-    rects.push({ x: CENTER_X - outer - 3, y, w: 6, h: 1, color: '#6f747c' });
-    rects.push({ x: CENTER_X + outer - 3, y, w: 6, h: 1, color: '#6f747c' });
+    rects.push({ x: CENTER_X - outer - 3, y, w: 6, h: 1, color: CLAREIRA.lair.stone });
+    rects.push({ x: CENTER_X + outer - 3, y, w: 6, h: 1, color: CLAREIRA.lair.stone });
   }
   // Soleira no chão: a última linha é a âncora de contato.
-  rects.push({ x: 6, y: 80, w: 84, h: 5, color: '#5d636b' }, { x: 6, y: 80, w: 84, h: 1, color: '#858b93' }, { x: 6, y: 84, w: 84, h: 1, color: '#3f444b' });
+  rects.push({ x: 6, y: 80, w: 84, h: 5, color: CLAREIRA.lair.threshold }, { x: 6, y: 80, w: 84, h: 1, color: CLAREIRA.lair.thresholdLight }, { x: 6, y: 84, w: 84, h: 1, color: CLAREIRA.lair.thresholdShade });
   return rects;
 }
 
@@ -73,13 +75,13 @@ export function lairMouthRects(layer) {
 
 export function lairChestOpenRects() {
   return [
-    { x: 2, y: 0, w: 20, h: 4, color: '#a06b3d' }, { x: 2, y: 3, w: 20, h: 1, color: '#6e4424' },
-    { x: 3, y: 4, w: 18, h: 4, color: '#2b1d12' },
-    { x: 5, y: 6, w: 14, h: 3, color: '#f2c14e' }, { x: 7, y: 6, w: 3, h: 1, color: '#ffe08a' }, { x: 13, y: 6, w: 3, h: 1, color: '#ffe08a' },
-    { x: 2, y: 10, w: 20, h: 2, color: '#a8713f' },
-    { x: 2, y: 12, w: 20, h: 11, color: '#8a5a33' }, { x: 2, y: 22, w: 20, h: 1, color: '#5b3a22' },
-    { x: 2, y: 12, w: 2, h: 11, color: '#6e4424' }, { x: 20, y: 12, w: 2, h: 11, color: '#6e4424' },
-    { x: 6, y: 12, w: 2, h: 11, color: '#3c3f44' }, { x: 15, y: 12, w: 2, h: 11, color: '#3c3f44' },
+    { x: 2, y: 0, w: 20, h: 4, color: CLAREIRA.lair.woodTop }, { x: 2, y: 3, w: 20, h: 1, color: CLAREIRA.lair.woodRim },
+    { x: 3, y: 4, w: 18, h: 4, color: CLAREIRA.lair.woodDeep },
+    { x: 5, y: 6, w: 14, h: 3, color: CLAREIRA.lair.gold }, { x: 7, y: 6, w: 3, h: 1, color: CLAREIRA.lair.goldLight }, { x: 13, y: 6, w: 3, h: 1, color: CLAREIRA.lair.goldLight },
+    { x: 2, y: 10, w: 20, h: 2, color: CLAREIRA.lair.woodBand },
+    { x: 2, y: 12, w: 20, h: 11, color: CLAREIRA.lair.wood }, { x: 2, y: 22, w: 20, h: 1, color: CLAREIRA.lair.woodFoot },
+    { x: 2, y: 12, w: 2, h: 11, color: CLAREIRA.lair.woodRim }, { x: 20, y: 12, w: 2, h: 11, color: CLAREIRA.lair.woodRim },
+    { x: 6, y: 12, w: 2, h: 11, color: CLAREIRA.lair.iron }, { x: 15, y: 12, w: 2, h: 11, color: CLAREIRA.lair.iron },
   ];
 }
 
@@ -108,6 +110,30 @@ export function lairChestIsOpen(state) {
   return state === 'cooldown' || state === 'empty';
 }
 
+// Área que recebe toque no baú: só as partes opacas do sprite (fechado: x 53–75,
+// y 70–95 do PNG de 128 px). Boca, sombras e adornos não entram aqui.
+export function lairChestHitRect(state, point, scale) {
+  if (lairChestIsOpen(state)) {
+    return { x: point.x - LAIR_CHEST_OPEN.anchorX * scale, y: point.y - LAIR_CHEST_OPEN.anchorY * scale,
+      w: LAIR_CHEST_OPEN.width * scale, h: LAIR_CHEST_OPEN.height * scale };
+  }
+  const { anchorX, anchorY } = LAIR_CHEST_CLOSED;
+  return { x: point.x + (53 - anchorX) * scale, y: point.y + (70 - anchorY) * scale, w: (76 - 53) * scale, h: (96 - 70) * scale };
+}
+
+// Baú sob o ponteiro (coordenadas do canvas). toScreen(chest) projeta o contato
+// do baú do mesmo modo que o desenho.
+export function findLairChestAtPoint(lairs, pointer, toScreen, scale) {
+  if (!pointer || !Number.isFinite(pointer.x) || !Number.isFinite(pointer.y)) return null;
+  for (const lair of Array.isArray(lairs) ? lairs : []) {
+    const chest = lair?.chest;
+    if (!Number.isFinite(chest?.x) || !Number.isFinite(chest?.y)) continue;
+    const rect = lairChestHitRect(lair.state, toScreen(chest), scale);
+    if (pointer.x >= rect.x && pointer.x < rect.x + rect.w && pointer.y >= rect.y && pointer.y < rect.y + rect.h) return lair;
+  }
+  return null;
+}
+
 let closedChestImage = null;
 // Carregamento preguiçoso: o laço de render é contínuo, então o PNG aparece
 // no quadro seguinte ao fim do carregamento, sem callback.
@@ -134,14 +160,19 @@ export function drawLairChest(ctx, point, state, scale, cache) {
 
 // Coisas da cena para o laço de desenho. Boca de fundo e de frente têm chaves
 // de profundidade separadas, para o personagem poder ficar entre elas.
+// Profundidade relativa ao contato da boca: o fundo fica 1,2 unidade atrás da
+// soma x+y do contato, e os lábios ficam logo à frente dele.
+export const LAIR_BACK_DEPTH_OFFSET = -0.6;
+export const LAIR_FRONT_DEPTH_OFFSET = 0.01;
+
 export function lairSceneThings(lairs) {
   const things = [];
   for (const lair of Array.isArray(lairs) ? lairs : []) {
     if (!Number.isFinite(lair?.mouth?.x) || !Number.isFinite(lair?.mouth?.y)) continue;
     if (!Number.isFinite(lair?.chest?.x) || !Number.isFinite(lair?.chest?.y)) continue;
     const { x, y } = lair.mouth;
-    things.push({ type: 'lair-mouth', layer: 'back', lairId: lair.id, x, y, sortX: x - 0.6, sortY: y - 0.6 });
-    things.push({ type: 'lair-mouth', layer: 'front', lairId: lair.id, x, y, sortX: x + 0.01, sortY: y + 0.01 });
+    things.push({ type: 'lair-mouth', layer: 'back', lairId: lair.id, x, y, sortX: x + LAIR_BACK_DEPTH_OFFSET, sortY: y + LAIR_BACK_DEPTH_OFFSET });
+    things.push({ type: 'lair-mouth', layer: 'front', lairId: lair.id, x, y, sortX: x + LAIR_FRONT_DEPTH_OFFSET, sortY: y + LAIR_FRONT_DEPTH_OFFSET });
     things.push({ type: 'lair-chest', lairId: lair.id, x: lair.chest.x, y: lair.chest.y, state: lair.state });
   }
   return things;

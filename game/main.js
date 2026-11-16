@@ -36,7 +36,7 @@ import { FALLEN_TREE_HALF_LENGTH, FALLEN_TREE_HEIGHT, FALLEN_TREE_RADIUS } from 
 import { assetScenesFor, createAssetLoader } from './content-assets.mjs';
 import { furnitureVisual,furnitureUse,roomFurnitureBedOccupantDepth,roomFurnitureDepthAnchor,roomFurnitureDrawLayers,roomFurnitureFootprintRadius,roomFurnitureRadius } from './furniture.mjs';
 import { compareSceneDepth } from './depth-order.mjs';
-import { LAIR_CHEST_PATH_RADIUS, drawLairChest, drawLairMouthLayer, findNearestLairChest, lairPromptText, lairSceneThings, lairStatusText } from './lair-art.mjs';
+import { LAIR_CHEST_PATH_RADIUS, drawLairChest, drawLairMouthLayer, findLairChestAtPoint, findNearestLairChest, lairPromptText, lairSceneThings, lairStatusText } from './lair-art.mjs';
 import { contentById } from './content-catalog.mjs';
 import { MEDIEVAL_FURNITURE, MEDIEVAL_FURNITURE_CATEGORIES } from './medieval-furniture.mjs';
 import { mergeQueuedState } from './state-inbox.mjs';
@@ -3038,6 +3038,10 @@ function setWalkDestination(event) {
     sendPlayerCommand({type:'action',name:{remove:'removeFurniture',rotate:'rotateFurniture'}[roomBuildMode],id:item.id});
     roomBuildMode=null;ui.roomBuildOptions.hidden=true;ui.roomBuildToggle.setAttribute('aria-expanded','false');updateRoomBuildButtons();updateRoomObjectCard(item);return;
   }
+  if (worldLocation === 'clearing') {
+    const chestLair = lairChestAtPointer(event);
+    if (chestLair) { touchLairChest(chestLair); return; }
+  }
   const editing=worldLocation==='room'&&(roomBuildMode==='place'||roomBuildMode==='move'&&roomMovingId);
   const targetStarted=renderProfiler?performance.now():0;
   const target=worldTargetAt(event.clientX,event.clientY,editing);
@@ -4126,6 +4130,21 @@ function nearestLairChest(position=localPosition) {
   });
 }
 
+// Baú sob o ponteiro: só o próprio baú; a boca e as sombras não recebem toque.
+function lairChestAtPointer(event) {
+  const bounds = canvas.getBoundingClientRect();
+  return findLairChestAtPoint(lairs, { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
+    chest => point(chest.x, chest.y), spriteScale);
+}
+
+// Toque no baú: ao alcance envia a intenção (o servidor decide); fora dele caminha até o baú.
+function touchLairChest(lair) {
+  announce(lairPromptText(lair, clientServerTime()));
+  const near = nearestLairChest();
+  if (near?.id === lair.id) sendPlayerCommand({ type: 'action', name: 'openTreasure', lairId: lair.id });
+  else requestWalkPath({ x: lair.chest.x, y: lair.chest.y });
+}
+
 function nearestVisitTarget() {
   if (worldLocation !== 'clearing') return null;
   let nearest = null;
@@ -4314,9 +4333,8 @@ function action(name) {
     if (worldLocation === 'room') { announce('Aproxime-se da porta, de um móvel utilizável ou de um ponto de atendimento.'); return; }
     const lair = nearestLairChest();
     if (lair) {
-      // Guardiões vivos e recarga são recusados aqui sem envio; o servidor confere o resto.
-      if (lair.state === 'ready') sendPlayerCommand({ type: 'action', name: 'openTreasure', lairId: lair.id });
-      else { announce(lairStatusText(lair, clientServerTime())); playEffect('chime'); }
+      // Perto do baú a intenção sempre vai ao servidor, que decide. O snapshot só dá o texto da dica.
+      sendPlayerCommand({ type: 'action', name: 'openTreasure', lairId: lair.id });
       return;
     }
     if(nearestWildlifeTarget()){action('hunt');return;}

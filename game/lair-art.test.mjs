@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   LAIR_MOUTH, LAIR_CHEST_OPEN, LAIR_INTERACT_RADIUS, findNearestLairChest, lairChestIsOpen, lairChestOpenRects,
-  lairMouthOrigin, lairMouthRects, lairPromptText, lairSceneThings, lairStatusText, rectColorAt,
+  lairChestHitRect, findLairChestAtPoint, lairMouthOrigin, lairMouthRects, lairPromptText, lairSceneThings, lairStatusText, rectColorAt,
 } from './lair-art.mjs';
 import { compareSceneDepth } from './depth-order.mjs';
+import { CLAREIRA } from './theme.mjs';
 
 // Dados falsos no formato do contrato do servidor (personalSnapshot.lairs).
 const lairFixture = (overrides = {}) => ({
@@ -57,8 +58,8 @@ test('o baú aberto tem contato na base e moedas visíveis dentro da tampa', () 
     assert.ok(rect.y + rect.h - 1 <= LAIR_CHEST_OPEN.anchorY, `${JSON.stringify(rect)} passa do contato`);
     assert.ok(rect.x >= 0 && rect.x + rect.w <= LAIR_CHEST_OPEN.width, `${JSON.stringify(rect)} sai da grade`);
   }
-  assert.equal(colorAt(rects, 12, 7), '#f2c14e', 'moedas dentro do baú aberto');
-  assert.equal(colorAt(rects, 12, 20), '#8a5a33', 'corpo do baú cobre a parte de baixo');
+  assert.equal(colorAt(rects, 12, 7), CLAREIRA.lair.gold, 'moedas dentro do baú aberto');
+  assert.equal(colorAt(rects, 12, 20), CLAREIRA.lair.wood, 'corpo do baú cobre a parte de baixo');
 });
 
 test('o estado escolhe baú fechado ou aberto', () => {
@@ -91,13 +92,27 @@ test('nearestLairChest ignora entradas incompletas e posição inválida', () =>
   assert.equal(findNearestLairChest(undefined, { x: 0, y: 0 }), null);
 });
 
-test('a cena põe o fundo antes e os lábios depois do personagem que está no vão', () => {
+test('o personagem atrás, dentro e na frente da boca: fundo, vão e lábios na ordem certa', () => {
   const [back, front] = lairSceneThings([lairFixture()]);
-  const north = { name: 'personagem-no-vao-norte', type: 'player', x: 565.8, y: 136.8 };
-  const south = { name: 'personagem-na-frente', type: 'player', x: 566.3, y: 137.3 };
+  // Contato da boca em (566, 137): soma 703. Fundo em 701,8; lábios em 703,02.
+  const behind = { name: 'atras-da-parede', type: 'player', x: 565, y: 135 };
+  const inside = { name: 'dentro-do-vao', type: 'player', x: 565.8, y: 136.8 };
+  const inFront = { name: 'na-frente-da-boca', type: 'player', x: 566.3, y: 137.3 };
   const label = item => item.name ?? `${item.type}:${item.layer}`;
-  const ordered = [front, south, back, north].sort(compareSceneDepth).map(label);
-  assert.deepEqual(ordered, ['lair-mouth:back', 'personagem-no-vao-norte', 'lair-mouth:front', 'personagem-na-frente']);
+  const ordered = [inFront, front, inside, back, behind].sort(compareSceneDepth).map(label);
+  assert.deepEqual(ordered, ['atras-da-parede', 'lair-mouth:back', 'dentro-do-vao', 'lair-mouth:front', 'na-frente-da-boca']);
+});
+
+test('o toque no baú acerta só as partes opacas do baú, não a boca nem as bordas transparentes', () => {
+  const lair = lairFixture({ state: 'ready' });
+  const scale = 2;
+  const contact = { x: 300, y: 200 };
+  const toScreen = () => contact;
+  const rect = lairChestHitRect('ready', contact, scale);
+  assert.equal(findLairChestAtPoint([lair], { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 }, toScreen, scale)?.id, lair.id);
+  assert.equal(findLairChestAtPoint([lair], { x: contact.x, y: contact.y - 60 * scale }, toScreen, scale), null, 'a boca acima do baú não recebe toque');
+  assert.equal(findLairChestAtPoint([lair], { x: contact.x - 20 * scale, y: contact.y - 10 * scale }, toScreen, scale), null, 'borda transparente do PNG');
+  assert.equal(findLairChestAtPoint([lair], { x: NaN, y: 0 }, toScreen, scale), null);
 });
 
 test('lairSceneThings gera fundo, lábios e baú, e ignora covil sem posição', () => {

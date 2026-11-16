@@ -21,7 +21,7 @@ import {
   addInventoryItem, canAddInventoryItems, createInventory, findInventorySlot, inventorySnapshot,
   removeInventoryItem, restoreInventory, selectedInventoryItem, STONE_AXE_DURABILITY, STONE_PICKAXE_DURABILITY,
 } from '../game/inventory.mjs';
-import { GEAR_LABELS, weaponDamageFor } from '../game/equipment.mjs';
+import { GEAR_LABELS, armorDefense, weaponDamageFor } from '../game/equipment.mjs';
 import { equipItem, unequipItem, purchaseGear, revertEquipChange } from '../game/equipment-actions.mjs';
 import { AXE_TOOL_SPECS, AXE_TOOL_IDS, PICKAXE_TOOL_SPECS, PICKAXE_TOOL_IDS, axeToolFor, axeUpgradeFor, pickaxeToolFor, pickaxeUpgradeFor } from '../game/tool-progression.mjs';
 import { RESOURCE_CONTRACTS, resourceContractBoard, resourceContractDayKey } from '../game/resource-contracts.mjs';
@@ -1097,8 +1097,10 @@ export function createPrototypeServer({
   // Dívida: a vida vive só em memória; ao sair e voltar o jogador começa com vida cheia (sem migração nesta fatia).
   const playerVitals = player => player.vitals ||= createVitals(player.inventory?.level);
   const isPlayerDowned = (player, at = now()) => isDowned(player.vitals, at);
-  // Ponto único para a branch de equipamento ligar a defesa.
-  const playerDefense = player => 0;
+  // Defesa vale só para o gibão vestido (slot do corpo). O atributo "defesa" não entra aqui:
+  // ele já reduz o empurrão (incomingKnockbackMultiplier em game/wildlife.mjs); somá-lo ao dano
+  // seria contar duas vezes a mesma proteção.
+  const playerDefense = player => armorDefense(player.inventory);
   const playerVitalsSnapshot = viewer => {
     const vitals = playerVitals(viewer), at = now();
     const snapshot = vitalsSnapshot(vitals, maxHealth(viewer.inventory?.level));

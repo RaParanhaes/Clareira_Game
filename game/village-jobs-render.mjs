@@ -8,7 +8,7 @@
 import { CLAREIRA } from './theme.mjs';
 import { villageJobProgress } from './village-jobs-client.mjs';
 
-const WOOD = '#7a5a36';
+const WOOD = CLAREIRA.material.board;
 const PAPER = CLAREIRA.palette.parchment;
 const INK = CLAREIRA.palette.ink;
 

@@ -25,6 +25,7 @@ import { AXE_TOOL_SPECS, AXE_TOOL_IDS, PICKAXE_TOOL_SPECS, PICKAXE_TOOL_IDS, axe
 import { RESOURCE_CONTRACTS, resourceContractBoard, resourceContractDayKey } from '../game/resource-contracts.mjs';
 import {normalizeAppearance} from '../game/appearance.mjs';
 import { createSnapshotStream } from './snapshot-stream.mjs';
+import { createVillageJobsServer } from './village-jobs-server.mjs';
 import { performance } from 'node:perf_hooks';
 import { createEventLoopLag } from './event-loop-lag.mjs';
 import { simulationBudget } from './simulation-clock.mjs';
@@ -520,6 +521,7 @@ export function createPrototypeServer({
     player.roomEntryContext = null; player.roomEnteredFloor = false;
     player.registration?.update({ location: player.location, contextId: playerContextId(player) });
     indexPlayer(player.socket, player);
+    villageJobs.movement(player);
   };
   const moveRoomPlayer=(player,position,input,delta,occupied)=>{
     const layout=getRoomLayout(player.roomKind,player.roomBuildingId,player.roomLodgingMode||player.lodgingClaim?.mode);
@@ -608,6 +610,7 @@ export function createPrototypeServer({
       step: FIXED_STEP_SECONDS, move, crossedRoomExit: didCrossRoomExit, walkOutOfRoom });
     player.moving = player.position.x !== previousPosition.x || player.position.y !== previousPosition.y;
     indexPlayer(player.socket, player);
+    villageJobs.movement(player);
   };
   const refreshCabinViews = async () => {
     cabinOccupancy = (await storage.listLodgingClaims()).filter(claim => isCabin(claim.buildingId))
@@ -668,6 +671,7 @@ export function createPrototypeServer({
   const fireWrites = new Map();
   const campfireActionQueues = new Map();
   let fireLifecycleTimer = null;
+  let villageJobTimer = null;
   let fireLifecycleRunning = false;
   const resourceState = dimensionId => {
     if (!resourceStates.has(dimensionId)) resourceStates.set(dimensionId, { collected: new Set(), respawns: new Map(), treeRespawns: new Map() });
@@ -739,6 +743,17 @@ export function createPrototypeServer({
     return firesByDimension.get(dimensionId);
   };
   const progressWrites = new Map();
+  // `now` é o mesmo relógio do servidor (Date.now em produção); os testes o controlam para virar o dia e medir o tempo mínimo.
+  const villageJobs = createVillageJobsServer({ now, storage, isHearthLit: (dimensionId, at) => {
+    // A chave do Map é o id da fogueira; o objeto recém-criado da chegada não o repete como campo.
+    const fire = firesFor(dimensionId).get('arrival');
+    return Boolean(fire?.permanent === true && campfireRemainingMs(fire, at) > 0);
+  }, queueWrite: (profileId, task) => {
+    const previous = progressWrites.get(profileId) || Promise.resolve();
+    const next = previous.catch(() => {}).then(task);
+    progressWrites.set(profileId, next);
+    return next;
+  } });
   const roomWrites = new Map();
   const locationWriteStates = new Map();
   const dimensionPositionWriteStates = new Map();
@@ -1097,6 +1112,8 @@ export function createPrototypeServer({
     if (result.damage <= 0) return 0;
     vitals.waking = vitals.waking || result.fainted;
     if (result.fainted) {
+      // Só desmaio cancela o turno de ofício; dano comum não interrompe o trabalho.
+      villageJobs.cancelForProfile(player.accountId);
       player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq; player.moving = false;
       player.position.vx = 0; player.position.vy = 0; player.sitting = false; player.emote = null;
       // Uma viagem já iniciada é cancelada: caído, o jogador não troca de dimensão.
@@ -1131,6 +1148,7 @@ export function createPrototypeServer({
       inventoryState: { seq: viewer.inventorySeq || 0, inventory: inventorySnapshot(viewer.inventory) },
       flightPilotAllowed: viewer.flightPilotEnabled === true,
       vitals: playerVitalsSnapshot(viewer),
+      villageJobs: villageJobs.state(viewer),
       roomOwnerName: viewer.roomState.name,
       roomCanEdit: canEditCurrentRoom(viewer),
       canOwnerVisitHomes: viewer.canOwnerVisitHomes === true,
@@ -1263,7 +1281,7 @@ export function createPrototypeServer({
       'inventoryState', 'flightPilotAllowed', 'roomOwnerName', 'roomCanEdit', 'canOwnerVisitHomes', 'roomKey', 'roomKind', 'roomBuildingId',
       'roomLodgingMode', 'lodgingClaim', 'lodgingClaims', 'lodgingLeases', 'lodgingLease', 'recurringLeasesAvailable', 'cabinKeys',
       'issuedCabinKeys', 'cabinOccupancy', 'propertyListings', 'propertyRentalListings', 'propertyRequests', 'resourceContracts', 'marketQuotes', 'objectCatalog',
-      'governmentTaxPanel', 'resourceContractsRequireAccount', 'arrivalTutorial', 'dimensions', 'vitals',
+      'governmentTaxPanel', 'resourceContractsRequireAccount', 'arrivalTutorial', 'dimensions', 'vitals', 'villageJobs',
     ],
   });
   let pendingBroadcast = null;
@@ -1276,7 +1294,9 @@ export function createPrototypeServer({
       pendingBroadcast = null;
       const refresh = pendingBroadcastRefreshWorld;
       pendingBroadcastRefreshWorld = false;
-      streamSnapshots(peers, (player, includeWorld, includeWildlife) => snapshot(player, includeWorld, includeWildlife), now(), refresh);
+      streamSnapshots(peers, (player, includeWorld, includeWildlife) => {
+        return snapshot(player, includeWorld, includeWildlife);
+      }, now(), refresh);
     });
   };
   const snapshotTimer = setInterval(() => broadcast(false), Math.max(1, Number(snapshotIntervalMs) || SNAPSHOT_MS));
@@ -1884,6 +1904,7 @@ export function createPrototypeServer({
     registration?.update({ location: player.location, contextId: playerContextId(player) });
     if(player.accountId && storage.getPropertyRequests) player.propertyRequests=await storage.getPropertyRequests(player.accountId);
     peers.set(socket, player);
+    villageJobs.invalidate(player.accountId);
     releaseAdmission();
     releaseAccountAdmission();
     indexPlayer(socket, player);
@@ -2250,6 +2271,12 @@ export function createPrototypeServer({
         player.arrivalTutorial={phase:'ready',step:4,completed:true};
         notice(socket,'A fagulha deixou um galho e uma folha para você. O Bosque das Brasas espera.','chime',{arrivalReady:true});
         broadcast(false);return;
+      }
+      if (message.type === 'action' && ['villageJobStart','villageJobFinish','villageJobCancel'].includes(message.name)) {
+        const result = await villageJobs.handle(player, message, { inventorySnapshot:() => inventorySnapshot(player.inventory) });
+        if (result?.notice) notice(socket, result.notice, result.ok ? 'chime' : 'soft', { villageJobResult:result });
+        if (result?.ok) broadcast(false);
+        return;
       }
       if (message.type !== 'action' || !['collect', 'hunt', 'work', 'craftAxe', 'craftPickaxe', 'upgradeAxe', 'upgradePickaxe', 'buildBench', 'buildKiln', 'buildFurnace', 'process', 'sharpen', 'selectHotbar', 'moveToHotbar', 'moveInventorySlot', 'chestMove', 'consumeXpPotion', 'allocateAttribute', 'learnAbility', 'castAbility', 'fire', 'share', 'interact', 'arrivalTutorialChoice', 'arrivalTutorialCollect', 'talkTutorialGuide', 'visitRoom', 'ownerVisitRoom', 'placeFurniture', 'removeFurniture', 'rotateFurniture', 'moveFurniture', 'useFurniture', 'lodgeClaim', 'lodgeEnter', 'lodgeSell', 'lodgeBuyTool', 'lodgeBuyGear', 'equipItem', 'unequipItem', 'lodgeCompleteContract', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyBuy', 'propertyRequest', 'propertyQuote', 'propertyRentList', 'propertyRentDelist', 'propertyRent', 'setLodgingAutoRenew', 'setSkyOverride', 'clearSkyOverrides'].includes(message.name)) return;
       if (message.name === 'allocateAttribute') {
@@ -4269,11 +4296,13 @@ export function createPrototypeServer({
           viewportWidth:player.viewportWidth,viewportHeight:player.viewportHeight});
         if(resumableSessions.size>128)resumableSessions.delete(resumableSessions.keys().next().value);
       }
+      villageJobs.cancelForProfile(peers.get(socket)?.accountId);
       peers.delete(socket);
       removeIndexedPlayer(socket);
       broadcast();
     });
     socket.on('error', () => {
+      villageJobs.cancelForProfile(peers.get(socket)?.accountId);
       peers.delete(socket);
       removeIndexedPlayer(socket);
       void releaseCoordination(registration).catch(error => {
@@ -4708,6 +4737,8 @@ export function createPrototypeServer({
       worldSyncTimer.unref();
       const lifecycleInterval = Math.max(50, Math.min(60_000, Number(campfireLifecycleIntervalMs) || 5_000));
       fireLifecycleTimer=setInterval(()=>{void pruneExpiredCampfires()},lifecycleInterval);
+      villageJobTimer=setInterval(()=>{villageJobs.sweep();},500);
+      villageJobTimer.unref();
       fireLifecycleTimer.unref();
       return httpServer.address();
     },
@@ -4743,6 +4774,7 @@ export function createPrototypeServer({
       if(worldSyncTimer)clearInterval(worldSyncTimer);
       if(worldSyncRunning)await worldSyncRunning;
       if(fireLifecycleTimer)clearInterval(fireLifecycleTimer);
+      if(villageJobTimer)clearInterval(villageJobTimer);
       for (const state of resourceStates.values()) {
         for (const scheduled of state.respawns.values()) clearTimeout(scheduled.timer);
         for (const timer of state.treeRespawns.values()) clearTimeout(timer);

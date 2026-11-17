@@ -58,6 +58,10 @@ import { nearestPlaceService, placeServicePoints, placeServiceAllowsAction, CABI
 import { createPanelController } from './panel-controller.mjs';
 import { discoverWorldMapCells, mergeWorldMapExploration, isWorldMapCellKnown, worldMapCellIndex, worldMapExplorationLabel, zoomWorldMapAround, preloadWorldMapCaches } from './world-map.mjs';
 import { createPlacePanel } from './place-panel.mjs';
+import { createVillageJobHud } from './village-jobs-view.mjs';
+import { drawVillageJobMark, villageJobMarkThing } from './village-jobs-render.mjs';
+import { VILLAGE_JOB_POINTS } from './village-jobs.mjs';
+import { villageJobsPacketSnapshot } from './village-jobs-client.mjs';
 import { attachDialogDrag } from './dialog-drag.mjs';
 attachDialogDrag(document);
 const SVG_NS='http://www.w3.org/2000/svg';
@@ -362,6 +366,14 @@ let worldRoomBuildingId = null;
 let activeLodgingClaim = null;
 let activeLodgingLease = null;
 let lodgingClaims = [], lodgingLeases = [], propertyRequests = [], propertyRentalListings = [];
+let villageJobs = null;
+const villageJobHud = createVillageJobHud();
+// Mesma atualização para o pacote normal de estado e para o pacote avulso villageJobs.
+function applyVillageJobsSnapshot(snapshot) {
+  villageJobs = snapshot || null;
+  const jobNotice = villageJobHud.update(villageJobs);
+  if (jobNotice) announce(jobNotice, 4500);
+}
 let recurringLeasesAvailable = false;
 let worldRoomLodgingMode = null;
 let cabinKeys = [], issuedCabinKeys = [], cabinOccupancy = [], propertyListings = [];
@@ -721,6 +733,8 @@ function updateVisibleWorldChunks() {
     };
     if (worldDimensionId === 'surface') {
       addStaticThing(CLEARING_HOME_THING);
+      // Marcas dos ofícios entram na fila de profundidade na própria posição, fora do cache da Recepção.
+      for (const jobPoint of VILLAGE_JOB_POINTS) addStaticThing(villageJobMarkThing(jobPoint));
       const receptionCanopy=buildingArchitecture(RECEPTION_BUILDING).canopy;
       if(receptionCanopy)addStaticThing({type:'building-canopy',x:receptionCanopy.right,y:receptionCanopy.bottom,
         canopy:receptionCanopy,building:RECEPTION_BUILDING});
@@ -2306,6 +2320,11 @@ function connect() {
       if (message.sound) playEffect(message.sound);
       return;
     }
+    if (message.type === 'villageJobs') {
+      const jobsSnapshot = villageJobsPacketSnapshot(message);
+      if (jobsSnapshot !== undefined) applyVillageJobsSnapshot(jobsSnapshot);
+      return;
+    }
     if (message.type !== 'state') return;
     loadingReceivedStates++;loadingProcessingPhase=2;
     const statePayloadChars=typeof event.data==='string'?event.data.length:0;
@@ -2498,6 +2517,7 @@ function connect() {
     if (Object.hasOwn(message, 'propertyRentalListings')) propertyRentalListings=message.propertyRentalListings || [];
     if (Object.hasOwn(message, 'lodgingClaims')) lodgingClaims = message.lodgingClaims || [];
     if (Object.hasOwn(message, 'lodgingLeases')) lodgingLeases = message.lodgingLeases || [];
+    if (Object.hasOwn(message, 'villageJobs')) applyVillageJobsSnapshot(message.villageJobs);
     if (Object.hasOwn(message, 'lodgingClaim')) activeLodgingClaim = message.lodgingClaim || null;
     if (Object.hasOwn(message, 'lodgingLease')) activeLodgingLease = message.lodgingLease || null;
     if (typeof message.recurringLeasesAvailable === 'boolean') recurringLeasesAvailable = message.recurringLeasesAvailable;
@@ -4087,7 +4107,7 @@ const placePanel = createPlacePanel({
   dialog: ui.lodgingDialog, controller: panels,
   getState: () => ({ guest: currentProfile?.guest === true, inventory: localInventory,
     worldTime:gameDayTimestampMs(), claim: activeLodgingClaim, claims:lodgingClaims, lodgingLeases, propertyRequests, propertyRentalListings, lodgingLease: activeLodgingLease, recurringLeasesAvailable, contracts: resourceContracts, marketQuotes,
-    cabinKeys, issuedCabinKeys, cabinOccupancy, propertyListings, governmentTaxPanel }),
+    cabinKeys, issuedCabinKeys, cabinOccupancy, propertyListings, governmentTaxPanel, villageJobs }),
   onAction: (message, point) => {
     const nearby = nearestReceptionService();
     if (!sceneReady || nearby?.key !== point.key || !placeServiceAllowsAction(nearby, message)) {
@@ -7307,6 +7327,8 @@ function drawScene() {
   for (const thing of things) {
     if(thing.type==='terrain-face')drawNaturalTerrainFace(thing.face);
     if (thing.type === 'home') drawClearingHome();
+    if (thing.type === 'village-job-mark') drawVillageJobMark(ctx,(x,y,z)=>point(x,y,camera,z),{point:thing.point,
+      active:villageJobs?.active||null,nowMs:Date.now(),scale:spriteScale});
     if (thing.type === 'lodging') drawVillageBuilding(thing.building);
     if (thing.type === 'building-post') drawBuildingPost(ctx,thing.building,thing.post,
       (x,y,z)=>point(x,y,camera,z),drawPixelPolygon);

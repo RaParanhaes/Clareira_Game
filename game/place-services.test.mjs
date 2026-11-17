@@ -49,7 +49,8 @@ test('services and authoritative actions belong to the correct place and counter
 
 test('cabins have exterior signs, no public reception, and cannot authorize another cabin', () => {
   const context = { location: 'clearing', dimensionId: 'surface' };
-  const points = placeServicePoints(context);
+  // Os pontos dos ofícios também ficam na superfície; aqui se conferem só as placas das cabanas.
+  const points = placeServicePoints(context).filter(point => point.id === 'property-sign');
   assert.equal(points.length, 3);
   for (const point of points) {
     assert.ok(canOccupy(point), `${point.key}: sign is on accessible outdoor floor`);

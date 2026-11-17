@@ -39,6 +39,7 @@ export const CLAREIRA = Object.freeze({
     branch: Object.freeze({ shadow: '#6f4d34', wood: '#b1814d', light: '#d0a26b', leaf: '#4b6f48' }),
     stone: Object.freeze({ shadow: '#77877b', stone: '#aab3a1', light: '#c4c8ae' }),
     berry: Object.freeze({ leaf: '#476c45', lightLeaf: '#73904e', fruit: '#d96d68', seed: '#f4cb82', newLeaf: '#9fc47c' }),
+    board: '#7a5a36',
   }),
   fire: Object.freeze({
     glow: '#ffcb7480',

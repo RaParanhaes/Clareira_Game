@@ -1,6 +1,7 @@
 import {objectBuildings,subscribeObjectCatalog} from './object-state.mjs';
 import { VILLAGE_BUILDINGS } from './village-buildings.mjs';
 import { isCabin } from './cabin-access.mjs';
+import { VILLAGE_JOB_POINTS, VILLAGE_JOBS } from './village-jobs.mjs';
 
 // Stable place IDs refer to the existing world/catalog; these are interaction
 // policies, not a second catalog of buildings, inventories or saved objects.
@@ -19,7 +20,32 @@ export const SERVICE_SECTIONS = Object.freeze({
   tools: Object.freeze({ label: 'Comprar ferramentas', description: 'Consultar as ferramentas deste balcão.' }),
   government: Object.freeze({ label: 'Governo e impostos', description: 'Consultar o tesouro e ajustar as alíquotas deste governo.' }),
   keys: Object.freeze({ label: 'Chaves da cabana', description: 'Entregar ou revogar chaves para outras contas.' }),
+  jobs: Object.freeze({ label: 'Trabalhos da vila', description: 'Pegue um trabalho pago e conclua no ponto indicado.' }),
 });
+
+// Pontos externos dos ofícios (quadro, entrega, fogueira). Ficam fora de
+// PLACE_SERVICES, que é reconstruído a cada atualização do catálogo de objetos.
+const JOB_POINT_PROMPTS = Object.freeze({ board: 'Ver trabalhos', delivery: 'Entregar caixa', hearth: 'Ver trabalhos' });
+// Início é por ofício: cada jobId só começa no ponto de partida do catálogo
+// (carrier no quadro, firekeeper na fogueira). Conclusão vale em qualquer
+// ponto de destino; cancelamento vale em qualquer ponto de ofício.
+const JOB_START_POINT_BY_ID = new Map(VILLAGE_JOBS.map(job => [job.id, job.startPointId]));
+const JOB_FINISH_POINT_IDS = new Set(VILLAGE_JOBS.map(job => job.finishPointId));
+const JOB_POINT_IDS = new Set(VILLAGE_JOB_POINTS.map(point => point.id));
+
+function jobActionAllowed(point, message) {
+  if (!Object.hasOwn(JOB_ACTION_NAMES, message.name)) return true;
+  if (!point.jobPointId) return false;
+  if (message.name === 'villageJobStart') return JOB_START_POINT_BY_ID.get(message.jobId) === point.jobPointId;
+  if (message.name === 'villageJobFinish') return JOB_FINISH_POINT_IDS.has(point.jobPointId);
+  return JOB_POINT_IDS.has(point.jobPointId);
+}
+const JOB_ACTION_NAMES = Object.freeze({ villageJobStart: true, villageJobFinish: true, villageJobCancel: true });
+export const EXTERIOR_JOB_SERVICES = Object.freeze(VILLAGE_JOB_POINTS.map(point => Object.freeze({
+  id: 'village-job', label: point.label, prompt: JOB_POINT_PROMPTS[point.id] || 'Ver trabalhos',
+  sections: Object.freeze(['jobs']), radius: point.radius, jobPointId: point.id, placeId: `village-job:${point.id}`,
+  anchor: Object.freeze({ kind: 'world-point', x: point.x, y: point.y }),
+})));
 
 const arrivalExchange = Object.freeze({
   ...reception(['trade', 'orders', 'tools', 'gear', 'government'], 'Trocas da vila', .86), id: 'exchange',
@@ -46,7 +72,7 @@ subscribeObjectCatalog(()=>{
 });
 
 export function resolveServiceAnchor(anchor, layout) {
-  if (anchor?.kind === 'building-sign') return { x: anchor.x, y: anchor.y, frontEdge: null };
+  if (anchor?.kind === 'building-sign' || anchor?.kind === 'world-point') return { x: anchor.x, y: anchor.y, frontEdge: null };
   if (!anchor || !layout?.bounds) return null;
   if (anchor.kind === 'counter-front' && layout.counter) {
     const counter = layout.counter;
@@ -64,8 +90,10 @@ export function resolveServiceAnchor(anchor, layout) {
 
 export function placeServicePoints(context, layout) {
   if (context.location === 'clearing' && context.dimensionId === 'surface')
-    return Object.entries(CABIN_EXTERIOR_SERVICES).map(([placeId, definition]) => ({ ...definition, placeId,
-      key: `${placeId}:${definition.id}`, ...resolveServiceAnchor(definition.anchor) }));
+    return [...Object.entries(CABIN_EXTERIOR_SERVICES).map(([placeId, definition]) => ({ ...definition, placeId,
+      key: `${placeId}:${definition.id}`, ...resolveServiceAnchor(definition.anchor) })),
+    ...EXTERIOR_JOB_SERVICES.map(definition => ({ ...definition, key: `${definition.placeId}:${definition.id}`,
+      ...resolveServiceAnchor(definition.anchor) }))];
   if (context.location !== 'room' || context.roomKind !== 'lobby' || !Object.hasOwn(PLACE_SERVICES, context.roomBuildingId)) return [];
   return PLACE_SERVICES[context.roomBuildingId].flatMap(definition => {
     const anchor = resolveServiceAnchor(definition.anchor, layout);
@@ -94,6 +122,7 @@ const ACTION_SECTIONS = Object.freeze({
   governmentTaxPolicySet: ['government'],
   propertyRequest:['properties','directory'], propertyQuote:['properties','directory'], propertyRentList:['properties'], propertyRentDelist:['properties'], propertyRent:['properties','directory'],
   propertyList: ['properties'], propertyDelist: ['properties'], propertyBuy: ['properties', 'directory'],
+  villageJobStart: ['jobs'], villageJobFinish: ['jobs'], villageJobCancel: ['jobs'],
 });
 
 export function isPlaceServiceAction(name) {
@@ -107,5 +136,6 @@ export function placeServiceAllowsAction(point, message) {
   return Boolean(point && sections.some(section => point.sections.includes(section))
     && (!['lodgeClaim', 'cabinGrantKey', 'cabinRevokeKey', 'propertyList', 'propertyDelist', 'propertyRentList', 'propertyRentDelist', 'setLodgingAutoRenew'].includes(message.name) || message.buildingId === point.placeId)
     && (!['propertyBuy','propertyRent','propertyRequest','propertyQuote'].includes(message.name) || point.sections.includes('directory') || message.buildingId === point.placeId)
-    && (message.name !== 'lodgeEnter' || !message.buildingId || message.buildingId === point.placeId));
+    && (message.name !== 'lodgeEnter' || !message.buildingId || message.buildingId === point.placeId)
+    && jobActionAllowed(point, message));
 }

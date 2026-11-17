@@ -443,6 +443,12 @@ export function createAccountStore({ directory }) {
       });
     },
 
+    // Leitura da carteira atual (usada pelo replay de ofícios no adapter JSON).
+    async getWallet(profileId) {
+      const data = await readState();
+      return walletFor(data.accounts.find(item => item.id === profileId));
+    },
+
     async debitWallet(profileId, amount) {
       if (typeof profileId !== 'string' || !/^[0-9a-f-]{36}$/i.test(profileId)
           || !Number.isSafeInteger(amount) || amount < 1 || amount > 999_999) {

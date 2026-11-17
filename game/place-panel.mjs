@@ -6,6 +6,8 @@ import { SERVICE_SECTIONS } from './place-services.mjs';
 import { isCabin } from './cabin-access.mjs';
 import { GEAR_LABELS, GEAR_PRICES } from './equipment.mjs';
 import { renderGearShop } from './equipment-ui.mjs';
+import { renderVillageJobsPanel, updateVillageJobTemporal, createVillageJobTicker } from './village-jobs-view.mjs';
+import { VILLAGE_JOB_POINT_LABELS } from './village-jobs-client.mjs';
 
 const itemNames = Object.freeze({ wood: 'Graveto seco', timber: 'Madeira bruta', stone: 'Pedra',
   sturdyBranch: 'Galho forte', berries: 'Frutinha', apples: 'Maçã', leaves: 'Folhas secas', vines: 'Cipó',
@@ -25,6 +27,13 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
   const taxDrafts = new Map();
   let askingPrice = null;
   let session = null, contentKey = '', busy = false, keyRecipient = '', draft = null;
+  // Referências do turno de ofício visível. O ticker só atualiza contagem e
+  // botão Concluir por quadro; nunca reconstrói a página nem tira o foco.
+  let jobRefs = null;
+  const jobTicker = createVillageJobTicker(nowMs => {
+    if (!session || !jobRefs || controller.current !== 'place') return false;
+    return updateVillageJobTemporal(jobRefs, { guest: getState().guest === true, busy, nowMs });
+  });
 
   function element(tag, text, className) {
     const node = doc.createElement(tag);
@@ -100,6 +109,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
   }
   content.addEventListener('input',event=>{if(event.target.dataset.propertyPrice)propertyDrafts.set(event.target.dataset.propertyPrice,event.target.value);});
   function render(route, routes) {
+    jobRefs = null;
     if (!session) return;
     if (route !== 'home' && route !== 'commerce-review' && !session.point.sections.includes(route)) return;
     const state = getState();
@@ -108,7 +118,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
       status.textContent = 'Sua conta não tem acesso à gestão de impostos deste governo.'; return;
     }
     const place = VILLAGE_BUILDINGS.find(item => item.id === session.point.placeId);
-    const placeName = place?.name || 'Recepção da Vila';
+    const placeName = session.point.jobPointId ? VILLAGE_JOB_POINT_LABELS[session.point.jobPointId] : (place?.name || 'Recepção da Vila');
     const ownsCabin = state.cabinKeys?.some(key => key.buildingId === session.point.placeId && key.isOwner);
     dialog.querySelector('#lodging-title').textContent = placeName;
     dialog.querySelector('#lodging-eyebrow').textContent = session.point.label;
@@ -304,6 +314,9 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
         const save=actionButton('Salvar alíquota','governmentTaxPolicySet',{taxCode:policy.taxCode});
         form.append(save); card.append(form); fragment.append(card);
       }
+    } else if (route === 'jobs') {
+      jobRefs = renderVillageJobsPanel(fragment, { element, actionButton, snapshot: state.villageJobs,
+        pointId: session.point.jobPointId, nearPoint: true, guest: state.guest === true });
     } else if (route === 'gear') {
       renderGearShop(fragment, { element, actionButton, formatCoins, balance, state });
     } else if (route === 'tools') {
@@ -318,6 +331,8 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
       }
     }
     content.replaceChildren(fragment);
+    jobTicker.stop();
+    if (jobRefs) jobTicker.start();
     content.setAttribute('aria-busy', String(busy));
     if (busy) for (const input of content.querySelectorAll('input,select,textarea')) input.disabled = true;
     dialog.querySelector('#lodging-wallet').textContent = `Carteira: ${formatCoins(
@@ -332,7 +347,7 @@ export function createPlacePanel({ dialog, controller, getState, onAction }) {
 
   controller.register('place', dialog, {
     initialFocus: '[data-service-section]', render,
-    onClose() { session = null; contentKey = ''; busy = false; keyRecipient = ''; draft = null; askingPrice = null; propertyDrafts.clear(); rentalPeriods.clear(); renewals.clear(); quantities.clear(); taxDrafts.clear(); },
+    onClose() { jobTicker.stop(); jobRefs = null; session = null; contentKey = ''; busy = false; keyRecipient = ''; draft = null; askingPrice = null; propertyDrafts.clear(); rentalPeriods.clear(); renewals.clear(); quantities.clear(); taxDrafts.clear(); },
   });
   back.addEventListener('click', () => controller.back());
   dialog.querySelector('#lodging-close').addEventListener('click', () => controller.close());

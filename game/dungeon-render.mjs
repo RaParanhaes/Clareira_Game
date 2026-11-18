@@ -8,6 +8,8 @@ export const DUNGEON_GEOMETRY = Object.freeze({
   halfH: 18,        // meia altura do losango do tile
   wallRise: 40,     // altura física da parede acima da base, em pixels de mundo
   pixel: 2,         // escala inteira da arte: 1 pixel lógico = 2 pixels de mundo
+  wallAnchorRow: 15, // linha lógica do losango do topo quando a rocha tem altura padrão
+  wallLiftMax: 4,    // quanto a rocha pode subir acima do padrão, em pixels lógicos (alturas variadas)
   playerBox: Object.freeze({ left: 24, right: 24, top: 84, bottom: 12 }), // pivô (48,84) de 96x96
 });
 export const DUNGEON_FRONT_WALL_ALPHA = 0.45;
@@ -16,10 +18,32 @@ export const DUNGEON_LIGHT = Object.freeze({
   playerReachTiles: 3.4,
   torchReachTiles: 2.6,
   maxTorches: 16,
-  veilAlpha: 0.97,
-  flicker: 0.06,
+  veilAlpha: 0.76,     // escuridão ambiente: sobra ~24% de visibilidade fria
+  flicker: 0.04,       // variação lenta do raio da tocha (fração), sem tremor
+  playerStrength: 0.5, // luz do jogador: corta metade do véu, neutra e mais fraca
+  torchStrength: 1,
 });
 const VIEW_MARGIN_TILES = 3;
+
+// Hash determinístico de uma célula: mesma seed, mesmo resultado em qualquer quadro.
+export function cellHash(c, r, salt = 0) {
+  let h = (c * 374761393 + r * 668265263 + salt * 2246822519) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0;
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+// Altura e forma da rocha de um tile: lift sobe o topo (0..wallLiftMax), shape escolhe o contorno.
+export function wallVariant(x, y) {
+  const h = cellHash(x, y, 5);
+  return { lift: h % (DUNGEON_GEOMETRY.wallLiftMax + 1), shape: (h >>> 8) % 4 };
+}
+
+// Canto do sprite da parede em relação ao centro da tela do tile. Todas as alturas usam o mesmo canto,
+// então a base da rocha fica no chão e o topo sobe ou desce dentro do sprite.
+export function wallDrawOffset() {
+  const { halfW, wallRise, wallAnchorRow, pixel } = DUNGEON_GEOMETRY;
+  return { dx: -halfW, dy: -wallRise - wallAnchorRow * pixel };
+}
 
 // Projeção isométrica de um ponto contínuo (px, py) em tiles para pixels de mundo.
 export function projectTile(px, py) {
@@ -116,7 +140,8 @@ export function wallAlphaFor(thing, player) {
   return overlaps ? DUNGEON_FRONT_WALL_ALPHA : 1;
 }
 
-// Luzes que iluminam o escuro: jogador sempre, tochas do viewport (teto por DUNGEON_LIGHT).
+// Luzes que iluminam o escuro: jogador sempre (neutra e fraca), tochas do viewport (quentes, teto por DUNGEON_LIGHT).
+// warm = luz de chama (âmbar); strength = quanto ela corta o véu escuro (0 a 1).
 export function collectDungeonLights({ things, camera, viewport, time, reducedMotion = false }) {
   const toScreen = t => {
     const p = projectTile(t.x, t.y), c = projectTile(camera.x, camera.y);
@@ -126,12 +151,14 @@ export function collectDungeonLights({ things, camera, viewport, time, reducedMo
   for (const thing of things) {
     if (thing.type === 'player') {
       const s = toScreen(thing);
-      lights.push({ x: s.x, y: s.y - 24, radius: DUNGEON_LIGHT.playerReachTiles * DUNGEON_LIGHT.pxPerTile, strength: 1 });
+      lights.push({ x: s.x, y: s.y - 24, radius: DUNGEON_LIGHT.playerReachTiles * DUNGEON_LIGHT.pxPerTile, warm: false, strength: DUNGEON_LIGHT.playerStrength });
     } else if (thing.type === 'torch') {
       const s = toScreen({ x: thing.sortX, y: thing.sortY });
       const seed = thing.x * 1.7 + thing.y * 0.63;
-      const flicker = reducedMotion ? 1 : 1 + DUNGEON_LIGHT.flicker * Math.sin(time * 7.3 + seed);
-      lights.push({ x: s.x, y: s.y - 30, radius: DUNGEON_LIGHT.torchReachTiles * DUNGEON_LIGHT.pxPerTile * flicker, strength: 1 });
+      // Duas ondas lentas (período de segundos), nunca um tremor rápido. Movimento reduzido: fixo.
+      const wobble = 0.7 * Math.sin(time * 1.3 + seed) + 0.3 * Math.sin(time * 2.9 + seed * 1.7);
+      const flicker = reducedMotion ? 1 : 1 + DUNGEON_LIGHT.flicker * wobble;
+      lights.push({ x: s.x, y: s.y - 30, radius: DUNGEON_LIGHT.torchReachTiles * DUNGEON_LIGHT.pxPerTile * flicker, warm: true, strength: DUNGEON_LIGHT.torchStrength });
     }
   }
   return lights;
@@ -178,15 +205,16 @@ export function drawDungeonFrame(ctx, { grid, camera, viewport, player, time = 0
     for (let x = Math.max(0, bounds.minX); x <= Math.min(grid.w - 1, bounds.maxX); x++) {
       if (!isOpenCell(grid, x, y)) continue;
       const s = screenOf({ x: x + 0.5, y: y + 0.5 });
-      ctx.drawImage(art.floor((x * 73856093 ^ y * 19349663) >>> 0), s.x - DUNGEON_GEOMETRY.halfW, s.y - DUNGEON_GEOMETRY.halfH);
+      ctx.drawImage(art.floor(cellHash(x, y, 11), cellHash(x >> 2, y >> 2, 12)), s.x - DUNGEON_GEOMETRY.halfW, s.y - DUNGEON_GEOMETRY.halfH);
     }
   }
   const things = collectDungeonThings({ grid, bounds, player });
+  const wallOffset = wallDrawOffset();
   for (const thing of things) {
     ctx.globalAlpha = wallAlphaFor(thing, player);
     if (thing.type === 'wall') {
       const s = screenOf({ x: thing.sortX, y: thing.sortY });
-      ctx.drawImage(art.wall(thing.mask), s.x - DUNGEON_GEOMETRY.halfW, s.y - DUNGEON_GEOMETRY.wallRise - DUNGEON_GEOMETRY.halfH);
+      ctx.drawImage(art.wall(thing.mask, wallVariant(thing.x, thing.y)), s.x + wallOffset.dx, s.y + wallOffset.dy);
     } else if (thing.type === 'torch') {
       const s = screenOf({ x: thing.sortX, y: thing.sortY });
       ctx.drawImage(art.torch(torchFrame(time, reducedMotion, thing.x + thing.y)), s.x - 8, s.y - 40);

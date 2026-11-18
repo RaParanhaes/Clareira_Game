@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DUNGEON_FRONT_WALL_ALPHA, DUNGEON_GEOMETRY, DUNGEON_LIGHT, collectDungeonLights, collectDungeonThings, createSpriteCache,
-  dungeonIndex, drawDungeonFrame, isOpenCell, projectTile, torchFrame, visibleTileBounds, wallAlphaFor, wallFaceMask,
+  dungeonIndex, drawDungeonFrame, isOpenCell, projectTile, torchFrame, visibleTileBounds, wallAlphaFor, wallDrawOffset,
+  wallFaceMask, wallVariant,
 } from './dungeon-render.mjs';
 import { createDungeonArt } from './dungeon-art.mjs';
 
@@ -103,7 +104,7 @@ test('drawDungeonFrame makes only the covering front wall translucent and draws 
   const cam = projectTile(player.x, player.y), target = projectTile(5.5, 5.5);
   // Compara x e y: (3,3) e (5,5) têm a mesma coluna na tela.
   const nearX = target.x - cam.x + viewport.width / 2 - DUNGEON_GEOMETRY.halfW;
-  const nearY = target.y - cam.y + viewport.height / 2 - DUNGEON_GEOMETRY.wallRise - DUNGEON_GEOMETRY.halfH;
+  const nearY = target.y - cam.y + viewport.height / 2 + wallDrawOffset().dy;
   const near = walls.find(c => c.x === nearX && c.y === nearY);
   assert.ok(near, 'the wall at (5,5) is drawn at its projected position');
   assert.equal(near.alpha, DUNGEON_FRONT_WALL_ALPHA);
@@ -167,6 +168,40 @@ test('torch flame alternates in two frames and holds still with reduced motion',
   const frames = Array.from({ length: 8 }, (_, i) => torchFrame(i * 0.25));
   assert.ok(frames.includes(0) && frames.includes(1), 'the flame alternates');
   assert.ok(Array.from({ length: 8 }, (_, i) => torchFrame(i * 0.25, true)).every(f => f === 0), 'reduced motion holds frame 0');
+});
+
+test('rock height varies per tile, deterministically, and stays inside the sprite', () => {
+  const lifts = new Set();
+  for (let y = 0; y < 30; y++) for (let x = 0; x < 30; x++) {
+    const v = wallVariant(x, y);
+    assert.deepEqual(wallVariant(x, y), v, 'same tile, same rock');
+    assert.ok(v.lift >= 0 && v.lift <= DUNGEON_GEOMETRY.wallLiftMax);
+    assert.ok(v.shape >= 0 && v.shape < 4);
+    lifts.add(v.lift);
+  }
+  assert.ok(lifts.size >= 4, 'tiles get several different heights');
+  const art = createDungeonArt({ createCanvas: fakeCanvas({ created: [] }) });
+  assert.notEqual(art.wall(3, { lift: 0, shape: 0 }), art.wall(3, { lift: 2, shape: 0 }), 'different heights are different sprites');
+  assert.equal(art.wall(3, { lift: 2, shape: 1 }), art.wall(3, { lift: 2, shape: 1 }), 'the same variant is reused from cache');
+});
+
+test('ambient darkness keeps about 20 to 30 percent of the room readable', () => {
+  const visible = 1 - DUNGEON_LIGHT.veilAlpha;
+  assert.ok(visible >= 0.2 && visible <= 0.3, `visibility ${visible}`);
+});
+
+test('torch light is warm and stronger than the player light, which is neutral', () => {
+  const torches = [{ x: 5, y: 6 }];
+  const grid = gridWithRock([], 12, torches);
+  const things = collectDungeonThings({ grid, bounds: { minX: 0, minY: 0, maxX: 11, maxY: 11 }, player: { x: 5, y: 5 } });
+  const lights = collectDungeonLights({ things, camera: { x: 5, y: 5 }, viewport: { width: 400, height: 300 }, time: 1 });
+  const torch = lights.find(l => l.warm), player = lights.find(l => !l.warm);
+  assert.ok(torch && player, 'one warm light and one neutral light');
+  assert.ok(torch.strength > player.strength, 'torch cuts more darkness than the player');
+  const still = collectDungeonLights({ things, camera: { x: 5, y: 5 }, viewport: { width: 400, height: 300 }, time: 9, reducedMotion: true });
+  assert.equal(still.find(l => l.warm).radius, DUNGEON_LIGHT.torchReachTiles * DUNGEON_LIGHT.pxPerTile, 'reduced motion keeps the torch radius fixed');
+  const wobble = Math.abs(torch.radius / (DUNGEON_LIGHT.torchReachTiles * DUNGEON_LIGHT.pxPerTile) - 1);
+  assert.ok(wobble <= DUNGEON_LIGHT.flicker + 1e-9, 'the torch varies only a little');
 });
 
 test('mock level is deterministic and keeps torches on rock with open floor below', () => {

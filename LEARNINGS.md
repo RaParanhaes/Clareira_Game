@@ -267,3 +267,5 @@ Formato: `AAAA-MM-DD — sintoma; tentativa; resultado; teste; fonte (opcional).
 - Comércio/admin (29/10): quantidade inválida deve ser recusada pelo servidor, nunca convertida silenciosamente; mudar alvo/dados/permissão invalida a revisão. Expulsão deriva prazo de 30 s no PostgreSQL, embora o cliente envie expiresAt=null. Não repetir mutações após timeout; fechamento/reabertura precisa limpar dados e liberar controles ao finalizar. Testes de ações rápidas avançam o relógio injetado além do cooldown, sem sleeps.
 
 - 2026-10-30 — Mapa progressivo: blocos alinhados e cache por dimensão/geometria permitem conservar o detalhe durante arrastes; cancelar trabalho fora da janela evita atrasar a região atual. Copas podem cruzar limites de bloco; outros elementos compartilhados precisam de recorte.
+
+- 2026-11-18 — Relógio do jogo: o dia do jogo dura 24 min reais (`GAME_DAY_DURATION_MS` em game/game-time.mjs) e a hora mostrada é o tempo mod 24 min mapeado para 24 h, ou seja, 1 min real = 1 h de jogo. Para validar de dia, desloque o relógio do processo do sandbox (pré-carga fora do repositório) até o horário desejado; não mexa no código do jogo.

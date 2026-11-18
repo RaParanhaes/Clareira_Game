@@ -73,7 +73,7 @@ import {
   campfireFlameStrength, campfireRemainingMs,
 } from '../game/campfire-life.mjs';
 import {
-  applyDamage, createVitals, damageFromAttack, dimensionTravelCancelledDetails, downedRefusal, isDowned, maxHealth, regenStep, releaseAnimalsFromPlayer, vitalsSnapshot,
+  applyDamage, applyDeath, createVitals, damageFromAttack, deathDestination, dimensionTravelCancelledDetails, downedRefusal, isDowned, maxHealth, regenStep, releaseAnimalsFromPlayer, vitalsSnapshot, wakeIfDue,
 } from '../game/vitals.mjs';
 
 function wildlifeOutsideVillage(position,dimensionId,padding=4) {
@@ -1090,41 +1090,44 @@ export function createPrototypeServer({
     const snapshot = vitalsSnapshot(vitals, maxHealth(viewer.inventory?.level));
     return isDowned(vitals, at) ? { ...snapshot, downedMs: Math.ceil(vitals.downedUntil - at) } : snapshot;
   };
+  const stopPlayerForFaint = (player, at, animalId) => {
+    player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq; player.moving = false;
+    player.position.vx = 0; player.position.vy = 0; player.sitting = false; player.emote = null;
+    // Uma viagem já iniciada é cancelada: caído, o jogador não troca de dimensão.
+    const pendingTransit = activeDimensionTransits.get(player.pendingDimensionTransitId);
+    if (pendingTransit) {
+      removeDimensionTransit(pendingTransit);
+      // O cliente desfaz a tela de viagem com a mesma resposta de uma viagem recusada.
+      notice(player.socket, 'A viagem foi interrompida.', 'soft', dimensionTravelCancelledDetails(pendingTransit.id));
+    }
+    delete player.pendingDimensionTransitId;
+    releaseAnimalsFromPlayer(wildlifeFor(player.dimensionId || 'surface').values(), player.id, animalId, at);
+  };
+  // Morte: só com dano acumulado durante o desmaio. Volta ao respawnPoint do jogador, ou ao spawn da dimensão.
+  const killPlayer = (player, at) => {
+    const vitals = playerVitals(player), max = maxHealth(player.inventory?.level);
+    const dimensionId = player.dimensionId || 'surface';
+    const { x, y, place } = deathDestination(player.respawnPoint, dimensionById(dimensions, dimensionId).spawn, dimensionId);
+    const target = { x, y };
+    const safe = findNearbyPosition(target, [
+      ...spatialIndex.query(playerContextId(player), target, 8).filter(other => other !== player).map(other => other.position),
+      ...firesFor(dimensionId).values(),
+    ]) || target;
+    player.position = { ...safe, vx: 0, vy: 0, z: 0, vz: 0, jumpHeld: false, running: false, crouching: false };
+    player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq;
+    player.moving = false; player.sitting = false; player.emote = null;
+    applyDeath(vitals, at, max, place);
+    indexPlayer(player.socket, player);
+    notice(player.socket, `Você caiu… e acordou ${place}.`, 'soft');
+  };
   const applyWildlifeHit = (player, event, at) => {
     if (player.location !== 'clearing') return 0;
     const vitals = playerVitals(player), max = maxHealth(player.inventory?.level);
     const result = applyDamage(vitals, damageFromAttack({ force: Number(event.force) || 0 }, playerDefense(player)), at, max);
+    if (result.dead) { killPlayer(player, at); return 0; }
     if (result.damage <= 0) return 0;
-    vitals.waking = vitals.waking || result.fainted;
-    if (result.fainted) {
-      player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq; player.moving = false;
-      player.position.vx = 0; player.position.vy = 0; player.sitting = false; player.emote = null;
-      // Uma viagem já iniciada é cancelada: caído, o jogador não troca de dimensão.
-      const pendingTransit = activeDimensionTransits.get(player.pendingDimensionTransitId);
-      if (pendingTransit) {
-        removeDimensionTransit(pendingTransit);
-        // O cliente desfaz a tela de viagem com a mesma resposta de uma viagem recusada.
-        notice(player.socket, 'A viagem foi interrompida.', 'soft', dimensionTravelCancelledDetails(pendingTransit.id));
-      }
-      delete player.pendingDimensionTransitId;
-      releaseAnimalsFromPlayer(wildlifeFor(player.dimensionId || 'surface').values(), player.id, event.animalId, at);
-    }
+    if (result.fainted) stopPlayerForFaint(player, at, event.animalId);
     return result.damage;
-  };
-  const wakePlayer = (player, at) => {
-    const vitals = player.vitals;
-    vitals.waking = false;
-    const dimensionId = player.dimensionId || 'surface';
-    const spawn = dimensionById(dimensions, dimensionId).spawn;
-    const safe = findNearbyPosition(spawn, [
-      ...spatialIndex.query(playerContextId(player), spawn, 8).filter(other => other !== player).map(other => other.position),
-      ...firesFor(dimensionId).values(),
-    ]) || spawn;
-    player.position = { ...safe, vx: 0, vy: 0, z: 0, vz: 0, jumpHeld: false, running: false, crouching: false };
-    player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq;
-    player.moving = false; player.sitting = false; player.emote = null;
-    indexPlayer(player.socket, player);
-    notice(player.socket, dimensionId === 'surface' ? 'Você desmaiou… e acordou na vila. Nada se perdeu.' : 'Você desmaiou… e acordou no ponto de partida. Nada se perdeu.', 'soft');
   };
 
   const personalSnapshot = viewer => ({
@@ -4344,8 +4347,9 @@ export function createPrototypeServer({
       if (player.vitals || player.location === 'clearing') {
         const vitals = playerVitals(player), at = now();
         const max = maxHealth(player.inventory?.level);
+        // O desmaio acaba no mesmo lugar: acordar não mexe na posição.
+        if (wakeIfDue(vitals, at, max)) notice(player.socket, 'Você se levantou…', 'soft');
         if (isDowned(vitals, at)) { player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq; player.moving = false; continue; }
-        if (vitals.waking) wakePlayer(player, at);
         const nearFire = [...firesFor(player.dimensionId || 'surface').values()].some(fire =>
           campfireRemainingMs(fire, at) > 0 && Math.hypot(player.position.x - fire.x, player.position.y - fire.y) <= FIRE_RADIUS + 3.5);
         vitals.hp = regenStep(vitals, { now: at, dtMs: elapsedSincePreviousTickMs, max, nearFire, location: player.location });
@@ -4436,7 +4440,8 @@ export function createPrototypeServer({
         const startedAt=performance.now();
         try{return callback(...args);}finally{wildlifeProfile[`${field}Ms`]+=performance.now()-startedAt;}
       };
-      const events=stepWildlifePopulation(population,{dimensionId,players:dimensionPlayers.filter(candidate=>!isPlayerDowned(candidate,wildlifeNow)),now:wildlifeNow,
+      // Caídos seguem na lista: monstros podem atacá-los; os outros animais os ignoram (ver isDownedPlayer em game/wildlife.mjs).
+      const events=stepWildlifePopulation(population,{dimensionId,players:dimensionPlayers,now:wildlifeNow,isDownedPlayer:candidate=>isPlayerDowned(candidate,wildlifeNow),
         deltaSeconds:wildlifeDelta,night:day.night>.48,hours:day.hours,worldSize:WORLD_SIZE,playerRadius:PLAYER_RADIUS,
         canOccupy:timedWildlifeQuery('canOccupy',(position,radius)=>wildlifeOutsideVillage(position,dimensionId)&&canOccupy(position,radius)),
         isOccluded:timedWildlifeQuery('isOccluded',(from,to)=>{

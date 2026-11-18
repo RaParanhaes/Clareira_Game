@@ -5,8 +5,8 @@ import { PRESET_REMOVE_MESSAGE, isPresetFurniture, placedFurnitureCount, withPre
 import { INVENTORY_ACTIONS, applyInventoryCommand } from '../game/inventory-prediction.mjs';
 import { applyRoomChestMove } from './room-chest-actions.mjs';
 import { openLairTreasure } from './lair-treasure-actions.mjs';
-import { LAIRS, formatLairCountdown } from '../game/lairs.mjs';
-import { createDungeonRegistry, dungeonEntranceSpawn, dungeonLevel, isDungeonDimensionId, parseDungeonDimensionId } from '../game/dungeon-instances.mjs';
+import { LAIRS, formatLairCountdown, createDungeonBoss, dungeonChestLair, dungeonChestView, dungeonLairId } from '../game/lairs.mjs';
+import { createDungeonRegistry, dungeonEntranceSpawn, dungeonLevel, isDungeonDimensionId, parseDungeonDimensionId, DUNGEON_SEED } from '../game/dungeon-instances.mjs';
 import { setActiveDungeonLevel } from '../game/world.mjs';
 import { roomChestId } from '../database/room-chest-store.mjs';
 import { cleanMovementDiagnosticEvent, MAX_MOVEMENT_DIAGNOSTIC_MESSAGE_BYTES } from '../game/movement-diagnostics.mjs';
@@ -392,6 +392,8 @@ export function createPrototypeServer({
   arrivalTutorialEnabled = false,
   resourceRespawnMs = 240_000,
   ambientCampfire = true,
+  // Só para testes: expõe `testing` (posicionar jogador na masmorra e ler respawnPoint). Desligado no servidor real.
+  testHooks = false,
   campfireLifecycleIntervalMs = 5_000,
   tickIntervalMs = TICK_INTERVAL_MS,
   snapshotIntervalMs = SNAPSHOT_MS,
@@ -652,7 +654,56 @@ export function createPrototypeServer({
   // Masmorra do Covil do Ninho (ARQUITETURA.md §1 e §5): uma instância efêmera por grupo. Nesta fatia só o nível 1.
   const DUNGEON_ENTRY_LEVEL = 1;
   const dungeonRegistry = createDungeonRegistry({ now: () => Date.now() });
-  const LAIR_MOUTH_DOOR = { id: 'lair:ninho', name: 'Covil do Ninho', x: LAIRS.ninho.mouth.x, y: LAIRS.ninho.mouth.y };
+  // Chefe da arena de cada instância (nível 1): vivo até cair. Quem acertou é contribuinte (pode abrir o baú).
+  const dungeonBossByDimension = new Map();
+  const ensureDungeonBoss = (dimensionId, level) => {
+    if (dungeonBossByDimension.has(dimensionId)) return;
+    const { boss } = dungeonLevel(level);
+    const animal = createDungeonBoss({ level, dimensionId, arena: boss.arena, center: boss.center, now: now() });
+    wildlifeFor(dimensionId).set(animal.id, animal);
+    dungeonBossByDimension.set(dimensionId, { bossId: animal.id, contributors: new Set(), defeated: false });
+  };
+  // Acerto em animal da fauna: o chefe da masmorra usa o próprio registro; o resto segue o covil exterior.
+  const recordWildlifeHit = (hit, attacker) => {
+    if (hit.dungeonBoss) {
+      const boss = dungeonBossByDimension.get(hit.dungeonDimensionId);
+      if (!boss) return;
+      boss.contributors.add(attacker.id);
+      if (hit.health <= 0) boss.defeated = true;
+      return;
+    }
+    if (hit.lairId) lairCycles.get(hit.lairId)?.contributors.add(attacker.id);
+  };
+  // Estado da masmorra para o próprio jogador (ARQUITETURA.md; contrato no topo de game/dungeon-gen.mjs).
+  const dungeonSnapshotFor = viewer => {
+    const parsed = isDungeonDimensionId(viewer.dimensionId) ? parseDungeonDimensionId(viewer.dimensionId) : null;
+    if (!parsed) return null;
+    const level = dungeonLevel(parsed.level);
+    const boss = dungeonBossByDimension.get(viewer.dimensionId);
+    const bossAlive = Boolean(boss && !boss.defeated);
+    const claim = (viewer.lairClaims || []).find(item => item.lairId === dungeonLairId(parsed.level));
+    return {
+      dimensionId: viewer.dimensionId, seed: DUNGEON_SEED, level: parsed.level,
+      exit: { x: level.exit.x, y: level.exit.y }, boss: { alive: bossAlive },
+      chest: dungeonChestView({ bossAlive, contributor: Boolean(boss?.contributors.has(viewer.id)), availableAt: claim?.availableAt ?? null, now: now() }),
+    };
+  };
+  // Só para testes (opção testHooks): posiciona o jogador na grade e lê o que o servidor guardou dele.
+  const testingHooks = {
+    placeInDungeon(playerId, point) {
+      const player = [...peers.values()].find(entry => entry.id === playerId);
+      if (!player || !isDungeonDimensionId(player.dimensionId)) return false;
+      player.position = { ...player.position, x: point.x, y: point.y, vx: 0, vy: 0 };
+      indexPlayer(player.socket, player);
+      return true;
+    },
+    playerState(playerId) {
+      const player = [...peers.values()].find(entry => entry.id === playerId);
+      return player ? { dimensionId: player.dimensionId, location: player.location, respawnPoint: player.respawnPoint ?? null } : null;
+    },
+  };
+  // A porta é a frente da boca: a rocha da entrada impede chegar a menos de ~1 tile do centro, o gatilho é 0,9.
+  const LAIR_MOUTH_DOOR = { id: 'lair:ninho', name: 'Covil do Ninho', x: LAIRS.ninho.mouth.x, y: LAIRS.ninho.mouth.y + 1.4 };
   const lairMouthFront = () => ({ x: LAIRS.ninho.mouth.x, y: LAIRS.ninho.mouth.y + 1.4 });
   const dungeonExitDoor = level => ({ id: 'dungeon-exit', name: 'Saída da caverna', x: level.exit.x + .5, y: level.exit.y + .5 });
   const enterDungeon = (player, level = DUNGEON_ENTRY_LEVEL) => {
@@ -662,10 +713,13 @@ export function createPrototypeServer({
       return false;
     }
     const { dimensionId } = acquired.instance;
+    ensureDungeonBoss(dimensionId, level);
     if (!worldDefinitions.has(dimensionId)) {
       worldDefinitions.set(dimensionId, normalizeWorldDefinition({ ...emptyWorldDefinition(dimensionId), theme: 'dark' }));
     }
     player.dimensionId = dimensionId;
+    // Ponto de volta da masmorra é a boca do covil; a regra de morte (outra branch) vai usá-lo.
+    player.respawnPoint = { lairId: LAIRS.ninho.id, x: LAIRS.ninho.mouth.x, y: LAIRS.ninho.mouth.y };
     player.location = 'clearing';
     player.position = { ...dungeonEntranceSpawn(level), vx: 0, vy: 0, z: 0, vz: 0, jumpHeld: false, running: false, crouching: false };
     resetSceneMotion(player);
@@ -680,6 +734,7 @@ export function createPrototypeServer({
     if (!isDungeonDimensionId(dimensionId)) return false;
     dungeonRegistry.release(dimensionId, player.sessionId);
     player.dimensionId = 'surface';
+    player.respawnPoint = null;
     player.location = 'clearing';
     activateWorld('surface');
     const front = lairMouthFront();
@@ -700,6 +755,7 @@ export function createPrototypeServer({
       doorCatalogsByDimension.delete(dimensionId);
       wildlifeByDimension.delete(dimensionId);
       firesByDimension.delete(dimensionId);
+      dungeonBossByDimension.delete(dimensionId);
     }
   }, 5000);
   dungeonCollectTimer.unref?.();
@@ -1076,6 +1132,8 @@ export function createPrototypeServer({
   };
   const ensureWildlifeForArea = (dimensionId, area) => {
     if (isPersonalArrivalDimensionId(dimensionId)) return;
+    // A masmorra não tem fauna comum nesta fatia (monstros da D2); o chefe entra direto na instância.
+    if (isDungeonDimensionId(dimensionId)) return;
     activateWorld(dimensionId);
     const dimension=dimensionById(dimensions,dimensionId);
     const population=wildlifeFor(dimensionId);
@@ -1427,6 +1485,7 @@ export function createPrototypeServer({
       lairs: viewer.location==='clearing'&&(viewer.dimensionId||'surface')==='surface' ? Object.values(LAIRS).filter(lair=>Math.hypot(lair.center.x-viewer.position.x,lair.center.y-viewer.position.y)<=viewer.aoiRadius).map(lair=>({
         id: lair.id, x: lair.center.x, y: lair.center.y, mouth: { x: lair.mouth.x, y: lair.mouth.y }, chest: null, state: 'mouth', readyAt: null,
       })) : [],
+      dungeon: dungeonSnapshotFor(viewer),
       cabinKeys: (viewer.cabinKeys || []).map(({ buildingId, isOwner }) => ({ buildingId, isOwner })),
       issuedCabinKeys: viewer.issuedCabinKeys || [],
       cabinOccupancy,
@@ -2028,8 +2087,10 @@ export function createPrototypeServer({
         furniture: await storage.loadRoom(profile.id, lodgingStorageKey(lodgingClaim)), name: roomDisplayName(lodgingKey, playerName, lodgingClaim), kind: detail.kind, buildingId: detail.buildingId,
       }, roomPresetMode(detail.kind, detail.buildingId, lodgingClaim.mode)));
     }
+    // Relogin dentro da masmorra: volta à boca do covil (na superfície), nunca à grade da instância.
+    const forcedLairExit = isDungeonDimensionId(resume?.dimensionId);
     const arrivalDimension = personalArrivalDimension(sessionId);
-    const dimensionId = !forcedCabinOutsideId && resume?.dimensionId === arrivalDimension.id
+    const dimensionId = forcedLairExit ? 'surface' : !forcedCabinOutsideId && resume?.dimensionId === arrivalDimension.id
       ? arrivalDimension.id
       : !forcedCabinOutsideId && !resume && arrivalTutorialEnabled
         ? arrivalDimension.id
@@ -2046,7 +2107,7 @@ export function createPrototypeServer({
       ? { ...originalSavedPosition, x: originalSavedPosition.x + DIMENSION_COORDINATE_OFFSET,
         y: originalSavedPosition.y + DIMENSION_COORDINATE_OFFSET }
       : originalSavedPosition;
-    const savedPosition = dimensionId === 'surface'
+    const savedPosition = forcedLairExit ? lairMouthFront() : dimensionId === 'surface'
       ? savedSurfacePosition
       : originalSavedPosition && isBareDarkDimension(dimensionById(dimensions, dimensionId))
         && resumeWorldVersion < DARK_WORLD_COORDINATE_VERSION
@@ -2645,7 +2706,7 @@ export function createPrototypeServer({
         const damage = combatTechnique
           ? ability.damage + weaponDamage + attributeAttackBonus(player.inventory.attributes,player.inventory.learnedAbilities)
           : ability.damage + attributeSpellDamageBonus(player.inventory.attributes);
-        const result = await huntWildlifeTarget({ player, animal, population, now:now(), persist:persistPlayer, onHit:(hit,attacker)=>{if(hit.lairId)lairCycles.get(hit.lairId)?.contributors.add(attacker.id);},
+        const result = await huntWildlifeTarget({ player, animal, population, now:now(), persist:persistPlayer, onHit:recordWildlifeHit,
           rangeOverride:ability.range, damageOverride:damage, weaponOverride:combatTechnique?null:'spell',
           hasClearPath:(from,to,definition)=>hasClearInteractionPath(from,to,{targetRadius:definition.stats.radius,
             fires:[...firesFor(player.dimensionId||'surface').values()],ignoreWildlife:animal.id}), });
@@ -2791,14 +2852,24 @@ export function createPrototypeServer({
       }
 
       if(message.name==='openTreasure'){
-        // O baú saiu do exterior. O novo baú fica atrás do chefe da arena (ainda não implementado nesta fatia).
-        notice(socket,'Esse baú não está aqui. A recompensa do covil fica no fundo da caverna.');return;
+        // O baú da masmorra fica atrás do chefe da arena: abre só depois da queda, e só para quem lutou.
+        const parsed=isDungeonDimensionId(player.dimensionId)?parseDungeonDimensionId(player.dimensionId):null;
+        if(!parsed){notice(socket,'Esse baú não está aqui. A recompensa do covil fica no fundo da caverna.');return;}
+        const boss=dungeonBossByDimension.get(player.dimensionId);
+        const level=dungeonLevel(parsed.level);
+        const lair=dungeonChestLair(parsed.level,level.boss.chest);
+        const bossAlive=Boolean(boss&&!boss.defeated);
+        const result=await openLairTreasure({player,lair,dimensionId:player.dimensionId,state:{guards:bossAlive?[{lairId:lair.id,health:1}]:[],contributors:boss?.contributors||new Set()},store:storage.lairClaims,storage,now:now(),actionId:randomUUID(),
+          runExclusive:fn=>{const key=player.accountId;const previous=progressWrites.get(key)||Promise.resolve();const next=previous.catch(()=>{}).then(fn);progressWrites.set(key,next);return next.finally(()=>{if(progressWrites.get(key)===next)progressWrites.delete(key);});},
+          hasClearPath:()=>hasClearInteractionPath(player.position,lair.chest,{targetRadius:0.3,fires:[...firesFor(player.dimensionId).values()]})});
+        const messages={conta:'Você precisa de uma conta para abrir o baú.',local:'O baú fica no fundo da caverna.',caido:'Você precisa se levantar antes de abrir o baú.',guardas:'O chefe ainda vigia o baú.',contribuicao:'Só quem lutou contra o chefe pode abrir este baú.',inventario:'Libere um espaço no Inventário antes de abrir o baú.',recarregando:`O baú volta a encher em ${formatLairCountdown((result.availableAt||now())-now())}.`,'falha-salvamento':'Não consegui salvar a recompensa; nada foi cobrado.',longe:'Chegue mais perto do baú para abri-lo.'};
+        if(result.ok){notice(socket,`+${lair.reward.bronze} bronze${result.sword?' e Espada curta de ferro':''}.`,'chime');broadcast();}else notice(socket,messages[result.reason]||'Não foi possível abrir o baú.');return;
       }
       if(message.name==='hunt'){
         if(player.location!=='clearing'){notice(socket,'A fauna vive no bosque, não nos quartos.');return;}
         const population=wildlifeFor(player.dimensionId||'surface');
         const animal=population.get(typeof message.animalId==='string'?message.animalId:'');
-        const result=await huntWildlifeTarget({player,animal,population,now:now(),persist:persistPlayer, onHit:(hit,attacker)=>{if(hit.lairId)lairCycles.get(hit.lairId)?.contributors.add(attacker.id);},
+        const result=await huntWildlifeTarget({player,animal,population,now:now(),persist:persistPlayer, onHit:recordWildlifeHit,
           hasClearPath:(from,to,definition)=>hasClearInteractionPath(from,to,{targetRadius:definition.stats.radius,
             fires:[...firesFor(player.dimensionId).values()]})});
         if(result.status==='missing'||result.status==='too-far'){
@@ -4706,6 +4777,7 @@ export function createPrototypeServer({
 
   return {
     server: httpServer,
+    ...(testHooks ? { testing: testingHooks } : {}),
     async listen() {
       await Promise.all([storage.ready(), coordination.ready()]);
       if (storage.ensureGoods && storage.refreshQuotes) {

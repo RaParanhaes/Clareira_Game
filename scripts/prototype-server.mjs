@@ -1,4 +1,5 @@
 import { GAME_RENTAL_DAYS, gameDaysToMs } from '../game/game-calendar.mjs';
+import { createDoorTriggerState, stepDoorTrigger, failDoorTrigger, DOOR_LOCK_MS } from '../game/door-proximity.mjs';
 import { lodgingStorageKey } from '../game/lodging-catalog.mjs';
 import { PRESET_REMOVE_MESSAGE, isPresetFurniture, placedFurnitureCount, withPresetFurniture } from '../game/room-presets.mjs';
 import { INVENTORY_ACTIONS, applyInventoryCommand } from '../game/inventory-prediction.mjs';
@@ -44,7 +45,7 @@ import { PlayerSpatialIndex } from './player-spatial-index.mjs';
 import {
   canOccupy, canOccupyRoom, canPlaceRoomFurniture, roomFurnitureSupport, hasClearInteractionPath, CLEARING_DOOR, PLAYER_RADIUS,
   ROOM_FURNITURE_LIMIT,
-  findNearbyPosition, getResourcesInBounds, getSolidTreesInBounds, getRocksInBounds, isPathTile, nearestCollectible, stepPlayer, stepRoomPlayer, getRoomLayout, getRoomSpawnCandidates, crossedRoomExit,
+  findNearbyPosition, getResourcesInBounds, getSolidTreesInBounds, getRocksInBounds, isPathTile, nearestCollectible, stepPlayer, stepRoomPlayer, getRoomLayout, getRoomSpawnCandidates,
   applyWorldDefinition, DIMENSION_COORDINATE_OFFSET, WORLD_COORDINATE_VERSION, WORLD_RESOURCE_GENERATION_VERSION, WORLD_SIZE, SPAWN_CAMPFIRE,
 } from '../game/world.mjs';
 import { FIRE_RADIUS } from '../game/obstacle-collision.mjs';
@@ -511,6 +512,8 @@ export function createPrototypeServer({
   let cabinOccupancy = [];
   const resetSceneMotion = player => {
     player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq;
+    player.roomDoorDirection = null;
+    player.doorTrigger = { ...createDoorTriggerState(), armed: false, lockUntil: performance.now() + DOOR_LOCK_MS };
     if (Number.isFinite(player.position.flightZ)) {
       const {flightZ,blocked,...grounded}=player.position;
       player.position={...grounded,z:0,vz:0,vx:0,vy:0};
@@ -522,6 +525,7 @@ export function createPrototypeServer({
     indexPlayer(player.socket, player);
   };
   const moveRoomPlayer=(player,position,input,delta,occupied)=>{
+    if (input?.x || input?.y) player.roomDoorDirection = { x: input.x || 0, y: input.y || 0 };
     const layout=getRoomLayout(player.roomKind,player.roomBuildingId,player.roomLodgingMode||player.lodgingClaim?.mode);
     const fixtures=player.exitFurnitureId?player.roomFurniture.filter(item=>item.id!==player.exitFurnitureId):player.roomFurniture;
     const next=stepRoomPlayer(position,input,delta,occupied,fixtures,layout,{...player.inventory.attributes,hasteActive:performance.now()<(player.hasteUntil||0)});
@@ -582,17 +586,8 @@ export function createPrototypeServer({
         .filter(other=>other!==player).map(other=>other.position))||{x:outsideDoor.x,y:outsideDoor.y+.6};
     resetSceneMotion(player);notice(player.socket,'Você voltou ao bosque.','chime');return true;
   };
-  const didCrossRoomExit = (player, from, to) => {
-    if (player.location !== 'room') return false;
-    const layout=getRoomLayout(player.roomKind, player.roomBuildingId, player.roomLodgingMode || player.lodgingClaim?.mode);
-    if (player.roomEntryContext !== player.roomKey) {
-      player.roomEntryContext=player.roomKey;
-      player.roomEnteredFloor=false;
-    }
-    if (from.y <= layout.bounds.bottom - PLAYER_RADIUS || to.y <= layout.bounds.bottom - PLAYER_RADIUS)
-      player.roomEnteredFloor=true;
-    return crossedRoomExit(from,to,layout,{enteredFloor:player.roomEnteredFloor});
-  };
+  // Room exits are routed through the same proximity trigger as every doorway.
+  const didCrossRoomExit = () => false;
   const advancePlayerToInput = (player, throughSeq) => {
     if (!player.sequenced || !Number.isSafeInteger(throughSeq) || throughSeq <= player.inputSeq) return;
     const targetSeq = Math.min(throughSeq, player.receivedSeq);
@@ -628,24 +623,25 @@ export function createPrototypeServer({
     }
   };
   const enterCabin = async (player, buildingId) => {
-    if (!player.accountId) { notice(player.socket, 'Porta trancada. Você precisa de uma conta e da chave desta cabana.'); return false; }
+    const reject = text => notice(player.socket, text, 'soft', { action: 'enterDoor', result: 'rejected' });
+    if (!player.accountId) { reject('Porta trancada. Você precisa de uma conta e da chave desta cabana.'); return false; }
     try {
       const keys = await storage.getCabinKeys(player.accountId);
       const access = keys.find(key => key.buildingId === buildingId);
-      if (!access) { notice(player.socket, 'Porta trancada. Você precisa da chave desta cabana.'); return false; }
+      if (!access) { reject('Porta trancada. Você precisa da chave desta cabana.'); return false; }
       const claim = cabinClaimForKey(access), roomKey = lodgingRoomKey(claim);
       const layout = getRoomLayout('lodging', buildingId, 'owned');
       const state = await loadCabinRoomState(roomKey,access.ownerProfileId,player.name,claim,buildingId);
       // Loading an offline owner's room can yield; a revoked key must not open it afterwards.
       const freshKeys = await storage.getCabinKeys(player.accountId);
       if (!freshKeys.some(key => key.buildingId === buildingId && key.ownerProfileId === access.ownerProfileId)) {
-        notice(player.socket, 'Essa chave não abre mais a cabana.'); return false;
+        reject('Essa chave não abre mais a cabana.'); return false;
       }
       const occupants = spatialIndex.query(playerContextId({ location: 'room', dimensionId: 'surface', roomKey }), layout.spawn, 16)
         .filter(other => other !== player).map(other => other.position);
       const spawn = getRoomSpawnCandidates(layout).find(point => canOccupyRoom(point, PLAYER_RADIUS, state.furniture, layout)
         && occupants.every(other => Math.hypot(point.x - other.x, point.y - other.y) > PLAYER_RADIUS * 2 + .12));
-      if (!spawn) { notice(player.socket, 'A entrada da cabana está ocupada. Tente de novo em um instante.'); return false; }
+      if (!spawn) { reject('A entrada da cabana está ocupada. Tente de novo em um instante.'); return false; }
       roomStates.set(roomKey, state);
       player.cabinKeys = freshKeys; player.location = 'room'; player.dimensionId = 'surface';
       player.roomKey = roomKey; player.roomKind = 'lodging'; player.roomBuildingId = buildingId; player.roomLodgingMode = 'owned';
@@ -653,7 +649,178 @@ export function createPrototypeServer({
       resetSceneMotion(player);
       notice(player.socket, `Você abriu ${villageBuildingById.get(buildingId).name} com sua chave.`, 'chime');
       return true;
-    } catch (error) { notice(player.socket, 'Não consegui conferir sua chave agora. A porta continua trancada.'); return false; }
+    } catch (error) { reject('Não consegui conferir sua chave agora. A porta continua trancada.'); return false; }
+  };
+  const doorsFor = player => {
+    if (player.location === 'room') {
+      const layout = getRoomLayout(player.roomKind, player.roomBuildingId, player.roomLodgingMode || player.lodgingClaim?.mode);
+      return [{ id: `room:${player.roomKey}`, ...layout.door }];
+    }
+    if (player.dimensionId !== 'surface') return [];
+    return [
+      ...(CLEARING_DOOR.enabled === false ? [] : [{ id: 'arrival', ...CLEARING_DOOR }]),
+      ...VILLAGE_BUILDINGS.filter(building => building.door.enabled !== false)
+        .map(building => ({ id: `building:${building.id}`, building, ...building.door })),
+    ];
+  };
+  const stepPlayerDoor = (player, at = performance.now()) => {
+    if (player.location === 'room' && player.staffRoomReturn) return;
+    if (player.doorUsePending || player.pendingDimensionTravel
+        || activeDimensionTransits.has(player.pendingDimensionTransitId) || player.dimensionTransit) return;
+    if (isDowned(playerVitals(player), now())) return;
+    const doors = doorsFor(player);
+    if (!doors.length) return;
+    const door = doors.map(item => ({ ...item,
+      distance: Math.hypot(player.position.x - item.x, player.position.y - item.y),
+    })).sort((a, b) => a.distance - b.distance)[0];
+    const roomLayout = player.location === 'room'
+      ? getRoomLayout(player.roomKind, player.roomBuildingId, player.roomLodgingMode || player.lodgingClaim?.mode) : null;
+    const clear = hasClearInteractionPath(player.position, door, {
+      fires: player.location === 'clearing' ? [...firesFor(player.dimensionId).values()] : undefined,
+      location: player.location, roomLayout,
+      furniture: player.location === 'room' ? player.roomFurniture : undefined,
+    });
+    const doorInput = player.input?.x || player.input?.y ? player.input : player.roomDoorDirection || { x: 0, y: 0 };
+    const towardDoor = !roomLayout || (roomLayout.elevation === 'flat'
+      && !(player.roomKind === 'lodging' && isCabin(player.roomBuildingId)))
+      || (doorInput.x * (door.x - player.position.x) + doorInput.y * (door.y - player.position.y) > .01);
+    const result = stepDoorTrigger(player.doorTrigger || (player.doorTrigger = createDoorTriggerState()), {
+      distance: door.distance, clear, towardDoor, now: at,
+    });
+    player.doorTrigger = result.state;
+    if (!result.fire) return;
+    const origin = `${player.location}:${player.roomKey || player.dimensionId}`;
+    void useDoor(player).then(entered => {
+      if (!entered && player.location === 'clearing' && origin.startsWith('clearing:'))
+        player.doorTrigger = failDoorTrigger(player.doorTrigger, performance.now());
+    }).catch(error => process.stderr.write(`Door proximity failed: ${error.message}\\n`));
+  };
+  const useDoor = async player => {
+    if (!player || player.doorUsePending) return false;
+    player.doorUsePending = true;
+    try {
+      if (player.location === 'clearing') {
+        if (player.dimensionId !== 'surface') {
+          notice(player.socket, 'As recepções e hospedagens ficam no Bosque das Brasas.');
+          return;
+        }
+        const interactionFires = [...firesFor(player.dimensionId).values()];
+        const buildingDoor = VILLAGE_BUILDINGS.filter(building=>building.door.enabled!==false).map(building => ({
+          building,
+          distance: Math.hypot(player.position.x - building.door.x, player.position.y - building.door.y),
+        })).filter(item => item.distance <= 1.2 && hasClearInteractionPath(player.position, item.building.door, { fires: interactionFires }))
+          .sort((a, b) => a.distance - b.distance)[0];
+        const atArrivalDoor = CLEARING_DOOR.enabled!==false && Math.hypot(player.position.x - CLEARING_DOOR.x, player.position.y - CLEARING_DOOR.y) <= 1.2
+          && hasClearInteractionPath(player.position, CLEARING_DOOR, { fires: interactionFires });
+        const building = buildingDoor?.building || null;
+        if (!building && !atArrivalDoor) {
+          notice(player.socket, 'Chegue perto da porta para atravessar.', 'soft', { action: 'enterDoor', result: 'rejected' });
+          return false;
+        }
+        const fromPlace = { location: player.location, dimensionId: player.dimensionId, position: { x: player.position.x, y: player.position.y } };
+        const usedDoor = building?.door || CLEARING_DOOR;
+        if (building?.kind === 'cabin') {
+          const entered = await enterCabin(player, building.id);
+          if (entered) {
+            try { await storage.recordInteraction(makeInteractionRecord(player, 'enter_place', {
+              id: building.id, kind: 'door', properties: { x: usedDoor.x, y: usedDoor.y, buildingId: building.id, buildingKind: building.kind },
+            }, { context: { dimensionId: fromPlace.dimensionId || 'surface', location: 'clearing', placeId: 'clearing',
+              instanceId: 'surface-clearing', position: fromPlace.position },
+              details: { from: fromPlace, to: { location: player.location, roomKey: player.roomKey } } })); }
+            catch (error) { process.stderr.write(`Could not record door interaction: ${error.message}\n`); }
+          }
+          broadcast(); return entered;
+        }
+        const lobbyId = building?.id || 'arrival';
+        const lobbyKey = lobbyRoomKey(lobbyId);
+        const lobbyDetails = roomDetails(lobbyKey);
+        const lobbyState = roomStates.get(lobbyKey) || {
+          furniture: [], name: roomDisplayName(lobbyKey, player.name), kind: 'lobby', buildingId: lobbyDetails.buildingId,
+        };
+        roomStates.set(lobbyKey, lobbyState);
+        player.location = 'room';
+        player.roomKey = lobbyKey; player.roomKind = 'lobby'; player.roomBuildingId = lobbyDetails.buildingId;
+        player.roomState = lobbyState; player.roomFurniture = lobbyState.furniture;
+        player.position = { ...getRoomLayout('lobby', lobbyDetails.buildingId).spawn };
+        // Move the player between AOI indexes before awaiting the journal write,
+        // so an intervening snapshot cannot omit the player from their scene.
+        resetSceneMotion(player);
+        notice(player.socket, `Você entrou na recepção${building ? ` de ${building.name}` : ' da Vila'}.`, 'chime');
+        try { await storage.recordInteraction(makeInteractionRecord(player, 'enter_place', {
+          id: building?.id || 'arrival', kind: 'door',
+          properties: { x: usedDoor.x, y: usedDoor.y, buildingId: building?.id || 'arrival', buildingKind: building?.kind || 'arrival' },
+        }, { context: { dimensionId: fromPlace.dimensionId || 'surface', location: 'clearing', placeId: 'clearing',
+          instanceId: 'surface-clearing', position: fromPlace.position },
+          details: { from: fromPlace, to: { location: player.location, roomKey: player.roomKey } } })); }
+        catch (error) { process.stderr.write(`Could not record door interaction: ${error.message}\n`); }
+      } else {
+        const roomLayout = getRoomLayout(player.roomKind, player.roomBuildingId, player.roomLodgingMode || player.lodgingClaim?.mode);
+        if (Math.hypot(player.position.x - roomLayout.door.x, player.position.y - roomLayout.door.y) > 1.2) {
+          notice(player.socket, 'Chegue perto da porta para atravessar.', 'soft', { action: 'enterDoor', result: 'rejected' });
+          return false;
+        }
+        const fromPlace = { location: player.location, dimensionId: player.dimensionId, roomKey: player.roomKey,
+          roomKind: player.roomKind, roomBuildingId: player.roomBuildingId,
+          position: { x: player.position.x, y: player.position.y } };
+        const usedDoor = { x: roomLayout.door.x, y: roomLayout.door.y };
+        if (player.staffRoomReturn) { walkOutOfRoom(player); broadcast(); return; }
+        if (player.roomKind === 'lodging' && isCabin(player.roomBuildingId)) {
+          const buildingId = player.roomBuildingId;
+          leaveCabin(player);
+          indexPlayer(player.socket, player);
+          player.input = { x: 0, y: 0 };
+          player.commands = []; player.inputSeq = player.receivedSeq;
+          player.moving = false;
+          player.emote = null; player.sitting = false;
+          broadcast();
+          try { await storage.recordInteraction(makeInteractionRecord(player, 'leave_place', {
+            id: buildingId, kind: 'door', properties: { ...usedDoor, buildingId, buildingKind: 'cabin' },
+          }, { context: { dimensionId: fromPlace.dimensionId || 'surface', location: 'room',
+            placeId: `room:${fromPlace.roomBuildingId || fromPlace.roomKind || 'home'}`,
+            instanceId: fromPlace.roomKey, position: fromPlace.position },
+            details: { from: fromPlace, to: { location: player.location, position: { x: player.position.x, y: player.position.y } } } })); }
+          catch (error) { process.stderr.write(`Could not record door interaction: ${error.message}\n`); }
+          notice(player.socket, 'Você saiu da cabana. A porta continua trancada.', 'chime'); return;
+        }
+        if (player.roomKind === 'lodging' && player.roomBuildingId) {
+          const lobbyKey = lobbyRoomKey(player.roomBuildingId), detail = roomDetails(lobbyKey);
+          const lobbyState = roomStates.get(lobbyKey) || {
+            furniture: [], name: roomDisplayName(lobbyKey, player.name), kind: 'lobby', buildingId: detail.buildingId,
+          };
+          roomStates.set(lobbyKey, lobbyState);
+          player.location = 'room'; player.roomKey = lobbyKey; player.roomKind = 'lobby';
+          player.roomBuildingId = detail.buildingId; player.roomState = lobbyState; player.roomFurniture = lobbyState.furniture;
+          player.position = { ...getRoomLayout('lobby', detail.buildingId).spawn };
+          resetSceneMotion(player);
+          notice(player.socket, 'Você voltou à recepção.', 'chime');
+        } else {
+          const building = player.roomKind === 'lobby' ? villageBuildingById.get(player.roomBuildingId) : null;
+          const outsideDoor = building?.door || CLEARING_DOOR;
+          player.location = 'clearing'; player.roomKey = player.homeRoomKey; player.roomKind = 'legacy'; player.roomBuildingId = null;
+          player.roomState = player.homeRoomState; player.roomFurniture = player.roomState.furniture;
+          player.position = { x: outsideDoor.x, y: outsideDoor.y + 0.5 };
+          resetSceneMotion(player);
+          notice(player.socket, 'Você voltou ao bosque.', 'chime');
+        }
+        indexPlayer(player.socket, player);
+        player.input = { x: 0, y: 0 };
+        player.commands = []; player.inputSeq = player.receivedSeq;
+        player.moving = false;
+        player.emote = null; player.sitting = false;
+        broadcast();
+        try { await storage.recordInteraction(makeInteractionRecord(player, 'leave_place', {
+          id: fromPlace.roomKey || 'room-door', kind: 'door',
+          properties: { ...usedDoor, buildingId: fromPlace.roomBuildingId || null, buildingKind: fromPlace.roomKind },
+        }, { context: { dimensionId: fromPlace.dimensionId || 'surface', location: 'room',
+          placeId: `room:${fromPlace.roomBuildingId || fromPlace.roomKind || 'home'}`,
+          instanceId: fromPlace.roomKey, position: fromPlace.position },
+          details: { from: fromPlace, to: { location: player.location, roomKey: player.roomKey,
+            position: { x: player.position.x, y: player.position.y } } } })); }
+        catch (error) { process.stderr.write(`Could not record door interaction: ${error.message}\n`); }
+      }
+
+      return true;
+    } finally { player.doorUsePending = false; }
   };
   const resumableSessions = new Map();
   let dimensions = normalizeDimensions(DEFAULT_DIMENSIONS);
@@ -1847,6 +2014,8 @@ export function createPrototypeServer({
       dimensionPositions,persistedDimensionPositions,
       aoiRadius: viewportAoiRadius(480, 300),
       moving: false,
+      doorTrigger: createDoorTriggerState(), doorUsePending: false,
+      roomDoorDirection: null,
       input: { x: 0, y: 0 },
       commands: !recoveringFlight && Array.isArray(resume?.commands) ? resume.commands.slice(-MAX_QUEUED_INPUT_COMMANDS).map(command => ({ ...command })) : [],
       inputSeq: recoveringFlight && Number.isSafeInteger(resume?.receivedSeq) ? Math.max(0,resume.receivedSeq)
@@ -3167,125 +3336,7 @@ export function createPrototypeServer({
           message.name==='moveFurniture'?`${label} movido.`:'Móvel atualizado.','chime','accepted');broadcast();return;
       }
 
-      if (message.name === 'interact') {
-        if (player.location === 'clearing') {
-          if (player.dimensionId !== 'surface') {
-            notice(socket, 'As recepções e hospedagens ficam no Bosque das Brasas.');
-            return;
-          }
-          const interactionFires = [...firesFor(player.dimensionId).values()];
-          const buildingDoor = VILLAGE_BUILDINGS.filter(building=>building.door.enabled!==false).map(building => ({
-            building,
-            distance: Math.hypot(player.position.x - building.door.x, player.position.y - building.door.y),
-          })).filter(item => item.distance <= 1.2 && hasClearInteractionPath(player.position, item.building.door, { fires: interactionFires }))
-            .sort((a, b) => a.distance - b.distance)[0];
-          const atArrivalDoor = CLEARING_DOOR.enabled!==false && Math.hypot(player.position.x - CLEARING_DOOR.x, player.position.y - CLEARING_DOOR.y) <= 1.2
-            && hasClearInteractionPath(player.position, CLEARING_DOOR, { fires: interactionFires });
-          const building = buildingDoor?.building || null;
-          if (!building && !atArrivalDoor) { notice(socket, 'Chegue perto da porta para atravessar.'); return; }
-          const fromPlace = { location: player.location, dimensionId: player.dimensionId, position: { x: player.position.x, y: player.position.y } };
-          const usedDoor = building?.door || CLEARING_DOOR;
-          if (building?.kind === 'cabin') {
-            const entered = await enterCabin(player, building.id);
-            if (entered) {
-              try { await storage.recordInteraction(makeInteractionRecord(player, 'enter_place', {
-                id: building.id, kind: 'door', properties: { x: usedDoor.x, y: usedDoor.y, buildingId: building.id, buildingKind: building.kind },
-              }, { context: { dimensionId: fromPlace.dimensionId || 'surface', location: 'clearing', placeId: 'clearing',
-                instanceId: 'surface-clearing', position: fromPlace.position },
-                details: { from: fromPlace, to: { location: player.location, roomKey: player.roomKey } } })); }
-              catch (error) { process.stderr.write(`Could not record door interaction: ${error.message}\n`); }
-            }
-            broadcast(); return;
-          }
-          const lobbyId = building?.id || 'arrival';
-          const lobbyKey = lobbyRoomKey(lobbyId);
-          const lobbyDetails = roomDetails(lobbyKey);
-          const lobbyState = roomStates.get(lobbyKey) || {
-            furniture: [], name: roomDisplayName(lobbyKey, player.name), kind: 'lobby', buildingId: lobbyDetails.buildingId,
-          };
-          roomStates.set(lobbyKey, lobbyState);
-          player.location = 'room';
-          player.roomKey = lobbyKey; player.roomKind = 'lobby'; player.roomBuildingId = lobbyDetails.buildingId;
-          player.roomState = lobbyState; player.roomFurniture = lobbyState.furniture;
-          player.position = { ...getRoomLayout('lobby', lobbyDetails.buildingId).spawn };
-          // Move the player between AOI indexes before awaiting the journal write,
-          // so an intervening snapshot cannot omit the player from their scene.
-          resetSceneMotion(player);
-          notice(socket, `Você entrou na recepção${building ? ` de ${building.name}` : ' da Vila'}.`, 'chime');
-          try { await storage.recordInteraction(makeInteractionRecord(player, 'enter_place', {
-            id: building?.id || 'arrival', kind: 'door',
-            properties: { x: usedDoor.x, y: usedDoor.y, buildingId: building?.id || 'arrival', buildingKind: building?.kind || 'arrival' },
-          }, { context: { dimensionId: fromPlace.dimensionId || 'surface', location: 'clearing', placeId: 'clearing',
-            instanceId: 'surface-clearing', position: fromPlace.position },
-            details: { from: fromPlace, to: { location: player.location, roomKey: player.roomKey } } })); }
-          catch (error) { process.stderr.write(`Could not record door interaction: ${error.message}\n`); }
-        } else {
-          const roomLayout = getRoomLayout(player.roomKind, player.roomBuildingId, player.roomLodgingMode || player.lodgingClaim?.mode);
-          if (Math.hypot(player.position.x - roomLayout.door.x, player.position.y - roomLayout.door.y) > 1.2) {
-            notice(socket, 'Chegue perto da porta para atravessar.');
-            return;
-          }
-          const fromPlace = { location: player.location, dimensionId: player.dimensionId, roomKey: player.roomKey,
-            roomKind: player.roomKind, roomBuildingId: player.roomBuildingId,
-            position: { x: player.position.x, y: player.position.y } };
-          const usedDoor = { x: roomLayout.door.x, y: roomLayout.door.y };
-          if (player.staffRoomReturn) { walkOutOfRoom(player); broadcast(); return; }
-          if (player.roomKind === 'lodging' && isCabin(player.roomBuildingId)) {
-            const buildingId = player.roomBuildingId;
-            leaveCabin(player);
-            indexPlayer(socket, player);
-            player.input = { x: 0, y: 0 };
-            player.commands = []; player.inputSeq = player.receivedSeq;
-            player.moving = false;
-            player.emote = null; player.sitting = false;
-            broadcast();
-            try { await storage.recordInteraction(makeInteractionRecord(player, 'leave_place', {
-              id: buildingId, kind: 'door', properties: { ...usedDoor, buildingId, buildingKind: 'cabin' },
-            }, { context: { dimensionId: fromPlace.dimensionId || 'surface', location: 'room',
-              placeId: `room:${fromPlace.roomBuildingId || fromPlace.roomKind || 'home'}`,
-              instanceId: fromPlace.roomKey, position: fromPlace.position },
-              details: { from: fromPlace, to: { location: player.location, position: { x: player.position.x, y: player.position.y } } } })); }
-            catch (error) { process.stderr.write(`Could not record door interaction: ${error.message}\n`); }
-            notice(socket, 'Você saiu da cabana. A porta continua trancada.', 'chime'); return;
-          }
-          if (player.roomKind === 'lodging' && player.roomBuildingId) {
-            const lobbyKey = lobbyRoomKey(player.roomBuildingId), detail = roomDetails(lobbyKey);
-            const lobbyState = roomStates.get(lobbyKey) || {
-              furniture: [], name: roomDisplayName(lobbyKey, player.name), kind: 'lobby', buildingId: detail.buildingId,
-            };
-            roomStates.set(lobbyKey, lobbyState);
-            player.location = 'room'; player.roomKey = lobbyKey; player.roomKind = 'lobby';
-            player.roomBuildingId = detail.buildingId; player.roomState = lobbyState; player.roomFurniture = lobbyState.furniture;
-            player.position = { ...getRoomLayout('lobby', detail.buildingId).spawn };
-            resetSceneMotion(player);
-            notice(socket, 'Você voltou à recepção.', 'chime');
-          } else {
-            const building = player.roomKind === 'lobby' ? villageBuildingById.get(player.roomBuildingId) : null;
-            const outsideDoor = building?.door || CLEARING_DOOR;
-            player.location = 'clearing'; player.roomKey = player.homeRoomKey; player.roomKind = 'legacy'; player.roomBuildingId = null;
-            player.roomState = player.homeRoomState; player.roomFurniture = player.roomState.furniture;
-            player.position = { x: outsideDoor.x, y: outsideDoor.y + 0.5 };
-            resetSceneMotion(player);
-            notice(socket, 'Você voltou ao bosque.', 'chime');
-          }
-          indexPlayer(socket, player);
-          player.input = { x: 0, y: 0 };
-          player.commands = []; player.inputSeq = player.receivedSeq;
-          player.moving = false;
-          player.emote = null; player.sitting = false;
-          broadcast();
-          try { await storage.recordInteraction(makeInteractionRecord(player, 'leave_place', {
-            id: fromPlace.roomKey || 'room-door', kind: 'door',
-            properties: { ...usedDoor, buildingId: fromPlace.roomBuildingId || null, buildingKind: fromPlace.roomKind },
-          }, { context: { dimensionId: fromPlace.dimensionId || 'surface', location: 'room',
-            placeId: `room:${fromPlace.roomBuildingId || fromPlace.roomKind || 'home'}`,
-            instanceId: fromPlace.roomKey, position: fromPlace.position },
-            details: { from: fromPlace, to: { location: player.location, roomKey: player.roomKey,
-              position: { x: player.position.x, y: player.position.y } } } })); }
-          catch (error) { process.stderr.write(`Could not record door interaction: ${error.message}\n`); }
-        }
-        return;
-      }
+      if (message.name === 'interact') { await useDoor(player); return; }
       if (player.location !== 'clearing') {
         notice(socket, message.name === 'collect' ? 'Seu quarto está vazio por enquanto.' : 'Essa ação espera por você na Clareira.');
         return;
@@ -4366,6 +4417,7 @@ export function createPrototypeServer({
         : null;
       if (!hasIntent && !hasResidualMotion && !current?.currentX && !current?.currentY) {
         player.moving = false;
+        stepPlayerDoor(player);
         continue;
       }
       const previous = player.position;
@@ -4390,6 +4442,7 @@ export function createPrototypeServer({
         }
       }
       player.moving = player.position.x !== previous.x || player.position.y !== previous.y;
+      stepPlayerDoor(player);
       if(player.location==='clearing'&&isPersonalArrivalDimensionId(player.dimensionId)){
         if(player.arrivalTutorial?.phase==='welcome'){
           const guide=dimensionById(dimensions,player.dimensionId).guide;

@@ -8,6 +8,7 @@ import {
 } from './dungeon-render.mjs';
 import { createDungeonArt } from './dungeon-art.mjs';
 import { loadDungeonTileset } from './dungeon-tileset.mjs';
+import { dungeonFixtureLevel, validateDungeonLevel } from './dungeon-contract.mjs';
 
 const manifestUrl = new URL('./art/dungeon/manifest.json', import.meta.url);
 const readManifest = async () => JSON.parse(await readFile(manifestUrl, 'utf8'));
@@ -28,7 +29,8 @@ export function mockLevel(seed = 1, w = 40, h = 40) {
       if (!cells[y * w + x] && isOpenCell({ w, h, cells }, x, y + 1) && rnd() < 0.02) torches.push({ x, y });
     }
   }
-  return { w, h, cells, torches, seed };
+  // Sala central é o ponto de entrada; o nível passa no contrato (borda fechada, tochas sobre rocha com piso abaixo).
+  return validateDungeonLevel({ w, h, cells, torches, seed, entrance: { x: 16, y: 16 } });
 }
 
 // Grade pequena e explícita: piso total, com rochas nas posições dadas.
@@ -76,9 +78,9 @@ test('wall faces are exposed only toward open floor on the S and L sides', () =>
   assert.equal(wallFaceMask(grid, 0, 0), 0, 'open floor is never a wall');
   assert.equal(wallFaceMask(gridWithRock([[0, 0]]), 0, 0), 3, 'grid-corner rock with open neighbours shows both faces');
   assert.equal(wallFaceMask(gridWithRock([[11, 11]]), 11, 11), 0, 'out-of-grid counts as rock, so the grid edge must be closed');
-  const index = dungeonIndex(grid);
-  assert.ok(index.walls.some(w => w.x === 6 && w.y === 6 && w.mask === 3));
-  assert.equal(index.walls.some(w => w.x === 5 && w.y === 5), false);
+  const walls = dungeonIndex(grid).chunks.flat().filter(t => t.type === 'wall');
+  assert.ok(walls.some(w => w.x === 6 && w.y === 6 && w.mask === 3));
+  assert.equal(walls.some(w => w.x === 5 && w.y === 5), false);
 });
 
 test('a wall behind the player draws before it and a wall in front draws after it', () => {
@@ -320,4 +322,59 @@ test('mock level is deterministic and keeps torches on rock with open floor belo
     assert.equal(isOpenCell(a, t.x, t.y), false);
     assert.equal(isOpenCell(a, t.x, t.y + 1), true);
   }
+});
+
+test('every draw position is a whole pixel, even with a fractional camera and an odd viewport', () => {
+  const grid = gridWithRock([[5, 5], [9, 4], [4, 3]], 20, [{ x: 4, y: 3 }]);
+  const ctx = fakeCanvas({ created: [] })(1, 1).ctx;
+  const player = { x: 6.37, y: 7.81 };
+  let actorScreen = null;
+  drawDungeonFrame(ctx, {
+    grid, camera: { x: 6.37, y: 7.81 }, viewport: { width: 401, height: 301 }, player, time: 1.5, art: tagArt(),
+    drawActor: (c, t, s) => { actorScreen = s; },
+  });
+  const tags = new Set(ctx.calls.map(c => c.img.tag));
+  for (const tag of ['floor', 'wall', 'torch']) assert.ok(tags.has(tag), `${tag} is drawn in this frame`);
+  for (const c of ctx.calls) assert.ok(Number.isInteger(c.x) && Number.isInteger(c.y), `${c.img.tag} at ${c.x},${c.y}`);
+  assert.ok(Number.isInteger(actorScreen.x) && Number.isInteger(actorScreen.y), 'the actor is placed on whole pixels');
+  const raw = projectTile(6.37, 7.81);
+  assert.ok(!Number.isInteger(raw.x), 'the camera really is fractional, so rounding is what makes the positions whole');
+});
+
+test('per-frame work follows the view size, not the level size', () => {
+  const viewport = { width: 400, height: 300 };
+  const frame = (size, camera) => {
+    const grid = mockLevel(5, size, size);
+    const ctx = fakeCanvas({ created: [] })(1, 1).ctx;
+    return drawDungeonFrame(ctx, { grid, camera, viewport, player: camera, art: tagArt() });
+  };
+  const small = frame(120, { x: 60, y: 60 });
+  const big = frame(480, { x: 60, y: 60 });
+  const far = frame(480, { x: 400, y: 400 });
+  assert.equal(big.visitedCells, small.visitedCells, 'same view in a 4x larger level visits the same cells');
+  assert.equal(far.visitedCells, small.visitedCells, 'moving the camera in open space keeps the count');
+  assert.ok(small.visitedCells < 120 * 120 / 4, `visited ${small.visitedCells} cells of ${120 * 120}`);
+  const totalChunks = Math.ceil(480 / 16) ** 2;
+  assert.ok(big.visitedChunks < totalChunks / 8, `visited ${big.visitedChunks} of ${totalChunks} chunks`);
+});
+
+test('the floor id per cell is computed once into a Uint8Array in the index', () => {
+  const grid = mockLevel(9, 50, 50);
+  const index = dungeonIndex(grid);
+  assert.ok(index.floor instanceof Uint8Array);
+  for (let y = 0; y < 50; y++) for (let x = 0; x < 50; x++) {
+    const v = index.floor[y * 50 + x];
+    if (isOpenCell(grid, x, y)) assert.equal(DUNGEON_FLOOR_IDS[v], floorTileId(x, y, 9), `cell ${x},${y}`);
+    else assert.equal(v, 255, `rock ${x},${y}`);
+  }
+});
+
+test('the test level and the contract fixture pass validateDungeonLevel', () => {
+  assert.doesNotThrow(() => validateDungeonLevel(mockLevel(4)));
+  const fixture = dungeonFixtureLevel();
+  assert.equal(validateDungeonLevel(fixture), fixture);
+  const ctx = fakeCanvas({ created: [] })(1, 1).ctx;
+  const camera = { x: 4, y: 3 };
+  const result = drawDungeonFrame(ctx, { grid: fixture, camera, viewport: { width: 300, height: 200 }, player: camera, art: tagArt() });
+  assert.ok(result.visitedCells > 0 && ctx.calls.length > 0, 'the fixture renders');
 });

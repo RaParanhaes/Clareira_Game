@@ -1,7 +1,11 @@
 // Renderer da masmorra (tema 'cave'): sem DOM, testável em Node.
-// Grade: { w, h, cells: Uint8Array, seed, torches: [{x,y}] } com 1 = piso aberto e 0 = rocha.
+// Formato do nível (contrato em game/dungeon-contract.mjs, validado por validateDungeonLevel):
+//   { w, h, cells: Uint8Array(w*h), seed, torches: [{x,y}], stairs?: [{x,y}], entrance: {x,y} }
+//   cells: 1 = piso aberto, 0 = rocha. Fora da grade conta como rocha.
 // Piso, paredes, estalagmites e tochas vêm do tileset aprovado (game/art/dungeon/manifest.json).
 // Paredes e estalagmites são objetos ordenados por profundidade (compareSceneDepth), como árvores e rochas.
+// Custo por quadro: o índice (piso por célula, paredes, estalagmites e tochas em chunks) é calculado uma vez
+// por grade; cada quadro só percorre as células e os chunks da vista.
 import { compareSceneDepth } from './depth-order.mjs';
 
 // Âncoras e tamanhos dos sprites do tileset, em pixels de mundo (1 pixel do PNG = 1 pixel de mundo).
@@ -30,6 +34,8 @@ export const DUNGEON_LIGHT = Object.freeze({
 export const DUNGEON_TORCH_FRAMES = 4;
 const TORCH_FPS = 6;   // 4 quadros em 6 por segundo: chama viva, sem tremor
 const VIEW_MARGIN_TILES = 3;
+const CHUNK_TILES = 16; // lado do chunk do índice, em tiles
+const ROCK = 255;       // valor do piso por célula para rocha
 
 export const DUNGEON_FLOOR_IDS = Object.freeze(['piso-terra', 'piso-pedra', 'piso-cascalho', 'piso-poca']);
 
@@ -110,29 +116,36 @@ export function wallFaceMask(grid, x, y) {
 }
 
 const indexCache = new WeakMap();
-// Índice das paredes com face visível, das estalagmites e das tochas, calculado uma vez por grade.
+// Índice calculado uma vez por grade:
+//   floor: Uint8Array(w*h) com o índice de DUNGEON_FLOOR_IDS por célula aberta, ROCK na rocha (o ruído não roda por quadro);
+//   chunks: lista de coisas (paredes, estalagmites, tochas) por chunk de CHUNK_TILES x CHUNK_TILES, para a vista só tocar os chunks visíveis.
 export function dungeonIndex(grid) {
   let index = indexCache.get(grid);
   if (index) return index;
-  const seed = grid.seed | 0;
-  const walls = [], props = [];
-  for (let y = 0; y < grid.h; y++) {
-    for (let x = 0; x < grid.w; x++) {
+  const w = grid.w, h = grid.h, seed = grid.seed | 0;
+  const chunkW = Math.ceil(w / CHUNK_TILES), chunkH = Math.ceil(h / CHUNK_TILES);
+  const chunks = Array.from({ length: chunkW * chunkH }, () => []);
+  const chunkAt = (x, y) => chunks[Math.floor(y / CHUNK_TILES) * chunkW + Math.floor(x / CHUNK_TILES)];
+  const floor = new Uint8Array(w * h).fill(ROCK);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
       if (isOpenCell(grid, x, y)) {
+        floor[y * w + x] = DUNGEON_FLOOR_IDS.indexOf(floorTileId(x, y, seed));
         const id = propTileId(x, y, seed);
-        if (id) props.push({ type: 'prop', id, x, y, sortX: x + 0.5, sortY: y + 0.5, sortZ: 0, sortId: `p${x},${y}` });
+        if (id) chunkAt(x, y).push({ type: 'prop', id, x, y, sortX: x + 0.5, sortY: y + 0.5, sortZ: 0, sortId: `p${x},${y}` });
         continue;
       }
       const mask = wallFaceMask(grid, x, y);
       if (mask) {
-        walls.push({ type: 'wall', x, y, mask, sprite: wallPiece(mask, x, y, seed), sortX: x + 0.5, sortY: y + 0.5, sortZ: 0, sortId: `w${x},${y}` });
+        chunkAt(x, y).push({ type: 'wall', x, y, mask, sprite: wallPiece(mask, x, y, seed), sortX: x + 0.5, sortY: y + 0.5, sortZ: 0, sortId: `w${x},${y}` });
       }
     }
   }
-  const torches = (grid.torches || []).map((t, i) => ({
-    type: 'torch', x: t.x, y: t.y, sortX: t.x + 0.5, sortY: t.y + 0.5, sortZ: 0.5, sortId: `t${i}`,
-  }));
-  index = { walls, props, torches };
+  (grid.torches || []).forEach((t, i) => {
+    if (t.x < 0 || t.y < 0 || t.x >= w || t.y >= h) return;
+    chunkAt(t.x, t.y).push({ type: 'torch', x: t.x, y: t.y, sortX: t.x + 0.5, sortY: t.y + 0.5, sortZ: 0.5, sortId: `t${i}` });
+  });
+  index = { w, h, floor, chunkW, chunkH, chunks };
   indexCache.set(grid, index);
   return index;
 }
@@ -162,21 +175,27 @@ function inBounds(thing, b) {
 }
 
 // Lista ordenada de coisas visíveis: paredes, estalagmites, tochas e o jogador.
-export function collectDungeonThings({ grid, bounds, player, torchLimit = DUNGEON_LIGHT.maxTorches }) {
+// Só percorre os chunks que tocam a vista. stats (opcional) recebe chunks e items visitados, para medir o custo.
+export function collectDungeonThings({ grid, bounds, player, torchLimit = DUNGEON_LIGHT.maxTorches, stats = {} }) {
   const index = dungeonIndex(grid);
-  const things = [];
-  for (const wall of index.walls) {
-    if (wall.x < bounds.minX || wall.x > bounds.maxX || wall.y < bounds.minY || wall.y > bounds.maxY) continue;
-    things.push(wall);
+  const things = [], torches = [];
+  const cx0 = Math.max(0, Math.floor(bounds.minX / CHUNK_TILES)), cx1 = Math.min(index.chunkW - 1, Math.floor(bounds.maxX / CHUNK_TILES));
+  const cy0 = Math.max(0, Math.floor(bounds.minY / CHUNK_TILES)), cy1 = Math.min(index.chunkH - 1, Math.floor(bounds.maxY / CHUNK_TILES));
+  stats.chunks = 0;
+  stats.items = 0;
+  for (let cy = cy0; cy <= cy1; cy++) {
+    for (let cx = cx0; cx <= cx1; cx++) {
+      stats.chunks++;
+      for (const thing of index.chunks[cy * index.chunkW + cx]) {
+        stats.items++;
+        if (!inBounds(thing, bounds)) continue;
+        if (thing.type === 'torch') torches.push(thing);
+        else things.push(thing);
+      }
+    }
   }
-  for (const prop of index.props) {
-    if (inBounds(prop, bounds)) things.push(prop);
-  }
-  const torches = index.torches
-    .filter(t => inBounds(t, bounds))
-    .sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y))
-    .slice(0, torchLimit);
-  things.push(...torches);
+  torches.sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y));
+  things.push(...torches.slice(0, torchLimit));
   things.push({ type: 'player', id: 'player', sortId: 'player', x: player.x, y: player.y, sortX: player.x, sortY: player.y, sortZ: 0 });
   things.sort(compareSceneDepth);
   return things;
@@ -246,26 +265,36 @@ export function createSpriteCache(limit = 512) {
 }
 
 // Desenha um quadro: piso visível, coisas em ordem de profundidade, véu escuro com luzes.
+// Todo drawImage usa coordenada inteira: câmera e origem da tela são arredondadas antes de projetar.
 // art: { floor(id), wall(spec), prop(id), torch(frame), darken(ctx, lights, w, h) } (ver dungeon-art.mjs).
 // drawActor(ctx, thing, screen) desenha o jogador (o avatar é responsabilidade do chamador).
+// Retorna contagens de custo: visitedCells (células do retângulo da vista) e visitedChunks.
 export function drawDungeonFrame(ctx, { grid, camera, viewport, player, time = 0, reducedMotion = false, art, drawActor }) {
   const bounds = visibleTileBounds(camera, viewport);
   const cam = projectTile(camera.x, camera.y);
+  const camX = Math.round(cam.x), camY = Math.round(cam.y);
+  const originX = Math.round(viewport.width / 2), originY = Math.round(viewport.height / 2);
   const screenOf = t => {
     const p = projectTile(t.x, t.y);
-    return { x: p.x - cam.x + viewport.width / 2, y: p.y - cam.y + viewport.height / 2 };
+    return { x: Math.round(p.x) - camX + originX, y: Math.round(p.y) - camY + originY };
   };
-  const seed = grid.seed | 0;
+  const index = dungeonIndex(grid);
   ctx.save();
   ctx.imageSmoothingEnabled = false;
-  for (let y = Math.max(0, bounds.minY); y <= Math.min(grid.h - 1, bounds.maxY); y++) {
-    for (let x = Math.max(0, bounds.minX); x <= Math.min(grid.w - 1, bounds.maxX); x++) {
-      if (!isOpenCell(grid, x, y)) continue;
+  let visitedCells = 0;
+  const x0 = Math.max(0, bounds.minX), x1 = Math.min(index.w - 1, bounds.maxX);
+  const y0 = Math.max(0, bounds.minY), y1 = Math.min(index.h - 1, bounds.maxY);
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      visitedCells++;
+      const f = index.floor[y * index.w + x];
+      if (f === ROCK) continue;
       const s = screenOf({ x: x + 0.5, y: y + 0.5 });
-      ctx.drawImage(art.floor(floorTileId(x, y, seed)), s.x - DUNGEON_GEOMETRY.floorAnchor.x, s.y - DUNGEON_GEOMETRY.floorAnchor.y);
+      ctx.drawImage(art.floor(DUNGEON_FLOOR_IDS[f]), s.x - DUNGEON_GEOMETRY.floorAnchor.x, s.y - DUNGEON_GEOMETRY.floorAnchor.y);
     }
   }
-  const things = collectDungeonThings({ grid, bounds, player });
+  const stats = {};
+  const things = collectDungeonThings({ grid, bounds, player, stats });
   const wallOffset = wallDrawOffset();
   for (const thing of things) {
     ctx.globalAlpha = wallAlphaFor(thing, player);
@@ -287,5 +316,5 @@ export function drawDungeonFrame(ctx, { grid, camera, viewport, player, time = 0
   const lights = collectDungeonLights({ things, camera, viewport, time, reducedMotion });
   art.darken(ctx, lights, viewport.width, viewport.height);
   ctx.restore();
-  return { things: things.length, bounds };
+  return { things: things.length, bounds, visitedCells, visitedChunks: stats.chunks };
 }

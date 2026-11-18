@@ -1,6 +1,7 @@
 // Persisted, server-authored changes layered over the deterministic world seed.
 import { normalizeTerrainChunk } from './terrain-chunks.mjs';
 import { lakeSignedDepthAt, normalizeLakeOutline } from './water-geometry.mjs';
+import { parseDungeonDimensionId } from './dungeon-ids.mjs';
 export const WORLD_DOCUMENT_VERSION = 1;
 export const WORLD_DOCUMENT_ID = 'clareira-shared';
 export const WORLD_DIMENSION_ID = 'surface';
@@ -14,7 +15,7 @@ const PRODUCTION_OUTPUTS = new Set(['wood', 'plank', 'charcoal', 'copperIngot', 
 const WATER_KINDS = new Set(['lake', 'pond']);
 const CREATURE_KINDS = new Set(['goblin', 'slime', 'dragon']);
 const CREATURE_DENSITIES = new Set(['low', 'medium', 'high', 'boss']);
-const WORLD_THEMES = new Set(['forest', 'dark', 'sky', 'magic', 'inferno', 'giants', 'energy']);
+const WORLD_THEMES = new Set(['forest', 'dark', 'sky', 'magic', 'inferno', 'giants', 'energy', 'cave']);
 const PLACE_KINDS = new Set(['hotel', 'castle', 'ruins', 'standing-stones', 'broken-tower', 'inn', 'goblin-camp', 'dragon-cave', 'mine', 'secret-ruins', 'secret-cave', 'slime-field', 'lake', 'woodland', 'meadow', 'mountain-range']);
 const MAP_OBJECT_ID = /^[a-z0-9-]{1,64}$/i;
 const TREE_ID = /^(?:seed:-?\d{1,15}|authored:\d{1,3}|maptree:[a-z0-9-]{1,64})$/i;
@@ -31,8 +32,10 @@ const worldGeometryKeys = new WeakMap();
 export function worldGeometryCacheKey(definition) {
   let key = worldGeometryKeys.get(definition);
   if (key) return key;
+  // Instâncias da masmorra compartilham a geometria do nível (seed + nível), não o id da instância.
+  const dungeon = parseDungeonDimensionId(definition.dimensionId);
   key = JSON.stringify({
-    dimensionId: definition.dimensionId,
+    dimensionId: dungeon ? dungeon.modelId : definition.dimensionId,
     seed: definition.seed,
     generationVersion: definition.generationVersion,
     theme: definition.theme,

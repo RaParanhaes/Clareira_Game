@@ -7,6 +7,7 @@ import { applyRoomChestMove } from './room-chest-actions.mjs';
 import { openLairTreasure } from './lair-treasure-actions.mjs';
 import { LAIRS, formatLairCountdown, createDungeonBoss, dungeonChestLair, dungeonChestView, dungeonLairId } from '../game/lairs.mjs';
 import { createDungeonRegistry, dungeonEntranceSpawn, dungeonLevel, isDungeonDimensionId, parseDungeonDimensionId, DUNGEON_SEED } from '../game/dungeon-instances.mjs';
+import { createWorldActivator, dungeonWorldDefinition } from '../game/dungeon-world.mjs';
 import { setActiveDungeonLevel } from '../game/world.mjs';
 import { roomChestId } from '../database/room-chest-store.mjs';
 import { cleanMovementDiagnosticEvent, MAX_MOVEMENT_DIAGNOSTIC_MESSAGE_BYTES } from '../game/movement-diagnostics.mjs';
@@ -537,6 +538,7 @@ export function createPrototypeServer({
   };
   const leaveCabin = player => {
     const building = villageBuildingById.get(player.roomBuildingId);
+    leaveDungeonMembership(player);
     player.location = 'clearing'; player.dimensionId = 'surface';
     player.roomKey = player.homeRoomKey; player.roomKind = 'legacy'; player.roomBuildingId = null;
     player.roomLodgingMode = null;
@@ -580,6 +582,7 @@ export function createPrototypeServer({
       resetSceneMotion(player);notice(player.socket,'Você voltou à recepção.','chime');return true;
     }
     const outsideDoor=building?.door||CLEARING_DOOR;
+    leaveDungeonMembership(player);
     player.location='clearing';player.dimensionId='surface';player.roomKey=player.homeRoomKey;
     player.roomKind='legacy';player.roomBuildingId=null;player.roomLodgingMode=null;
     player.roomState=player.homeRoomState;player.roomFurniture=player.roomState.furniture;
@@ -643,6 +646,7 @@ export function createPrototypeServer({
         && occupants.every(other => Math.hypot(point.x - other.x, point.y - other.y) > PLAYER_RADIUS * 2 + .12));
       if (!spawn) { reject('A entrada da cabana está ocupada. Tente de novo em um instante.'); return false; }
       roomStates.set(roomKey, state);
+      leaveDungeonMembership(player);
       player.cabinKeys = freshKeys; player.location = 'room'; player.dimensionId = 'surface';
       player.roomKey = roomKey; player.roomKind = 'lodging'; player.roomBuildingId = buildingId; player.roomLodgingMode = 'owned';
       player.roomState = state; player.roomFurniture = state.furniture; player.position = { ...spawn };
@@ -701,22 +705,29 @@ export function createPrototypeServer({
       const player = [...peers.values()].find(entry => entry.id === playerId);
       return player ? { dimensionId: player.dimensionId, location: player.location, respawnPoint: player.respawnPoint ?? null } : null;
     },
+    // Quem ocupa a vaga de uma instância (chaves de sessão); null se a instância não existe.
+    dungeonInstancePlayers(dimensionId) {
+      const instance = dungeonRegistry.get(dimensionId);
+      return instance ? [...instance.players] : null;
+    },
   };
   // A porta é a frente da boca: a rocha da entrada impede chegar a menos de ~1 tile do centro, o gatilho é 0,9.
   const LAIR_MOUTH_DOOR = { id: 'lair:ninho', name: 'Covil do Ninho', x: LAIRS.ninho.mouth.x, y: LAIRS.ninho.mouth.y + 1.4 };
   const lairMouthFront = () => ({ x: LAIRS.ninho.mouth.x, y: LAIRS.ninho.mouth.y + 1.4 });
   const dungeonExitDoor = level => ({ id: 'dungeon-exit', name: 'Saída da caverna', x: level.exit.x + .5, y: level.exit.y + .5 });
+  // Toda saída de uma dimensão dg- passa por aqui: libera a vaga do grupo (a instância some 30 s depois de vazia).
+  const leaveDungeonMembership = player => {
+    if (isDungeonDimensionId(player.dimensionId)) dungeonRegistry.release(player.dimensionId, player.sessionId);
+  };
   const enterDungeon = (player, level = DUNGEON_ENTRY_LEVEL) => {
-    const acquired = dungeonRegistry.acquire(player.sessionId, level, player.sessionId);
+    // Grupo = conta (convidado: sessão), para que reconectar não ocupe outra vaga.
+    const acquired = dungeonRegistry.acquire(player.accountId || player.sessionId, level, player.sessionId);
     if (!acquired.ok) {
       notice(player.socket, 'A caverna está cheia, tente em instantes.', 'soft', { action: 'enterDoor', result: 'rejected' });
       return false;
     }
     const { dimensionId } = acquired.instance;
     ensureDungeonBoss(dimensionId, level);
-    if (!worldDefinitions.has(dimensionId)) {
-      worldDefinitions.set(dimensionId, normalizeWorldDefinition({ ...emptyWorldDefinition(dimensionId), theme: 'dark' }));
-    }
     player.dimensionId = dimensionId;
     // Ponto de volta da masmorra é a boca do covil; a regra de morte (outra branch) vai usá-lo.
     player.respawnPoint = { lairId: LAIRS.ninho.id, x: LAIRS.ninho.mouth.x, y: LAIRS.ninho.mouth.y };
@@ -732,7 +743,7 @@ export function createPrototypeServer({
   const leaveDungeon = player => {
     const dimensionId = player.dimensionId;
     if (!isDungeonDimensionId(dimensionId)) return false;
-    dungeonRegistry.release(dimensionId, player.sessionId);
+    leaveDungeonMembership(player);
     player.dimensionId = 'surface';
     player.respawnPoint = null;
     player.location = 'clearing';
@@ -751,7 +762,7 @@ export function createPrototypeServer({
   // Coleta instâncias vazias há 30 s e limpa o estado delas (definição do mundo, portas, fauna e fogueiras).
   const dungeonCollectTimer = setInterval(() => {
     for (const dimensionId of dungeonRegistry.collect()) {
-      worldDefinitions.delete(dimensionId);
+      // A definição é por nível (compartilhada), então só o estado da instância sai aqui.
       doorCatalogsByDimension.delete(dimensionId);
       wildlifeByDimension.delete(dimensionId);
       firesByDimension.delete(dimensionId);
@@ -1071,9 +1082,10 @@ export function createPrototypeServer({
   const locationSaveErrors = new Set();
   let serverClosing = false;
   worldDefinitions.set('surface', emptyWorldDefinition());
-  let activeWorldDimensionId = null;
-  let activeWorldRevision = -1;
-  const worldFor = dimensionId => worldDefinitions.get(dimensionId) || worldDefinitions.get('surface') || emptyWorldDefinition();
+  // Masmorra: a definição é uma por nível (dungeon-world.mjs); a instância só escolhe o nível.
+  const worldFor = dimensionId => isDungeonDimensionId(dimensionId)
+    ? dungeonWorldDefinition(parseDungeonDimensionId(dimensionId).level)
+    : worldDefinitions.get(dimensionId) || worldDefinitions.get('surface') || emptyWorldDefinition();
   const canTravelBetweenDimensions = player => player.canStaffTravelDimensions === true
     || player.inventory?.learnedAbilities?.includes('universalTeleport') === true;
   const dimensionsForPlayer = player => {
@@ -1117,19 +1129,12 @@ export function createPrototypeServer({
     await loadCampfires(dimension.id);
     return worldDefinitions.get(dimension.id);
   };
-  const activateWorld = dimensionId => {
-    const key = worldDefinitions.has(dimensionId) ? dimensionId : 'surface';
-    const definition = worldFor(key);
-    // A grade da masmorra acompanha a dimensão ativa (canOccupy usa a grade); fora dela o terreno volta ao normal.
-    const dungeon = isDungeonDimensionId(key) ? parseDungeonDimensionId(key) : null;
-    setActiveDungeonLevel(dungeon ? dungeonLevel(dungeon.level) : null);
-    if (activeWorldDimensionId !== key || activeWorldRevision !== definition.revision) {
-      applyWorldDefinition(definition);
-      activeWorldDimensionId = key;
-      activeWorldRevision = definition.revision;
-    }
-    return definition;
-  };
+  // Um ativador por servidor: alternar entre instâncias do mesmo nível não reaplica a geometria a cada tick.
+  const worldActivator = createWorldActivator({
+    applyWorldDefinition, setActiveDungeonLevel, dungeonLevel,
+    definitionFor: key => worldFor(key), hasDefinition: id => worldDefinitions.has(id),
+  });
+  const activateWorld = dimensionId => worldActivator.activate(dimensionId);
   const ensureWildlifeForArea = (dimensionId, area) => {
     if (isPersonalArrivalDimensionId(dimensionId)) return;
     // A masmorra não tem fauna comum nesta fatia (monstros da D2); o chefe entra direto na instância.
@@ -1321,7 +1326,8 @@ export function createPrototypeServer({
     && a.roomKey === b.roomKey && a.roomOwnerName === b.roomOwnerName && a.color === b.color);
   const sameDimensionPosition=(a,b)=>Boolean(a&&b&&a.dimensionId===b.dimensionId&&a.x===b.x&&a.y===b.y&&a.worldVersion===b.worldVersion);
   const persistPlayerDimensionPosition=(player,dimensionId=player.dimensionId,position=player.position,force=false)=>{
-    if(player.location!=='clearing'||typeof dimensionId!=='string'||!Number.isFinite(position?.x)||!Number.isFinite(position?.y))return Promise.resolve();
+    // A masmorra é efêmera: a posição de um id dg- não é guardada por dimensão (nem na memória nem no banco).
+    if(player.location!=='clearing'||typeof dimensionId!=='string'||isDungeonDimensionId(dimensionId)||!Number.isFinite(position?.x)||!Number.isFinite(position?.y))return Promise.resolve();
     const checkpoint={dimensionId,x:position.x,y:position.y,worldVersion:coordinateVersionForDimension(dimensionId)};
     player.dimensionPositions ||= new Map();player.persistedDimensionPositions ||= new Map();
     player.dimensionPositions.set(dimensionId,checkpoint);
@@ -1683,7 +1689,7 @@ export function createPrototypeServer({
       const cooldown = latest.edits.find(edit => edit.id === editId && edit.type === 'resource-cooldown');
       if (!cooldown) {
         resourceState(dimensionId).collected.delete(sourceId);
-        activeWorldRevision = -1;
+        worldActivator.reset();
         activateWorld(dimensionId);
         broadcast();
         return;
@@ -1700,7 +1706,7 @@ export function createPrototypeServer({
       const saved = await storage.saveWorld(updated, latest.revision, dimensionId);
       worldDefinitions.set(dimensionId, saved);
       resourceState(dimensionId).collected.delete(cooldown.sourceId);
-      activeWorldRevision = -1;
+      worldActivator.reset();
       activateWorld(dimensionId);
       broadcast();
     } catch (error) {
@@ -1710,7 +1716,7 @@ export function createPrototypeServer({
         const current = latest.edits.find(edit => edit.id === editId && edit.type === 'resource-cooldown');
         if (current) scheduleResourceCooldown(dimensionId, current);
         else resourceState(dimensionId).collected.delete(sourceId);
-        activeWorldRevision = -1;
+        worldActivator.reset();
         activateWorld(dimensionId);
         broadcast();
         return;
@@ -1725,7 +1731,7 @@ export function createPrototypeServer({
       const latest = normalizeWorldDefinition(await storage.loadWorld(dimensionId));
       worldDefinitions.set(dimensionId, latest);
       const marker = latest.edits.find(edit => edit.id === editId && edit.type === 'tree-remove' && edit.respawnAt !== undefined);
-      if (!marker) { activeWorldRevision = -1; activateWorld(dimensionId); broadcast(); return; }
+      if (!marker) { worldActivator.reset(); activateWorld(dimensionId); broadcast(); return; }
       const sampledAt = Date.now();
       if ((marker.nextGrowthAt ?? marker.respawnAt) > sampledAt) { scheduleTreeRegrowth(dimensionId, marker); return; }
       let nextMarker = null;
@@ -1739,7 +1745,7 @@ export function createPrototypeServer({
         : { removeIds:[editId] }, { worldSize:WORLD_SIZE });
       const saved = await storage.saveWorld(updated, latest.revision, dimensionId);
       worldDefinitions.set(dimensionId, saved);
-      activeWorldRevision = -1;
+      worldActivator.reset();
       activateWorld(dimensionId);
       if (nextMarker) scheduleTreeRegrowth(dimensionId, nextMarker);
       broadcast();
@@ -1749,7 +1755,7 @@ export function createPrototypeServer({
         worldDefinitions.set(dimensionId, latest);
         const current = latest.edits.find(edit => edit.id === editId && edit.type === 'tree-remove' && edit.respawnAt !== undefined);
         if (current) scheduleTreeRegrowth(dimensionId, current);
-        activeWorldRevision = -1;
+        worldActivator.reset();
         activateWorld(dimensionId);
         broadcast();
         return;
@@ -2358,6 +2364,8 @@ export function createPrototypeServer({
 
       if (message.type === 'dimensionTravel') {
         const rejectTransit = text => notice(socket, text, 'soft', { action: 'dimensionTravel', requestId: message.requestId, result: 'rejected' });
+        // Instâncias da masmorra não são destino de viagem: entram só pela boca do covil.
+        if (isDungeonDimensionId(message.dimensionId)) { rejectTransit('Essa dimensão não está disponível.'); return; }
         const universalTeleport = message.universalTeleport === true;
         const universalAbility = PLAYER_ABILITIES.universalTeleport;
         if (universalTeleport && (!universalAbility || !player.inventory.learnedAbilities.includes('universalTeleport'))) { rejectTransit('Você ainda não aprendeu Teleporte Universal.'); return; }
@@ -2439,6 +2447,8 @@ export function createPrototypeServer({
           if (activeDimensionTransits.get(transit.id) !== transit || player.pendingDimensionTransitId !== transit.id
               || isPlayerDowned(player)
               || !peers.has(socket) || socket.readyState !== WebSocket.OPEN) return;
+          // Viagem da equipe (ou teleporte) que sai da masmorra libera a instância antes de trocar a dimensão.
+          leaveDungeonMembership(player);
           player.dimensionId = targetDimension.id;
           player.arrivalTutorial = isPersonalArrivalDimensionId(targetDimension.id) ? { phase: 'welcome', step: 0, completed: false } : null;
           player.location = 'clearing'; player.roomKey = player.homeRoomKey;
@@ -3242,6 +3252,8 @@ export function createPrototypeServer({
         return;
       }
       if (message.name === 'ownerVisitRoom') {
+        // Visita guarda a origem e a restaura ao sair; dentro da masmorra a origem não tem vaga, então não é permitida.
+        if (isDungeonDimensionId(player.dimensionId)) { notice(socket, 'Saia da masmorra antes de visitar uma casa.'); return; }
         let isOwner = false;
         try { isOwner = !!player.accountId && !!staffAuthorization?.hasPermission
           && await staffAuthorization.hasPermission(player.accountId, '*', { scopeKey: 'global' }); }
@@ -3574,7 +3586,7 @@ export function createPrototypeServer({
             const updated = updateWorldEdits(currentDefinition, { removeIds: [batchEditId] }, { worldSize:WORLD_SIZE });
             const saved = await storage.saveWorld(updated, currentDefinition.revision, player.dimensionId);
             worldDefinitions.set(player.dimensionId, saved);
-            activeWorldRevision = -1;
+            worldActivator.reset();
             activateWorld(player.dimensionId);
             addInventoryItem(player.inventory, batch.outputItem, quantity);
             const interaction = makeInteractionRecord(player, 'collect_batch', {
@@ -3597,7 +3609,7 @@ export function createPrototypeServer({
                 }] }, { worldSize:WORLD_SIZE });
                 const restored = await storage.saveWorld(returned, saved.revision, player.dimensionId);
                 worldDefinitions.set(player.dimensionId, restored);
-                activeWorldRevision = -1;
+                worldActivator.reset();
                 activateWorld(player.dimensionId);
               } catch (error) { process.stderr.write(`Could not restore production batch: ${error.message}\n`); }
               notice(socket, 'Não consegui salvar o resultado; o lote foi devolvido.', 'soft', pickupRequest && { ...pickupRequest, result: 'rejected' });
@@ -3617,7 +3629,7 @@ export function createPrototypeServer({
             if (error.status === 409) {
               const latest = await storage.loadWorld(player.dimensionId);
               worldDefinitions.set(player.dimensionId, normalizeWorldDefinition(latest));
-              activeWorldRevision = -1;
+              worldActivator.reset();
               activateWorld(player.dimensionId);
               notice(socket, 'Alguém recolheu esse lote antes de você.', 'soft', pickupRequest && { ...pickupRequest, result: 'rejected' });
             }
@@ -3687,7 +3699,7 @@ export function createPrototypeServer({
             const saved = await persistWorldCollection(player, updated, currentDefinition.revision, interaction, candidateInventory);
             restoreInventory(player.inventory, inventorySnapshot(candidateInventory));
             worldDefinitions.set(player.dimensionId, saved);
-            activeWorldRevision = -1;
+            worldActivator.reset();
             activateWorld(player.dimensionId);
           } catch (error) {
             restoreInventory(player.inventory, beforeInventory);
@@ -3695,7 +3707,7 @@ export function createPrototypeServer({
             if (error.status === 409) {
               const latest = normalizeWorldDefinition(await storage.loadWorld(player.dimensionId));
               worldDefinitions.set(player.dimensionId, latest);
-              activeWorldRevision = -1;
+              worldActivator.reset();
               activateWorld(player.dimensionId);
               notice(socket, 'Alguém recolheu esse recurso antes de você.');
             } else notice(socket, 'Não consegui registrar a coleta. O recurso continua no chão.');
@@ -3705,14 +3717,14 @@ export function createPrototypeServer({
           try {
             const saved = await storage.saveWorld(updated, currentDefinition.revision, player.dimensionId);
             worldDefinitions.set(player.dimensionId, saved);
-            activeWorldRevision = -1;
+            worldActivator.reset();
             activateWorld(player.dimensionId);
           } catch (error) {
             resourcesForDimension.collected.delete(resource.id);
             if (error.status === 409) {
               const latest = normalizeWorldDefinition(await storage.loadWorld(player.dimensionId));
               worldDefinitions.set(player.dimensionId, latest);
-              activeWorldRevision = -1;
+              worldActivator.reset();
               activateWorld(player.dimensionId);
               notice(socket, 'Alguém recolheu esse recurso antes de você.');
             } else notice(socket, 'Não consegui registrar a coleta. O recurso continua no chão.');
@@ -3730,7 +3742,7 @@ export function createPrototypeServer({
                 const restored = updateWorldEdits(latest, { removeIds: [cooldown.id] }, { worldSize: WORLD_SIZE });
                 const returned = await storage.saveWorld(restored, latest.revision, player.dimensionId);
                 worldDefinitions.set(player.dimensionId, returned);
-                activeWorldRevision = -1;
+                worldActivator.reset();
                 activateWorld(player.dimensionId);
               }
             } catch (error) {
@@ -3878,7 +3890,7 @@ export function createPrototypeServer({
             const updated = appendWorldEdits(currentDefinition, [{ id, type:'resource', resourceKind:building.kind, x:player.position.x, y:player.position.y }], { worldSize:WORLD_SIZE });
             const saved = await storage.saveWorld(updated, currentDefinition.revision, player.dimensionId);
             worldDefinitions.set(player.dimensionId, saved);
-            activeWorldRevision = -1;
+            worldActivator.reset();
             activateWorld(player.dimensionId);
             notice(socket, `Você construiu uma ${building.label}. Ela fica no mundo para todos usarem.`);
             broadcast();
@@ -3888,7 +3900,7 @@ export function createPrototypeServer({
             if (error.status === 409) {
               const latest = await storage.loadWorld(player.dimensionId);
               worldDefinitions.set(player.dimensionId, normalizeWorldDefinition(latest));
-              activeWorldRevision = -1;
+              worldActivator.reset();
               activateWorld(player.dimensionId);
             }
             notice(socket, error.status === 409 ? 'O mundo mudou; tente construir novamente.' : 'Não consegui salvar a máquina; os materiais foram devolvidos.');
@@ -3966,7 +3978,7 @@ export function createPrototypeServer({
             }], { worldSize:WORLD_SIZE });
             const saved = await storage.saveWorld(updated, currentDefinition.revision, player.dimensionId);
             worldDefinitions.set(player.dimensionId, saved);
-            activeWorldRevision = -1;
+            worldActivator.reset();
             activateWorld(player.dimensionId);
             const minutes = Math.floor(recipe.durationMs / 60_000);
             const seconds = Math.ceil((recipe.durationMs % 60_000) / 1_000);
@@ -3979,7 +3991,7 @@ export function createPrototypeServer({
             if (error.status === 409) {
               const latest = await storage.loadWorld(player.dimensionId);
               worldDefinitions.set(player.dimensionId, normalizeWorldDefinition(latest));
-              activeWorldRevision = -1;
+              worldActivator.reset();
               activateWorld(player.dimensionId);
             }
             notice(socket, error.status === 409 ? 'O mundo mudou; tente iniciar o lote novamente.' : 'Não consegui registrar o lote; os insumos foram devolvidos.');
@@ -4069,7 +4081,7 @@ export function createPrototypeServer({
                 }] }, { worldSize:WORLD_SIZE });
                 const saved = await storage.saveWorld(updated, currentDefinition.revision, player.dimensionId);
                 worldDefinitions.set(player.dimensionId, saved);
-                activeWorldRevision = -1;
+                worldActivator.reset();
                 activateWorld(player.dimensionId);
               } catch (error) {
                 restoreInventory(player.inventory, before);
@@ -4078,7 +4090,7 @@ export function createPrototypeServer({
                 if (error.status === 409) {
                   const latest = normalizeWorldDefinition(await storage.loadWorld(player.dimensionId));
                   worldDefinitions.set(player.dimensionId, latest);
-                  activeWorldRevision = -1;
+                  worldActivator.reset();
                   activateWorld(player.dimensionId);
                   notice(socket, 'O veio mudou em outra sessão. Tente o próximo golpe novamente.');
                 } else notice(socket, 'Não consegui salvar o golpe; a durabilidade foi devolvida.');
@@ -4101,7 +4113,7 @@ export function createPrototypeServer({
               const updated = updateWorldEdits(currentDefinition, { upserts, removeIds: removals }, { worldSize:WORLD_SIZE });
               const saved = await storage.saveWorld(updated, currentDefinition.revision, player.dimensionId);
               worldDefinitions.set(player.dimensionId, saved);
-              activeWorldRevision = -1;
+              worldActivator.reset();
               activateWorld(player.dimensionId);
               addInventoryItem(player.inventory, outputItem, 1);
               try { await persistPlayer(player); }
@@ -4114,7 +4126,7 @@ export function createPrototypeServer({
                   ] }, { worldSize:WORLD_SIZE });
                   const restored = await storage.saveWorld(restoredWorld, saved.revision, player.dimensionId);
                   worldDefinitions.set(player.dimensionId, restored);
-                  activeWorldRevision = -1;
+                  worldActivator.reset();
                   activateWorld(player.dimensionId);
                 } catch (error) { process.stderr.write(`Could not restore mined deposit: ${error.message}\\n`); }
                 notice(socket, 'Não consegui salvar o minério; a unidade foi devolvida ao veio.');
@@ -4131,7 +4143,7 @@ export function createPrototypeServer({
               if (error.status === 409) {
                 const latest = await storage.loadWorld(player.dimensionId);
                 worldDefinitions.set(player.dimensionId, normalizeWorldDefinition(latest));
-                activeWorldRevision = -1;
+                worldActivator.reset();
                 activateWorld(player.dimensionId);
                 notice(socket, 'Alguém terminou esse veio antes de você.');
               } else notice(socket, 'Não consegui registrar a extração. O último golpe foi desfeito.');
@@ -4214,7 +4226,7 @@ export function createPrototypeServer({
             }] }, { worldSize:WORLD_SIZE });
             const saved = await persistWoodworkState(player,updated,currentDefinition.revision);
             worldDefinitions.set(player.dimensionId, saved);
-            activeWorldRevision = -1;
+            worldActivator.reset();
             activateWorld(player.dimensionId);
           } catch (error) {
             restoreInventory(player.inventory, before);
@@ -4223,7 +4235,7 @@ export function createPrototypeServer({
             if (error.status === 409) {
               const latest = normalizeWorldDefinition(await storage.loadWorld(player.dimensionId));
               worldDefinitions.set(player.dimensionId, latest);
-              activeWorldRevision = -1;
+              worldActivator.reset();
               activateWorld(player.dimensionId);
               notice(socket, 'O mundo mudou em outra sessão. Tente o próximo golpe novamente.');
             } else notice(socket, 'Não consegui salvar o golpe; a durabilidade foi devolvida.');
@@ -4261,7 +4273,7 @@ export function createPrototypeServer({
             saved=await persistWorldAndProgress(player,updated,currentDefinition.revision);
           }else saved=await persistWoodworkState(player,updated,currentDefinition.revision);
           worldDefinitions.set(player.dimensionId, saved);
-          activeWorldRevision = -1;
+          worldActivator.reset();
           activateWorld(player.dimensionId);
           if (isTree) {
             scheduleTreeRegrowth(player.dimensionId, edits[0]);
@@ -4284,7 +4296,7 @@ export function createPrototypeServer({
                 }, { worldSize:WORLD_SIZE });
                 const restored = await storage.saveWorld(returned, saved.revision, player.dimensionId);
                 worldDefinitions.set(player.dimensionId, restored);
-                activeWorldRevision = -1;
+                worldActivator.reset();
                 activateWorld(player.dimensionId);
               } catch (error) { process.stderr.write(`Could not restore cut log: ${error.message}\n`); }
               notice(socket, 'Não consegui salvar a madeira; a tora foi devolvida.');
@@ -4302,7 +4314,7 @@ export function createPrototypeServer({
           if (error.status === 409) {
             const latest = await storage.loadWorld(player.dimensionId);
             worldDefinitions.set(player.dimensionId, normalizeWorldDefinition(latest));
-            activeWorldRevision = -1;
+            worldActivator.reset();
             activateWorld(player.dimensionId);
             notice(socket, 'Alguém terminou esse trabalho antes de você.');
           } else notice(socket, 'Não consegui registrar este trabalho. O último golpe foi desfeito.');
@@ -4496,7 +4508,7 @@ export function createPrototypeServer({
         if (transit.actorId === player.id && !Number.isFinite(transit.destinationStartAt)) removeDimensionTransit(transit);
       }
       // Quem sai dentro da masmorra libera a instância; ela é coletada 30 s depois se ficar vazia.
-      if (isDungeonDimensionId(player.dimensionId)) dungeonRegistry.release(player.dimensionId, player.sessionId);
+      leaveDungeonMembership(player);
       // Staff visits are transient. If the connection drops, resume at the
       // original location instead of persisting the visitor inside someone else's home.
       if (player.staffRoomReturn) walkOutOfRoom(player);
@@ -4917,7 +4929,7 @@ export function createPrototypeServer({
           let objectsChanged=latestObjects.revision!==sceneObjectCatalog.revision;
           if(objectsChanged){
             const oldBuildings=new Map(VILLAGE_BUILDINGS.map(b=>[b.id,b]));
-            applyObjectCatalog(latestObjects);sceneObjectCatalog=latestObjects;activeWorldRevision=-1;doorCatalogsByDimension.clear();
+            applyObjectCatalog(latestObjects);sceneObjectCatalog=latestObjects;worldActivator.reset();doorCatalogsByDimension.clear();
             const claimsForNames=await storage.listLodgingClaims();
             for(const [roomKey,state]of roomStates){const detail=roomDetails(roomKey);if(detail.kind!=='legacy')state.name=roomDisplayName(roomKey,state.name,claimsForNames.find(c=>c.profileId===lodgingLocation(roomKey)?.profileId));}
             for(const player of peers.values()){
@@ -4951,7 +4963,7 @@ export function createPrototypeServer({
             }
             if (!firesByDimension.has(dimension.id)) await loadCampfires(dimension.id);
           }
-          if (changed) { activeWorldRevision = -1; broadcast(); }
+          if (changed) { worldActivator.reset(); broadcast(); }
         }catch(error){process.stderr.write(`Could not refresh shared world: ${error.message}\n`)}
       };
       worldSyncTimer=setInterval(()=>{if(!worldSyncRunning)worldSyncRunning=synchronizeWorld().finally(()=>{worldSyncRunning=null;});},Math.max(500,worldSyncIntervalMs));

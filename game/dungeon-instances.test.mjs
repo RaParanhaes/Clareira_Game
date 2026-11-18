@@ -94,3 +94,22 @@ test('colisão da grade: rocha bloqueia, piso com folga passa, borda do mundo bl
     setActiveDungeonLevel(null);
   }
 });
+
+test('reconexão do mesmo grupo não ocupa vaga nova: a chave é a conta, não a sessão', () => {
+  const registry = createDungeonRegistry({ now: () => 0 });
+  for (let session = 0; session < 20; session += 1) {
+    const acquired = registry.acquire('conta-1', 1, `sessao-${session}`);
+    assert.equal(acquired.ok, true);
+    registry.release(acquired.instance.dimensionId, `sessao-${session}`);
+  }
+  assert.equal(registry.count(), 1);
+});
+
+test('teto de 12 instâncias conta grupos: reconexões de quem já tem vaga continuam entrando', () => {
+  const registry = createDungeonRegistry({ now: () => 0 });
+  for (let group = 0; group < 12; group += 1) assert.equal(registry.acquire(`conta-${group}`, 1, `sessao-${group}`).ok, true);
+  assert.equal(registry.acquire('conta-novo', 1, 'sessao-novo').ok, false, 'a 13ª vaga é recusada');
+  registry.release(dungeonDimensionId(1, instanceIdFor('conta-3')), 'sessao-3');
+  assert.equal(registry.acquire('conta-3', 1, 'sessao-3-nova').ok, true, 'reconexão de quem tinha vaga entra');
+  assert.equal(registry.count(), 12);
+});

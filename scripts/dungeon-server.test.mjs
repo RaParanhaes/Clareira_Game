@@ -18,7 +18,7 @@ const TEST_ORIGIN = 'https://test.clareira.invalid';
 const LAIR_MOUTH = LAIRS.ninho.mouth;
 
 // Abre a sala de jogo com contas registradas; cada nome vira um perfil diferente (um grupo diferente).
-async function startRoom(t, usernames, { placeAt } = {}) {
+async function startRoom(t, usernames, { placeAt, learnedAbilities } = {}) {
   const stateDirectory = await mkdtemp(path.join(os.tmpdir(), 'clareira-dungeon-'));
   const accounts = createAccountStore({ directory: stateDirectory });
   for (const username of usernames) await accounts.register({ username, password: 'dungeon-fixture-only' });
@@ -29,7 +29,8 @@ async function startRoom(t, usernames, { placeAt } = {}) {
     databaseUrl: null, redisUrl: null, testHooks: true,
     resolveSession: async token => usernames.includes(token.replace(/^token-/, '')) ? {
       profile: { id: ids[token.replace(/^token-/, '')], username: token.replace(/^token-/, ''), guest: false,
-        inventory: createInventory({ slots: [{ itemId: 'shortSword', quantity: 1 }], selectedSlot: 0 }) },
+        inventory: Object.assign(createInventory({ slots: [{ itemId: 'shortSword', quantity: 1 }], selectedSlot: 0 }),
+          learnedAbilities ? { learnedAbilities: [...learnedAbilities] } : {}) },
     } : null,
   });
   // Um só hook: fecha o servidor antes de apagar o diretório de estado (senão as gravações pendentes falham).
@@ -233,6 +234,26 @@ test('masmorra: relogin dentro da masmorra reaparece na boca do covil, não na g
   assert.equal(state.dimensionId, 'surface', 'superfície, não a instância');
   const me = player.self(state);
   assert.ok(Math.hypot(me.x - LAIR_MOUTH.x, me.y - (LAIR_MOUTH.y + 1.4)) <= 2.5, 'reaparece à frente da boca');
+  player.socket.terminate();
+});
+
+test('masmorra: a viagem de quem sai da masmorra libera a vaga do grupo; destino dg- é recusado', async t => {
+  const { address, token, testing } = await startRoom(t, ['dungeon_viagem'], {
+    placeAt: { dungeon_viagem: { x: LAIR_MOUTH.x, y: LAIR_MOUTH.y + 0.6 } }, learnedAbilities: ['universalTeleport'],
+  });
+  const player = await openPlayer(t, address, token('dungeon_viagem'));
+  player.act('interact');
+  const entered = await player.nextState(state => String(state.dimensionId || '').startsWith('dg-ninho-n1-'), 6000, 'dungeon dimension');
+  assert.deepEqual(testing.dungeonInstancePlayers(entered.dimensionId).length, 1, 'o grupo ocupa uma vaga');
+
+  // Destino de instância não é viagem: a recusa chega como aviso e o jogador segue na masmorra.
+  player.socket.send(JSON.stringify({ type: 'dimensionTravel', dimensionId: entered.dimensionId, requestId: 'viagem-dg' }));
+  await player.nextState(() => true, 4000, 'estado após recusar destino dg-');
+  assert.equal(testing.playerState(player.id).dimensionId, entered.dimensionId, 'continua na instância');
+
+  player.socket.send(JSON.stringify({ type: 'dimensionTravel', dimensionId: 'surface', requestId: 'viagem-1' }));
+  await player.nextState(state => state.dimensionId === 'surface', 9000, 'surface after team travel');
+  assert.equal(testing.dungeonInstancePlayers(entered.dimensionId).length, 0, 'a viagem libera a instância');
   player.socket.terminate();
 });
 

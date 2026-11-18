@@ -1,5 +1,5 @@
 import { GAME_RENTAL_DAYS, gameDaysToMs } from '../game/game-calendar.mjs';
-import { createDoorTriggerState, stepDoorTrigger, failDoorTrigger, DOOR_LOCK_MS } from '../game/door-proximity.mjs';
+import { createDoorTriggerState, stepDoorTrigger, failDoorTrigger, DOOR_LOCK_MS, DOOR_REARM_DISTANCE, DOOR_TRIGGER_RADIUS } from '../game/door-proximity.mjs';
 import { lodgingStorageKey } from '../game/lodging-catalog.mjs';
 import { PRESET_REMOVE_MESSAGE, isPresetFurniture, placedFurnitureCount, withPresetFurniture } from '../game/room-presets.mjs';
 import { INVENTORY_ACTIONS, applyInventoryCommand } from '../game/inventory-prediction.mjs';
@@ -191,7 +191,7 @@ function enqueueInputCommand(player, command) {
   }
 }
 
-function advanceQueuedInput(player, { throughSeq = Infinity, maxSteps = Infinity, step, move, crossedRoomExit, walkOutOfRoom }) {
+function advanceQueuedInput(player, { throughSeq = Infinity, maxSteps = Infinity, step, move }) {
   let simulatedSteps = 0;
   while (simulatedSteps < maxSteps && player.commands.length && player.commands[0].seq <= throughSeq) {
     const command = player.commands.shift();
@@ -207,10 +207,6 @@ function advanceQueuedInput(player, { throughSeq = Infinity, maxSteps = Infinity
     player.position = move(previousPosition, command, step);
     player.inputSeq = command.seq;
     simulatedSteps += 1;
-    if (crossedRoomExit(player, previousPosition, player.position)) {
-      walkOutOfRoom(player);
-      break;
-    }
     if (isBlockedAtRest(previousPosition, player.position, command)) {
       while (player.commands.length && player.commands[0].seq <= throughSeq
           && hasSameMovementIntent(command, player.commands[0])) {
@@ -586,8 +582,6 @@ export function createPrototypeServer({
         .filter(other=>other!==player).map(other=>other.position))||{x:outsideDoor.x,y:outsideDoor.y+.6};
     resetSceneMotion(player);notice(player.socket,'Você voltou ao bosque.','chime');return true;
   };
-  // Room exits are routed through the same proximity trigger as every doorway.
-  const didCrossRoomExit = () => false;
   const advancePlayerToInput = (player, throughSeq) => {
     if (!player.sequenced || !Number.isSafeInteger(throughSeq) || throughSeq <= player.inputSeq) return;
     const targetSeq = Math.min(throughSeq, player.receivedSeq);
@@ -600,7 +594,7 @@ export function createPrototypeServer({
       : stepPlayer(position, input, delta, occupied, [...firesFor(player.dimensionId).values()], now(),
         wildlifeCollisionBodies(wildlifeFor(player.dimensionId).values()), { ...player.inventory.attributes, hasteActive:performance.now()<(player.hasteUntil||0), sprintBurstActive:performance.now()<(player.sprintBurstUntil||0), flightAuthorized:player.flightPilotEnabled });
     advanceQueuedInput(player, { throughSeq: targetSeq, maxSteps: MAX_QUEUED_INPUT_COMMANDS,
-      step: FIXED_STEP_SECONDS, move, crossedRoomExit: didCrossRoomExit, walkOutOfRoom });
+      step: FIXED_STEP_SECONDS, move });
     player.moving = player.position.x !== previousPosition.x || player.position.y !== previousPosition.y;
     indexPlayer(player.socket, player);
   };
@@ -651,17 +645,29 @@ export function createPrototypeServer({
       return true;
     } catch (error) { reject('Não consegui conferir sua chave agora. A porta continua trancada.'); return false; }
   };
+  const doorCatalogsByDimension = new Map();
   const doorsFor = player => {
+    const dimensionId = player.dimensionId || 'surface';
+    let catalogs = doorCatalogsByDimension.get(dimensionId);
+    if (!catalogs) { catalogs = new Map(); doorCatalogsByDimension.set(dimensionId, catalogs); }
+    const catalogKey = player.location === 'room'
+      ? `room:${player.roomKey}:${player.roomKind}:${player.roomBuildingId}:${player.roomLodgingMode || player.lodgingClaim?.mode || ''}`
+      : 'clearing';
+    if (catalogs.has(catalogKey)) return catalogs.get(catalogKey);
     if (player.location === 'room') {
       const layout = getRoomLayout(player.roomKind, player.roomBuildingId, player.roomLodgingMode || player.lodgingClaim?.mode);
-      return [{ id: `room:${player.roomKey}`, ...layout.door }];
+      const doors = [{ id: `room:${player.roomKey}`, ...layout.door }];
+      catalogs.set(catalogKey, doors);
+      return doors;
     }
-    if (player.dimensionId !== 'surface') return [];
-    return [
+    if (dimensionId !== 'surface') return [];
+    const doors = [
       ...(CLEARING_DOOR.enabled === false ? [] : [{ id: 'arrival', ...CLEARING_DOOR }]),
       ...VILLAGE_BUILDINGS.filter(building => building.door.enabled !== false)
         .map(building => ({ id: `building:${building.id}`, building, ...building.door })),
     ];
+    catalogs.set(catalogKey, doors);
+    return doors;
   };
   const stepPlayerDoor = (player, at = performance.now()) => {
     if (player.location === 'room' && player.staffRoomReturn) return;
@@ -670,21 +676,37 @@ export function createPrototypeServer({
     if (isDowned(playerVitals(player), now())) return;
     const doors = doorsFor(player);
     if (!doors.length) return;
-    const door = doors.map(item => ({ ...item,
-      distance: Math.hypot(player.position.x - item.x, player.position.y - item.y),
-    })).sort((a, b) => a.distance - b.distance)[0];
+    const trigger = player.doorTrigger || (player.doorTrigger = createDoorTriggerState());
+    if (!player.moving && !Number.isFinite(trigger.since)) {
+      if (trigger.armed) return;
+      const nearestDistance = Math.min(...doors.map(item => Math.hypot(player.position.x - item.x, player.position.y - item.y)));
+      if (nearestDistance <= DOOR_REARM_DISTANCE) return;
+      player.doorTrigger = stepDoorTrigger(trigger, { distance: nearestDistance, now: at }).state;
+      return;
+    }
+    const door = doors.reduce((nearest, item) => {
+      const distance = Math.hypot(player.position.x - item.x, player.position.y - item.y);
+      return !nearest || distance < nearest.distance ? { ...item, distance } : nearest;
+    }, null);
+    if (trigger.armed && door.distance > DOOR_REARM_DISTANCE) return;
+    if (door.distance > DOOR_TRIGGER_RADIUS && !Number.isFinite(trigger.since)) {
+      player.doorTrigger = stepDoorTrigger(trigger, { distance: door.distance, now: at }).state;
+      return;
+    }
     const roomLayout = player.location === 'room'
       ? getRoomLayout(player.roomKind, player.roomBuildingId, player.roomLodgingMode || player.lodgingClaim?.mode) : null;
-    const clear = hasClearInteractionPath(player.position, door, {
+    const clear = door.distance <= DOOR_TRIGGER_RADIUS && hasClearInteractionPath(player.position, door, {
       fires: player.location === 'clearing' ? [...firesFor(player.dimensionId).values()] : undefined,
       location: player.location, roomLayout,
       furniture: player.location === 'room' ? player.roomFurniture : undefined,
     });
     const doorInput = player.input?.x || player.input?.y ? player.input : player.roomDoorDirection || { x: 0, y: 0 };
-    const towardDoor = !roomLayout || (roomLayout.elevation === 'flat'
-      && !(player.roomKind === 'lodging' && isCabin(player.roomBuildingId)))
-      || (doorInput.x * (door.x - player.position.x) + doorInput.y * (door.y - player.position.y) > .01);
-    const result = stepDoorTrigger(player.doorTrigger || (player.doorTrigger = createDoorTriggerState()), {
+    const mustFaceDoor = !roomLayout || roomLayout.elevation !== 'flat'
+      || player.roomKind === 'lodging' && isCabin(player.roomBuildingId);
+    const doorDirectionDot = doorInput.x * (door.x - player.position.x) + doorInput.y * (door.y - player.position.y);
+    const towardDoor = !mustFaceDoor || doorDirectionDot > .01
+      || Number.isFinite(trigger.since) && door.distance <= PLAYER_RADIUS;
+    const result = stepDoorTrigger(trigger, {
       distance: door.distance, clear, towardDoor, now: at,
     });
     player.doorTrigger = result.state;
@@ -2040,6 +2062,9 @@ export function createPrototypeServer({
       appearance:resume?.appearance||(!profile.guest?await storage.loadAppearance(profile.id).catch(()=>normalizeAppearance()):normalizeAppearance()),
       objectCatalogRevisionSeen: null,
     };
+    const nearbyDoors = doorsFor(player);
+    if (nearbyDoors.some(door => Math.hypot(position.x - door.x, position.y - door.y) <= DOOR_TRIGGER_RADIUS))
+      player.doorTrigger = { ...createDoorTriggerState(), armed: false };
     player.persistedLocation = canRestorePosition && durableVisit
       && sameLocationCheckpoint(locationCheckpoint(player), durableVisit) ? durableVisit : null;
     if (resume?.viewportWidth && resume?.viewportHeight) applyViewport(player, resume.viewportWidth, resume.viewportHeight);
@@ -4428,7 +4453,7 @@ export function createPrototypeServer({
         : stepPlayer(position,input,delta,occupied,[...firesFor(player.dimensionId).values()],now(),wildlifeCollidersFor(player.dimensionId), { ...player.inventory.attributes, hasteActive:performance.now()<(player.hasteUntil||0), sprintBurstActive:performance.now()<(player.sprintBurstUntil||0), flightAuthorized:player.flightPilotEnabled });
       if (player.sequenced) {
         let simulatedSteps = advanceQueuedInput(player, { throughSeq: Infinity, maxSteps: budget.steps,
-          step, move, crossedRoomExit: didCrossRoomExit, walkOutOfRoom });
+          step, move });
         while(simulatedSteps<budget.steps&&Number(player.position.burningRemainingMs)>0&&!player.commands.length){
           player.position=move(player.position,{motion:true,x:0,y:0,jump:false},step,occupied);
           simulatedSteps++;
@@ -4438,7 +4463,6 @@ export function createPrototypeServer({
         for(let simulatedSteps=0;simulatedSteps<budget.steps;simulatedSteps++){
           const previousPosition=player.position;
           player.position = move(previousPosition, player.input, step, occupied);
-          if(didCrossRoomExit(player,previousPosition,player.position)){walkOutOfRoom(player);break;}
         }
       }
       player.moving = player.position.x !== previous.x || player.position.y !== previous.y;
@@ -4721,7 +4745,7 @@ export function createPrototypeServer({
           let objectsChanged=latestObjects.revision!==sceneObjectCatalog.revision;
           if(objectsChanged){
             const oldBuildings=new Map(VILLAGE_BUILDINGS.map(b=>[b.id,b]));
-            applyObjectCatalog(latestObjects);sceneObjectCatalog=latestObjects;activeWorldRevision=-1;
+            applyObjectCatalog(latestObjects);sceneObjectCatalog=latestObjects;activeWorldRevision=-1;doorCatalogsByDimension.clear();
             const claimsForNames=await storage.listLodgingClaims();
             for(const [roomKey,state]of roomStates){const detail=roomDetails(roomKey);if(detail.kind!=='legacy')state.name=roomDisplayName(roomKey,state.name,claimsForNames.find(c=>c.profileId===lodgingLocation(roomKey)?.profileId));}
             for(const player of peers.values()){
@@ -4744,6 +4768,7 @@ export function createPrototypeServer({
           if (latestCatalog.revision > dimensionsRevision) {
             dimensions = normalizeDimensions(latestCatalog.dimensions);
             dimensionsRevision = latestCatalog.revision;
+            doorCatalogsByDimension.clear();
           }
           let changed = objectsChanged;
           for (const dimension of dimensions) {

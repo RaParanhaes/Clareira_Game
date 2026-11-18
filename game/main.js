@@ -65,7 +65,7 @@ function svgIcon(id){const svg=document.createElementNS(SVG_NS,'svg');svg.setAtt
 import { isCabin } from './cabin-access.mjs';
 import { AXE_TOOL_IDS, AXE_TOOL_SPECS, PICKAXE_TOOL_IDS, PICKAXE_TOOL_SPECS, axeToolFor, pickaxeToolFor } from './tool-progression.mjs';
 import { createDraggableHud } from './draggable-hud.mjs';
-import { createDoorTriggerState, stepDoorTrigger, DOOR_LOCK_MS } from './door-proximity.mjs';
+import { createDoorTriggerState, stepDoorTrigger, DOOR_LOCK_MS, DOOR_TRIGGER_RADIUS } from './door-proximity.mjs';
 const geometryCache = createGeometryCache();
 const canopyGeometryCache=createGeometryCache(16);
 const resourceGeometryCache = createGeometryCache(64);
@@ -4162,12 +4162,14 @@ function stepLocalDoor(input, at = performance.now()) {
     return;
   }
   const layout = worldLocation === 'room' ? currentRoomLayout() : null;
-  const clear = hasClearInteractionPath(localPosition, door, worldLocation === 'room'
+  const clear = door.distance <= DOOR_TRIGGER_RADIUS && hasClearInteractionPath(localPosition, door, worldLocation === 'room'
     ? { location: 'room', furniture: [...roomFurniture.values()], roomLayout: layout }
     : { fires: [...fires.values()] });
-  const mustFaceDoor = layout && (layout.elevation !== 'flat'
+  const mustFaceDoor = worldLocation !== 'room' || layout && (layout.elevation !== 'flat'
     || worldRoomKind === 'lodging' && isCabin(worldRoomBuildingId));
-  const towardDoor = !mustFaceDoor || input.x * (door.x - localPosition.x) + input.y * (door.y - localPosition.y) > .01;
+  const doorDirectionDot = input.x * (door.x - localPosition.x) + input.y * (door.y - localPosition.y);
+  const towardDoor = !mustFaceDoor || doorDirectionDot > .01
+    || Number.isFinite(clientDoorTrigger.since) && door.distance <= PLAYER_RADIUS;
   const result = stepDoorTrigger(clientDoorTrigger, { distance: door.distance, clear, towardDoor, now: at });
   clientDoorTrigger = result.state;
   if (result.fire) {

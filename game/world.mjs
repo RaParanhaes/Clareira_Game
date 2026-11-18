@@ -1035,20 +1035,6 @@ export function canOccupyRoom(position, radius = PLAYER_RADIUS, furniture = [], 
   return true;
 }
 
-// Walk-through exits are directional. A player must first stand on the real
-// floor, then cross the plane of the doorway; a shallow step near the outer
-// landing must never switch the whole scene back to the exterior.
-export function crossedRoomExit(from, to, roomLayout = STANDARD_ROOM_LAYOUT, { enteredFloor = false } = {}) {
-  if (roomLayout.elevation !== 'flat' || !from || !to) return false;
-  if (!enteredFloor) return false;
-  const exitY = roomLayout.door.y;
-  if (to.y <= exitY || to.y <= from.y) return false;
-  const fraction = (exitY - from.y) / (to.y - from.y);
-  if (fraction < 0 || fraction > 1) return false;
-  const crossingX = from.x + (to.x - from.x) * fraction;
-  return Math.abs(crossingX - roomLayout.door.x) <= ROOM_ENTRANCE_LANE_HALF_WIDTH;
-}
-
 // Interaction checks trace sightlines through physical obstacles; the actor's
 // movement margin is not added to the ray, so nearby ground items remain usable.
 // Keeping this shared means server actions and client affordances agree.

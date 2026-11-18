@@ -1,9 +1,10 @@
 import { addInventoryItem, canAddInventoryItems, inventorySnapshot, restoreInventory } from '../game/inventory.mjs';
 import { ownsGear } from '../game/equipment.mjs';
 
-export async function openLairTreasure({ player, lair, state, store, storage, now = Date.now(), actionId, hasClearPath = () => true, runExclusive = fn => fn() }) {
+// dimensionId: onde o baú fica (a superfície para o covil exterior, a instância da masmorra para o chefe).
+export async function openLairTreasure({ player, lair, state, store, storage, now = Date.now(), actionId, hasClearPath = () => true, runExclusive = fn => fn(), dimensionId = 'surface' }) {
   if (!player.accountId) return { ok:false, reason:'conta' };
-  if (player.location !== 'clearing' || (player.dimensionId || 'surface') !== 'surface') return { ok:false, reason:'local' };
+  if (player.location !== 'clearing' || (player.dimensionId || 'surface') !== dimensionId) return { ok:false, reason:'local' };
   if (player.vitals?.waking || player.vitals?.downed || player.vitals?.health <= 0) return { ok:false, reason:'caido' };
   if (Math.hypot(player.position.x-lair.chest.x,player.position.y-lair.chest.y)>lair.interactRadius || !hasClearPath(player.position,lair.chest)) return { ok:false, reason:'longe' };
   if (state.guards.some(animal => animal.lairId === lair.id && animal.health > 0)) return { ok:false, reason:'guardas' };

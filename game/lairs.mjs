@@ -55,3 +55,49 @@ export function lairView(lair, { guards = [], state = null, readyAt = null } = {
     chest: { x: lair.chest.x, y: lair.chest.y }, mouth: { x: lair.mouth.x, y: lair.mouth.y },
     state: viewState === 'empty' ? 'empty' : viewState, readyAt: readyAt ?? null };
 }
+
+// Masmorra do Covil (ARQUITETURA.md §4 e §5). Nesta fatia só o nível 1 tem chefe e baú.
+export const DUNGEON_REWARDS = Object.freeze({
+  1: Object.freeze({ bronze: 200, ironShortSword: 1 }),
+});
+export const DUNGEON_BOSS_BY_LEVEL = Object.freeze({
+  1: Object.freeze({ speciesId: 'caveWarden', health: 40, attackScale: 1.6, scale: 1.5 }),
+});
+
+export const dungeonLairId = level => `ninho-n${level}`;
+
+// Chefe da arena: fica no centro da arena, preso pela coleira à própria arena e acorda quando alguém entra nela.
+export function createDungeonBoss({ level, dimensionId, arena, center, now = Date.now() }) {
+  const spec = DUNGEON_BOSS_BY_LEVEL[level];
+  if (!spec) throw new Error(`Sem chefe para o nível ${level}.`);
+  const x = center.x + 0.5, y = center.y + 0.5;
+  const leash = Math.max(2, Math.min(arena.w, arena.h) / 2 - 1);
+  const id = `boss:${dimensionId}`;
+  return {
+    id, dimensionId, speciesId: spec.speciesId, lairId: dungeonLairId(level),
+    dungeonBoss: true, dungeonDimensionId: dimensionId, scale: spec.scale, attackScale: spec.attackScale,
+    x, y, vx: 0, vy: 0, targetX: x, targetY: y, homeX: x, homeY: y,
+    shelterX: x, shelterY: y, shelterCover: null, shelterAt: null, shelterId: id,
+    health: spec.health, hunger: 0, thirst: 0, energy: 100,
+    ageDays: 1, lifeStage: 'adulto', sex: 'macho', state: 'vigiando', sheltered: false,
+    thinkAt: now, randomSeed: level, provokedUntil: 0, awarenessUntil: 0, pregnancyUntil: 0,
+    groupId: id, awake: false,
+    leash, wakeRadius: leash,
+  };
+}
+
+// Baú do chefe como uma "lair" de openLairTreasure: o chefe é o guardião e o baú é a chest.
+export function dungeonChestLair(level, chestCell) {
+  return {
+    id: dungeonLairId(level), chest: { x: chestCell.x + 0.5, y: chestCell.y + 0.5 },
+    interactRadius: 1.8, cooldownMs: GAME_DAY_DURATION_MS, reward: DUNGEON_REWARDS[level],
+  };
+}
+
+// Estado do baú para um jogador: trancado com o chefe vivo, sem parte depois da luta, recarga por conta.
+export function dungeonChestView({ bossAlive, contributor, availableAt = null, now = Date.now() }) {
+  if (bossAlive) return { state: 'trancado', readyAt: null };
+  if (!contributor) return { state: 'sem-parte', readyAt: null };
+  if (availableAt > now) return { state: 'recarregando', readyAt: availableAt };
+  return { state: 'pronto', readyAt: null };
+}

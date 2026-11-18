@@ -370,14 +370,15 @@ function handleAnimalAttack(animal, target, definition, context, events) {
     }
     const directionX = target.position.x - animal.x, directionY = target.position.y - animal.y;
     const length = Math.hypot(directionX, directionY) || 1;
-    const knockback = attack.force * incomingKnockbackMultiplier(target.inventory?.attributes);
+    const force = attack.force * (animal.attackScale ?? 1);
+    const knockback = force * incomingKnockbackMultiplier(target.inventory?.attributes);
     target.position.vx = (target.position.vx || 0) + directionX / length * knockback;
     target.position.vy = (target.position.vy || 0) + directionY / length * knockback;
     target.position.crouching = false;
     animal.state = 'atacando';
     animal.targetX = target.position.x;
     animal.targetY = target.position.y;
-    events.push({type:'player-attacked', animalId:animal.id, speciesId:definition.id, playerId:target.id, force:attack.force, reach:attack.reach, at:context.now});
+    events.push({type:'player-attacked', animalId:animal.id, speciesId:definition.id, playerId:target.id, force, reach:attack.reach, at:context.now});
     return;
   }
   target.health -= 1;
@@ -402,8 +403,9 @@ function chooseBehavior(animal, definition, context, events) {
   }
   animal.sheltered=false;
   const fixedPost=definition.fixed?{x:animal.homeX??animal.shelterX,y:animal.homeY??animal.shelterY}:null;
-  const fixedLeash=definition.fixed?(LAIRS[animal.lairId]?.leash??0):0;
-  const fixedWake=definition.fixed?(LAIRS[animal.lairId]?.wakeRadius??0):0;
+  // Coleira e despertar: do próprio animal (chefe da arena) ou, sem eles, da tabela do covil exterior.
+  const fixedLeash=definition.fixed?(animal.leash??LAIRS[animal.lairId]?.leash??0):0;
+  const fixedWake=definition.fixed?(animal.wakeRadius??LAIRS[animal.lairId]?.wakeRadius??0):0;
   // Guardião fixo dorme no posto até um jogador entrar no raio de despertar (wakeRadius).
   // Desperto, persegue dentro da coleira (leash) e volta a dormir quando ninguém fica nela.
   const guardReach=animal.awake?fixedLeash:fixedWake;

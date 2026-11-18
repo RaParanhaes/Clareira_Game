@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { openLairTreasure } from './lair-treasure-actions.mjs';
-import { LAIRS } from '../game/lairs.mjs';
+import { LAIRS, dungeonChestLair } from '../game/lairs.mjs';
 import { createInventory, addInventoryItem, inventorySnapshot } from '../game/inventory.mjs';
 import { currencyValue, walletFromValue } from '../game/lodging-catalog.mjs';
 
@@ -87,4 +87,37 @@ test('erro ao liberar após falha de gravação é registrado e retornado',async
     assert.equal(logged.length,1);
     assert.deepEqual(inventorySnapshot(s.player.inventory),before);
   } finally { console.error=originalError; }
+});
+
+// Baú do chefe da masmorra: fica na instância, abre só depois da queda e só para quem lutou.
+function dungeonSetup({ bossAlive = false, contributor = true } = {}) {
+  const s = setup({ contributor });
+  const dimensionId = 'dg-ninho-n1-0123456789';
+  s.lair = dungeonChestLair(1, { x: 9, y: 3 });
+  s.player.dimensionId = dimensionId;
+  s.player.position = { ...s.lair.chest };
+  s.state.guards = bossAlive ? [{ lairId: s.lair.id, health: 1 }] : [];
+  s.dimensionId = dimensionId; // sem espalhar o objeto: o getter de 'paid' precisa continuar vivo
+  return s;
+}
+const runDungeon = s => openLairTreasure({ player: s.player, lair: s.lair, state: s.state, store: s.store, storage: s.storage, now: 1000, actionId: 'dungeon-claim-1', dimensionId: s.dimensionId });
+
+test('baú da masmorra recusa com o chefe vivo e abre depois da queda para quem lutou', async () => {
+  assert.equal((await runDungeon(dungeonSetup({ bossAlive: true }))).reason, 'guardas');
+  const open = dungeonSetup();
+  const result = await runDungeon(open);
+  assert.equal(result.ok, true);
+  assert.equal(open.paid, 200);
+  assert.equal(open.claims.has('profile-1:ninho-n1'), true, 'recarga por conta no id do nível');
+});
+
+test('baú da masmorra recusa quem não lutou contra o chefe', async () => {
+  assert.equal((await runDungeon(dungeonSetup({ contributor: false }))).reason, 'contribuicao');
+});
+
+test('baú da masmorra não abre fora da instância (dimensão diferente)', async () => {
+  const s = dungeonSetup();
+  s.player.dimensionId = 'surface';
+  const result = await runDungeon(s);
+  assert.equal(result.reason, 'local');
 });

@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import WebSocket from 'ws';
 import {
-  DIMENSION_COORDINATE_OFFSET, getResourcesInBounds, ROOM_SPAWN, SPAWN, SPAWN_CAMPFIRE, WORLD_COORDINATE_VERSION,
+  DIMENSION_COORDINATE_OFFSET, getResourcesInBounds, getRoomLayout, ROOM_SPAWN, SPAWN, SPAWN_CAMPFIRE, WORLD_COORDINATE_VERSION,
   WORLD_RESOURCE_GENERATION_VERSION, WORLD_SIZE, canOccupy,
 } from '../game/world.mjs';
 import { waterStateAt, WATER_WADING_DEPTH } from '../game/waterways.mjs';
@@ -22,6 +22,7 @@ import { createInventory } from '../game/inventory.mjs';
 import { getCampfireGatheringCount } from '../game/social.mjs';
 import { WILDLIFE_BY_ID } from '../game/wildlife.mjs';
 import { DEFAULT_DIMENSIONS } from '../game/dimensions.mjs';
+import { RECEPTION_BUILDING, VILLAGE_BUILDINGS } from '../game/village-buildings.mjs';
 import { WORLD_NATURE_ORIGIN } from '../game/world-scale.mjs';
 import {
 
@@ -92,6 +93,131 @@ function openTestPlayer(address, token = 'test-session-token') {
     headers: { origin: TEST_ORIGIN, cookie: `clareira_session=${token}` },
   });
 }
+
+test('door proximity enters and exits the reception, then rearms only after leaving the doorway', async t => {
+  const stateDirectory = await mkdtemp(path.join(os.tmpdir(), 'clareira-door-proximity-'));
+  const profileId = 'e04d06d9-b215-4d08-b4b9-894dd63477cc';
+  const door = RECEPTION_BUILDING.door;
+  await createJsonPlayerLocationStore(stateDirectory).savePlayerLocation(profileId, {
+    location: 'clearing', dimensionId: 'surface', x: door.x, y: door.y + 2,
+    worldVersion: WORLD_COORDINATE_VERSION,
+  });
+  const room = createTestServer(t, { ambientCampfire: false, port: 0, stateDirectory, allowedOrigin: TEST_ORIGIN,
+    resolveSession: async token => token === 'test-session-token' ? { profile: {
+      id: profileId, displayName: 'Viajante', guest: true, inventory: { wood: 0, stone: 0, berries: 0 },
+    } } : null });
+  const address = await room.listen();
+  const player = openTestPlayer(address);
+  t.after(() => player.terminate());
+  await new Promise(resolve => player.once('open', resolve));
+  let state = await waitFor(player, message => message.type === 'state' && message.players.length === 1,
+    2500, 'door test player');
+  const id = state.players[0].id;
+  player.send(JSON.stringify({ type: 'input', ...directionToward(state.players[0], door) }));
+  state = await waitFor(player, message => message.type === 'state'
+    && message.players.find(item => item.id === id)?.location === 'room', 5000, 'automatic reception entry');
+  assert.equal(state.roomKind, 'lobby');
+  player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
+  await new Promise(resolve => setTimeout(resolve, 1900));
+  state = await waitFor(player, message => message.type === 'state' && message.players.find(item => item.id === id), 1500, 'stable arrival snapshot');
+  assert.equal(state.players.find(item => item.id === id)?.location, 'room', 'arrival inside the radius does not bounce outside');
+
+  const roomDoor = getRoomLayout('lobby', 'arrival').door;
+  let seq = 0;
+  const moveSequenced = async direction => {
+    const firstSeq = seq + 1;
+    seq += 12;
+    const completed = waitFor(player, message => message.type === 'state'
+      && (message.players.find(item => item.id === id)?.location === 'clearing'
+        || message.players.find(item => item.id === id)?.inputSeq >= seq), 2500, 'sequenced movement batch');
+    player.send(JSON.stringify({ type: 'input', location: 'room', commands: Array.from({ length: 12 }, (_, index) => ({
+      seq: firstSeq + index, x: direction.x, y: direction.y, motion: true,
+    })) }));
+    return completed;
+  };
+  while (Math.hypot(state.players.find(item => item.id === id).x - roomDoor.x,
+      state.players.find(item => item.id === id).y - roomDoor.y) <= 1.8)
+    state = await moveSequenced({ x: 0, y: -1 });
+  assert.ok(Math.hypot(state.players.find(item => item.id === id).x - roomDoor.x,
+    state.players.find(item => item.id === id).y - roomDoor.y) > 1.8, 'sequenced movement rearms the doorway');
+  for (let attempt = 0; attempt < 8 && state.players.find(item => item.id === id)?.location === 'room'; attempt += 1)
+    state = await moveSequenced({ x: 0, y: 1 });
+  assert.equal(state.players.find(item => item.id === id)?.location, 'clearing', 'sequenced approach exits by proximity');
+  player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  state = await waitFor(player, message => message.type === 'state' && message.players.find(item => item.id === id), 1500, 'stable outside snapshot');
+  assert.equal(state.players.find(item => item.id === id)?.location, 'clearing', 'leaving also cannot bounce back inside');
+});
+
+test('reconnecting near a door starts disarmed and does not enter without moving away', async t => {
+  const stateDirectory = await mkdtemp(path.join(os.tmpdir(), 'clareira-door-reconnect-'));
+  const profileId = 'door-reconnect-nearby';
+  const door = RECEPTION_BUILDING.door;
+  await createJsonPlayerLocationStore(stateDirectory).savePlayerLocation(profileId, {
+    location: 'clearing', dimensionId: 'surface', x: door.x, y: door.y + .55,
+    worldVersion: WORLD_COORDINATE_VERSION,
+  });
+  const room = createTestServer(t, { ambientCampfire: false, port: 0, stateDirectory, allowedOrigin: TEST_ORIGIN,
+    resolveSession: async token => token === 'test-session-token' ? { profile: {
+      id: profileId, displayName: 'Viajante', guest: true, inventory: { wood: 0, stone: 0, berries: 0 },
+    } } : null });
+  const address = await room.listen();
+  const player = openTestPlayer(address);
+  t.after(() => player.terminate());
+  await new Promise(resolve => player.once('open', resolve));
+  await waitFor(player, message => message.type === 'state' && message.players.length === 1, 2500, 'reconnected player');
+  await new Promise(resolve => setTimeout(resolve, 900));
+  const state = await waitFor(player, message => message.type === 'state' && message.players.length === 1,
+    1500, 'stable reconnected player');
+  assert.equal(state.players[0].location, 'clearing', 'reconnecting inside the door radius cannot enter automatically');
+});
+
+test('a cabin door rejects a player without a key on the server', async t => {
+  const stateDirectory = await mkdtemp(path.join(os.tmpdir(), 'clareira-door-cabin-no-key-'));
+  const profileId = 'door-cabin-no-key';
+  const cabinDoor = VILLAGE_BUILDINGS.find(building => building.id === 'cabin-cedar-one').door;
+  await createJsonPlayerLocationStore(stateDirectory).savePlayerLocation(profileId, {
+    location: 'clearing', dimensionId: 'surface', x: cabinDoor.x, y: cabinDoor.y + 2.2,
+    worldVersion: WORLD_COORDINATE_VERSION,
+  });
+  const room = createTestServer(t, { ambientCampfire: false, port: 0, stateDirectory, allowedOrigin: TEST_ORIGIN,
+    resolveSession: async token => token === 'test-session-token' ? { profile: {
+      id: profileId, displayName: 'Visitante', guest: true, inventory: { wood: 0, stone: 0, berries: 0 },
+    } } : null });
+  const address = await room.listen();
+  const player = openTestPlayer(address);
+  t.after(() => player.terminate());
+  await new Promise(resolve => player.once('open', resolve));
+  let state = await waitFor(player, message => message.type === 'state' && message.players.length === 1, 2500, 'cabin visitor');
+  player.send(JSON.stringify({ type: 'input', ...directionToward(state.players[0], cabinDoor) }));
+  await new Promise(resolve => setTimeout(resolve, 1800));
+  state = await waitFor(player, message => message.type === 'state' && message.players.length === 1, 1500, 'cabin access result');
+  assert.equal(state.players[0].location, 'clearing', 'the server keeps a visitor without a cabin key outside');
+});
+
+test('passing close along the reception facade without approaching does not enter', async t => {
+  const stateDirectory = await mkdtemp(path.join(os.tmpdir(), 'clareira-door-facade-pass-'));
+  const profileId = 'door-facade-pass';
+  const door = RECEPTION_BUILDING.door;
+  await createJsonPlayerLocationStore(stateDirectory).savePlayerLocation(profileId, {
+    location: 'clearing', dimensionId: 'surface', x: door.x + .6, y: door.y + 1,
+    worldVersion: WORLD_COORDINATE_VERSION,
+  });
+  const room = createTestServer(t, { ambientCampfire: false, port: 0, stateDirectory, allowedOrigin: TEST_ORIGIN,
+    resolveSession: async token => token === 'test-session-token' ? { profile: {
+      id: profileId, displayName: 'Visitante', guest: true, inventory: { wood: 0, stone: 0, berries: 0 },
+    } } : null });
+  const address = await room.listen();
+  const player = openTestPlayer(address);
+  t.after(() => player.terminate());
+  await new Promise(resolve => player.once('open', resolve));
+  await waitFor(player, message => message.type === 'state' && message.players.length === 1, 2500, 'facade passer');
+  player.send(JSON.stringify({ type: 'input', x: 0, y: -1 }));
+  await new Promise(resolve => setTimeout(resolve, 1100));
+  const state = await waitFor(player, message => message.type === 'state' && message.players.length === 1,
+    1500, 'facade pass result');
+  assert.equal(state.players[0].location, 'clearing', 'walking past the door line does not enter the reception');
+});
 
 function waitFor(socket, predicate, timeout = 2500, description = 'room message') {
   return new Promise((resolve, reject) => {

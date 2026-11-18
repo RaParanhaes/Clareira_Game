@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getRoomLayout, getRoomSpawnCandidates, canOccupyRoom, canPlaceRoomFurniture, crossedRoomExit, findWalkPath, stepRoomPlayer } from './world.mjs';
+import { getRoomLayout, getRoomSpawnCandidates, canOccupyRoom, canPlaceRoomFurniture, findWalkPath, stepRoomPlayer } from './world.mjs';
 import { canTraverseSurface, surfaceHeight } from './elevation.mjs';
 
 const lobbyIds = [
@@ -75,27 +75,6 @@ test('flat rooms place arrivals on the exterior landing and keep a walkable door
   assert.ok(position.y<lobby.bounds.bottom-.2,'walking inward crosses the threshold');
   for(let index=0;index<18;index++)position=stepRoomPlayer(position,{x:0,y:1},.05,[],[],lobby);
   assert.ok(position.y>lobby.bounds.bottom+.55,'walking back reaches the exterior exit tile');
-});
-
-test('a shallow diagonal step near the landing does not trigger the automatic room exit',()=>{
-  for(const layout of [getRoomLayout('lobby','lodging-ember-hotel'),getRoomLayout('lodging','cabin-cedar-one','owned')]){
-    let position={...layout.spawn};
-    for(let index=0;index<3;index++){
-      const previous=position;
-      position=stepRoomPlayer(position,{x:0,y:-1},.05,[],[],layout);
-      assert.equal(crossedRoomExit(previous,position,layout),false,`${layout.id}: entering the room cannot exit`);
-    }
-    const previous=position;
-    position=stepRoomPlayer(position,{x:0,y:1},.05,[],[],layout);
-    assert.ok(position.y>previous.y,`${layout.id}: the return step moves toward the doorway`);
-    assert.equal(crossedRoomExit(previous,position,layout),false,`${layout.id}: a shallow return step stays inside`);
-
-    const deep={x:layout.door.x,y:layout.bounds.bottom-.3};
-    const beyondDoor={x:layout.door.x,y:layout.door.y+.05};
-    assert.equal(crossedRoomExit(deep,beyondDoor,layout,{enteredFloor:true}),true,`${layout.id}: walking through the doorway exits`);
-    assert.equal(crossedRoomExit(deep,{...beyondDoor,x:layout.door.x+1.1},layout,{enteredFloor:true}),false,
-      `${layout.id}: crossing beside the doorway does not exit`);
-  }
 });
 
 test('hotel floor silhouette has a real central entrance corridor',()=>{

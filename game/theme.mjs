@@ -67,6 +67,20 @@ export const CLAREIRA = Object.freeze({
     moss: '#5b7448', mossLight: '#7f9a5e', mossDark: '#3b4f32',
     dirt: '#7b5f42', dirtLight: '#96775a', dirtShade: '#5a4330',
   }),
+  // Masmorra (tema 'cave'): rocha de ardósia, terra e musgo, sob luz quente de tocha.
+  cave: Object.freeze({
+    slate: '#4b4f57', slateLight: '#646a73', slateShade: '#34383f',
+    ochre: '#9b7342', ochreLight: '#c49a5c', ochreDark: '#6b4c2b',
+    brown: '#5e4330', brownDark: '#382619', rim: '#8c7152', ink: '#17110c',
+    moss: '#5f7a46', mossLight: '#8aa463', mossDark: '#33462b',
+    earth: '#4d3c2c', earthLight: '#65503b', earthShade: '#3a2d21',
+    stone: '#4a4d52', stoneLight: '#5c6068', stoneShade: '#363940',
+    gravel: '#48413a', gravelLight: '#746a5d', gravelShade: '#2f2a25',
+    stalagmite: '#7d6a52', stalagmiteShade: '#56473a', stalagmiteTip: '#b59a6c',
+    puddle: '#19222b', puddleGlint: '#4f6c74', crack: '#25201b', seam: '#2b2620',
+    iron: '#3a3834', wood: '#6b4a33', woodShade: '#4a3224',
+    torch: '#ffa448', torchCore: '#ffd77a', playerLight: '#aebfd4', veil: '#070a12',
+  }),
   avatars: Object.freeze([
     Object.freeze({ coat: '#72966b', shade: '#42654c', hair: '#493b31', hat: '#d6ba75', scarf: '#d77f62', stitch: '#f2d181' }),
     Object.freeze({ coat: '#ca8766', shade: '#8d594d', hair: '#523f42', hat: '#e2bf7d', scarf: '#8db99a', stitch: '#f6d895' }),

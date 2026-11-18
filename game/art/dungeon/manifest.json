@@ -1,0 +1,290 @@
+{
+  "versao": 1,
+  "grade_tile": {
+    "largura": 64,
+    "altura": 36
+  },
+  "paleta": "game/theme.mjs:cave",
+  "artefatos": [
+    {
+      "id": "piso-terra",
+      "arquivo": "piso-terra.png",
+      "tamanho": {
+        "largura": 64,
+        "altura": 36
+      },
+      "pivo_contato": {
+        "x": 32,
+        "y": 18
+      },
+      "altura_parede": 0,
+      "tipo": "piso"
+    },
+    {
+      "id": "piso-pedra",
+      "arquivo": "piso-pedra.png",
+      "tamanho": {
+        "largura": 64,
+        "altura": 36
+      },
+      "pivo_contato": {
+        "x": 32,
+        "y": 18
+      },
+      "altura_parede": 0,
+      "tipo": "piso"
+    },
+    {
+      "id": "piso-cascalho",
+      "arquivo": "piso-cascalho.png",
+      "tamanho": {
+        "largura": 64,
+        "altura": 36
+      },
+      "pivo_contato": {
+        "x": 32,
+        "y": 18
+      },
+      "altura_parede": 0,
+      "tipo": "piso"
+    },
+    {
+      "id": "piso-poca",
+      "arquivo": "piso-poca.png",
+      "tamanho": {
+        "largura": 64,
+        "altura": 36
+      },
+      "pivo_contato": {
+        "x": 32,
+        "y": 18
+      },
+      "altura_parede": 0,
+      "tipo": "piso"
+    },
+    {
+      "id": "parede-baixa-a",
+      "arquivo": "parede-baixa-a.png",
+      "tamanho": {
+        "largura": 96,
+        "altura": 72
+      },
+      "pivo_contato": {
+        "x": 48,
+        "y": 61
+      },
+      "altura_parede": 30,
+      "tipo": "parede"
+    },
+    {
+      "id": "parede-baixa-b",
+      "arquivo": "parede-baixa-b.png",
+      "tamanho": {
+        "largura": 96,
+        "altura": 72
+      },
+      "pivo_contato": {
+        "x": 48,
+        "y": 61
+      },
+      "altura_parede": 30,
+      "tipo": "parede"
+    },
+    {
+      "id": "parede-baixa-c",
+      "arquivo": "parede-baixa-c.png",
+      "tamanho": {
+        "largura": 96,
+        "altura": 72
+      },
+      "pivo_contato": {
+        "x": 48,
+        "y": 61
+      },
+      "altura_parede": 30,
+      "tipo": "parede"
+    },
+    {
+      "id": "parede-alta-a",
+      "arquivo": "parede-alta-a.png",
+      "tamanho": {
+        "largura": 96,
+        "altura": 72
+      },
+      "pivo_contato": {
+        "x": 48,
+        "y": 61
+      },
+      "altura_parede": 52,
+      "tipo": "parede"
+    },
+    {
+      "id": "parede-alta-b",
+      "arquivo": "parede-alta-b.png",
+      "tamanho": {
+        "largura": 96,
+        "altura": 72
+      },
+      "pivo_contato": {
+        "x": 48,
+        "y": 61
+      },
+      "altura_parede": 52,
+      "tipo": "parede"
+    },
+    {
+      "id": "parede-alta-c",
+      "arquivo": "parede-alta-c.png",
+      "tamanho": {
+        "largura": 96,
+        "altura": 72
+      },
+      "pivo_contato": {
+        "x": 48,
+        "y": 61
+      },
+      "altura_parede": 52,
+      "tipo": "parede"
+    },
+    {
+      "id": "canto-baixo",
+      "arquivo": "canto-baixo.png",
+      "tamanho": {
+        "largura": 96,
+        "altura": 72
+      },
+      "pivo_contato": {
+        "x": 48,
+        "y": 61
+      },
+      "altura_parede": 30,
+      "tipo": "parede-canto"
+    },
+    {
+      "id": "canto-alto",
+      "arquivo": "canto-alto.png",
+      "tamanho": {
+        "largura": 96,
+        "altura": 72
+      },
+      "pivo_contato": {
+        "x": 48,
+        "y": 61
+      },
+      "altura_parede": 52,
+      "tipo": "parede-canto"
+    },
+    {
+      "id": "estalagmite-1",
+      "arquivo": "estalagmite-1.png",
+      "tamanho": {
+        "largura": 64,
+        "altura": 72
+      },
+      "pivo_contato": {
+        "x": 32,
+        "y": 67
+      },
+      "altura_parede": 0,
+      "tipo": "estalagmite"
+    },
+    {
+      "id": "estalagmite-2",
+      "arquivo": "estalagmite-2.png",
+      "tamanho": {
+        "largura": 64,
+        "altura": 72
+      },
+      "pivo_contato": {
+        "x": 32,
+        "y": 67
+      },
+      "altura_parede": 0,
+      "tipo": "estalagmite"
+    },
+    {
+      "id": "estalagmite-3",
+      "arquivo": "estalagmite-3.png",
+      "tamanho": {
+        "largura": 64,
+        "altura": 72
+      },
+      "pivo_contato": {
+        "x": 32,
+        "y": 67
+      },
+      "altura_parede": 0,
+      "tipo": "estalagmite"
+    },
+    {
+      "id": "tocha-frame-1",
+      "arquivo": "tocha-frame-1.png",
+      "tamanho": {
+        "largura": 32,
+        "altura": 48
+      },
+      "pivo_contato": {
+        "x": 16,
+        "y": 28
+      },
+      "altura_parede": 0,
+      "tipo": "tocha"
+    },
+    {
+      "id": "tocha-frame-2",
+      "arquivo": "tocha-frame-2.png",
+      "tamanho": {
+        "largura": 32,
+        "altura": 48
+      },
+      "pivo_contato": {
+        "x": 16,
+        "y": 28
+      },
+      "altura_parede": 0,
+      "tipo": "tocha-frame"
+    },
+    {
+      "id": "tocha-frame-3",
+      "arquivo": "tocha-frame-3.png",
+      "tamanho": {
+        "largura": 32,
+        "altura": 48
+      },
+      "pivo_contato": {
+        "x": 16,
+        "y": 28
+      },
+      "altura_parede": 0,
+      "tipo": "tocha-frame"
+    },
+    {
+      "id": "tocha-frame-4",
+      "arquivo": "tocha-frame-4.png",
+      "tamanho": {
+        "largura": 32,
+        "altura": 48
+      },
+      "pivo_contato": {
+        "x": 16,
+        "y": 28
+      },
+      "altura_parede": 0,
+      "tipo": "tocha-frame"
+    },
+    {
+      "id": "escada-descendo",
+      "arquivo": "escada-descendo.png",
+      "tamanho": {
+        "largura": 80,
+        "altura": 72
+      },
+      "pivo_contato": {
+        "x": 40,
+        "y": 58
+      },
+      "altura_parede": 0,
+      "tipo": "escada"
+    }
+  ]
+}

@@ -684,7 +684,33 @@ function hasLairObstacleCollision(position, radius) {
   return false;
 }
 
+// Grade da masmorra ativa (dungeon-gen.mjs). Só existe enquanto a dimensão da masmorra estiver ativa:
+// activateWorld (servidor) e o cliente definem a grade; fora da masmorra fica null e nada muda.
+let activeDungeonGrid = null;
+export function setActiveDungeonLevel(level) {
+  activeDungeonGrid = level ? { w: level.w, h: level.h, cells: level.cells } : null;
+}
+
+// Rocha da masmorra: célula com valor 0 ou fora da grade. O círculo do jogador colide se tocar uma célula de rocha.
+function hasDungeonWallCollision(position, radius) {
+  const { w, h, cells } = activeDungeonGrid;
+  const x0 = Math.floor(position.x - radius), x1 = Math.floor(position.x + radius);
+  const y0 = Math.floor(position.y - radius), y1 = Math.floor(position.y + radius);
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (x >= 0 && y >= 0 && x < w && y < h && cells[y * w + x] === 1) continue;
+      const nearestX = Math.min(Math.max(position.x, x), x + 1);
+      const nearestY = Math.min(Math.max(position.y, y), y + 1);
+      const dx = position.x - nearestX, dy = position.y - nearestY;
+      if (dx * dx + dy * dy < radius * radius) return true;
+    }
+  }
+  return false;
+}
+
 export function canOccupy(position, radius = PLAYER_RADIUS, height = 0, { ignoreFires = false, absoluteFeetZ = null } = {}) {
+  // Dentro da masmorra, a única regra de terreno é a grade: não há prédios, árvores nem morro.
+  if (activeDungeonGrid) return !hasDungeonWallCollision(position, radius);
   if (!insideBoundaryWall(position, radius, WORLD_SIZE)) return false;
   const surfaceDimension = isSurfaceDimension();
   if (hasBuildingCollision(position, radius)) return false;

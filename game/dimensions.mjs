@@ -4,6 +4,7 @@ import { WORLD_SIZE, SPAWN } from './world.mjs';
 import { emptyWorldDefinition, normalizeWorldDefinition } from './world-edits.mjs';
 import { DIMENSION_THEMES } from './dimension-themes.mjs';
 import { createSkyTerrainDemoEdits } from './terrain-chunks.mjs';
+import { dungeonEntranceSpawn, parseDungeonDimensionId } from './dungeon-instances.mjs';
 export { DIMENSION_THEMES } from './dimension-themes.mjs';
 
 export const DEFAULT_DIMENSIONS = Object.freeze([
@@ -105,10 +106,21 @@ export function normalizeDimensions(values) {
   return result;
 }
 
+// Instância da masmorra do Covil do Ninho: não aparece na lista de dimensões (mapa e viagem não a enxergam).
+export function dungeonDimensionFor(id) {
+  const parsed = parseDungeonDimensionId(id);
+  if (!parsed) return null;
+  return { id, universeId: 'clareira', name: `Covil do Ninho · Nível ${parsed.level}`, theme: 'cave',
+    spawn: dungeonEntranceSpawn(parsed.level), instanceType: 'dungeon', lairId: parsed.lairId,
+    level: parsed.level, builtIn: true };
+}
+
 export function dimensionById(dimensions, id) {
   const found = dimensions.find(item => item.id === id);
   if (found) return found;
   if (isPersonalArrivalDimensionId(id)) return personalArrivalDimension(id.slice(PERSONAL_ARRIVAL_PREFIX.length));
+  const dungeon = dungeonDimensionFor(id);
+  if (dungeon) return dungeon;
   return dimensions.find(item => item.id === 'surface') || normalizeDimension(DEFAULT_DIMENSIONS[0]);
 }
 

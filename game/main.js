@@ -65,6 +65,7 @@ function svgIcon(id){const svg=document.createElementNS(SVG_NS,'svg');svg.setAtt
 import { isCabin } from './cabin-access.mjs';
 import { AXE_TOOL_IDS, AXE_TOOL_SPECS, PICKAXE_TOOL_IDS, PICKAXE_TOOL_SPECS, axeToolFor, pickaxeToolFor } from './tool-progression.mjs';
 import { createDraggableHud } from './draggable-hud.mjs';
+import { createDoorTriggerState, stepDoorTrigger, DOOR_LOCK_MS, DOOR_TRIGGER_RADIUS } from './door-proximity.mjs';
 const geometryCache = createGeometryCache();
 const canopyGeometryCache=createGeometryCache(16);
 const resourceGeometryCache = createGeometryCache(64);
@@ -111,7 +112,7 @@ import {surfaceHeight,HEIGHT_PIXELS,ROOM_LEVEL} from './elevation.mjs';
 import { isDimensionPathTile, isDimensionSecretPathTile, isVillagePlazaTile } from './dimension-layout.mjs';
 import { isReceptionFootway } from './village-ground.mjs';
 import {
-  crossedRoomExit, canPlaceRoomFurniture, roomFurnitureSupport, hasClearInteractionPath, CLEARING_DOOR, getObjectiveText, nearestCollectible, PLAYER_RADIUS, PLAYER_SPEED,
+  canPlaceRoomFurniture, roomFurnitureSupport, hasClearInteractionPath, CLEARING_DOOR, getObjectiveText, nearestCollectible, PLAYER_RADIUS, PLAYER_SPEED,
   RESOURCE_NODES, SPAWN, SHELTER_BOUNDS, SHELTER_WALL_CLEARANCE, SPAWN_CAMPFIRE, isPathTile,
   SOLID_TREES, SOLID_WATER, WORLD_CHUNK_SIZE, getFallenTreesInBounds, getSolidTreesInBounds, getTreeGrowthInBounds, getResourcesInBounds, getRocksInBounds, getLakesInBounds,
   stepPlayer, stepRoomPlayer, WORLD_SIZE, applyWorldDefinition, getWorldDefinition, getRoomLayout,
@@ -2250,6 +2251,9 @@ function connect() {
     if (message.type === 'mapExploration') { mergeMapExploration(message); return; }
     if (message.type === 'aviso') showFramedNotice(message);
     if (message.type === 'notice') {
+      if(message.action === 'enterDoor' && message.result === 'rejected'){
+        clearTimeout(pendingRoomTravelTimer);pendingRoomTravelTimer=null;pendingRoomTravelRequestId=null;roomTransition.cancel();
+      }
       if(message.action==='roomFurniture'&&Number.isSafeInteger(message.requestId)){
         const restored=roomFurniturePrediction.acknowledge(message.requestId,message.result==='accepted');
         if(restored)applyRoomFurnitureSnapshot(restored,{predicted:true});
@@ -2532,7 +2536,8 @@ function connect() {
         snapshotReady = sceneReadiness.accept(message, selfId);
       }
       if (self.location && (self.location !== worldLocation || dimensionChanged || (self.location==='room'&&roomChanged))) {
-        worldLocation = self.location;clientRoomEnteredFloor=false;
+        worldLocation = self.location;
+        clientDoorTrigger={...createDoorTriggerState(),armed:false,lockUntil:performance.now()+DOOR_LOCK_MS};
         roomBuildMode = null; roomMovingId=null;
         pendingRoomFurnitureUse=null;roomSelectedId=null;ui.roomObjectCard.hidden=true;ui.roomBuildOptions.hidden=true;
         ui.roomBuildToggle.setAttribute('aria-expanded','false');
@@ -2559,8 +2564,8 @@ function connect() {
         ui.roomBuildToggle.hidden=!roomCanEdit;
         for(const element of [ui.roomPlace,ui.roomCategory,ui.roomKind,ui.roomMove,ui.roomRotate,ui.roomRemove])element.hidden=!roomCanEdit;
       canvas.setAttribute('aria-label', worldLocation === 'room'
-        ? `${worldRoomKind === 'lobby' ? roomOwnerName || 'Recepção da Vila' : roomOwnerName || 'Hospedagem'}. Caminhe com WASD, as setas ou toque; use a roda do mouse ou aproxime dois dedos para ajustar o zoom; E na porta volta ao local anterior.`
-        : 'Bosque isométrico. Use WASD, as setas ou os controles de toque para caminhar; E usa portas e pontos de atendimento; cabanas exigem chave; longe deles coleta; H trabalha com o machado; V visita alguém com hospedagem.');
+        ? `${worldRoomKind === 'lobby' ? roomOwnerName || 'Recepção da Vila' : roomOwnerName || 'Hospedagem'}. Caminhe com WASD, as setas ou toque; use a roda do mouse ou aproxime dois dedos para ajustar o zoom; a porta leva ao local anterior.`
+        : 'Bosque isométrico. Use WASD, as setas ou os controles de toque para caminhar; portas funcionam por proximidade; E usa pontos de atendimento; cabanas exigem chave; longe deles coleta; H trabalha com o machado; V visita alguém com hospedagem.');
       const touchWalkHint=document.querySelector('.touch-walk-hint');
       if(touchWalkHint)touchWalkHint.textContent=worldLocation==='room'?'Toque para caminhar · pinça ajusta o zoom':'Toque no chão para caminhar';
       const acknowledgedSeq=self.inputSeq||0,ackDelta=acknowledgedSeq-lastAcknowledgedInput;
@@ -3581,9 +3586,11 @@ function sendPendingMovementBeforeInteraction() {
   }
 }
 
-let pendingRoomTravelTimer=null,pendingRoomTravelRequestId=null,clientRoomEnteredFloor=false;
+let pendingRoomTravelTimer=null,pendingRoomTravelRequestId=null;
+let clientDoorTrigger=createDoorTriggerState();
 function beginPendingRoomTravel(requestId=null){
   if(roomTransition.active)return;
+  clientDoorTrigger={...createDoorTriggerState(),armed:false,lockUntil:performance.now()+DOOR_LOCK_MS};
   pendingRoomTravelRequestId=requestId;
   roomTransition.start();clearMovement();
   pendingRoomTravelTimer=setTimeout(()=>{
@@ -4130,21 +4137,45 @@ function nearestVisitTarget() {
   return nearest;
 }
 
-function nearestInteractionDoor() {
+function nearestInteractionDoor(maxDistance = 1.5, requireClear = true) {
   if (worldLocation === 'room') {
     const roomDoor=currentRoomLayout().door;
     const door = { ...roomDoor, kind: 'room', distance: Math.hypot(localPosition.x - roomDoor.x, localPosition.y - roomDoor.y) };
-    return door.distance <= 1.5 && hasClearInteractionPath(localPosition, door, {
+    return door.distance <= maxDistance && (!requireClear || hasClearInteractionPath(localPosition, door, {
       location: 'room', furniture: [...roomFurniture.values()], roomLayout: currentRoomLayout(),
-    }) ? door : null;
+    })) ? door : null;
   }
   if (worldDimensionId !== 'surface') return null;
   const interactionFires = [...fires.values()];
   const doors = [{ x: CLEARING_DOOR.x, y: CLEARING_DOOR.y, kind: 'arrival', name: 'Recepção da Vila' },
     ...VILLAGE_BUILDINGS.filter(building=>building.door.enabled!==false).map(building => ({ ...building.door, kind: 'lobby', name: building.name, buildingId: building.id, private: isCabin(building.id) }))];
   return doors.map(door => ({ ...door, distance: Math.hypot(localPosition.x - door.x, localPosition.y - door.y) }))
-    .filter(door => door.distance <= 1.5 && hasClearInteractionPath(localPosition, door, { fires: interactionFires }))
+    .filter(door => door.distance <= maxDistance && (!requireClear || hasClearInteractionPath(localPosition, door, { fires: interactionFires })))
     .sort((first, next) => first.distance - next.distance)[0] || null;
+}
+
+function stepLocalDoor(input, at = performance.now()) {
+  if (panels.isOpen || roomTransition.active || !sceneReady) return;
+  const door = nearestInteractionDoor(2.2, false);
+  if (!door) {
+    clientDoorTrigger = stepDoorTrigger(clientDoorTrigger, { distance: Infinity, now: at }).state;
+    return;
+  }
+  const layout = worldLocation === 'room' ? currentRoomLayout() : null;
+  const clear = door.distance <= DOOR_TRIGGER_RADIUS && hasClearInteractionPath(localPosition, door, worldLocation === 'room'
+    ? { location: 'room', furniture: [...roomFurniture.values()], roomLayout: layout }
+    : { fires: [...fires.values()] });
+  const mustFaceDoor = worldLocation !== 'room' || layout && (layout.elevation !== 'flat'
+    || worldRoomKind === 'lodging' && isCabin(worldRoomBuildingId));
+  const doorDirectionDot = input.x * (door.x - localPosition.x) + input.y * (door.y - localPosition.y);
+  const towardDoor = !mustFaceDoor || doorDirectionDot > .01
+    || Number.isFinite(clientDoorTrigger.since) && door.distance <= PLAYER_RADIUS;
+  const result = stepDoorTrigger(clientDoorTrigger, { distance: door.distance, clear, towardDoor, now: at });
+  clientDoorTrigger = result.state;
+  if (result.fire) {
+    sendPendingMovementBeforeInteraction();
+    beginPendingRoomTravel();
+  }
 }
 
 function warmNearbyCabin(){
@@ -6989,11 +7020,11 @@ function updateObjective() {
     ? 'Escolha um ponto livre no piso para colocar o móvel.'
     : worldLocation === 'room' && roomBuildMode === 'remove'
       ? 'Chegue perto do móvel e toque nele para retirar.'
-      : nearDoor ? (worldLocation === 'room'
-    ? worldRoomKind === 'lodging' && !isCabin(worldRoomBuildingId) ? 'A porta leva à recepção. Pressione E para sair.' : 'A porta leva de volta ao bosque. Pressione E para sair.'
-    : door.private ? `${door.name}: porta trancada. Use E com sua chave para entrar; a placa fica do lado de fora.` : `A porta de ${door.name} está aqui. Pressione E para entrar.`)
-    : worldLocation === 'room' && worldRoomKind === 'lobby' ? 'Explore o estabelecimento e vá ao balcão para ver os serviços. E perto da porta sai.'
-      : worldLocation === 'room' ? 'Explore o quarto. E perto da porta muda de local.'
+    : nearDoor ? (worldLocation === 'room'
+    ? worldRoomKind === 'lodging' && !isCabin(worldRoomBuildingId) ? 'A porta leva à recepção.' : 'A porta leva de volta ao bosque.'
+    : door.private ? `${door.name}: porta trancada. É preciso ter a chave; a placa fica do lado de fora.` : `Chegue perto da porta de ${door.name} para entrar.`)
+    : worldLocation === 'room' && worldRoomKind === 'lobby' ? 'Explore o estabelecimento e vá ao balcão para ver os serviços. A porta leva para fora.'
+      : worldLocation === 'room' ? 'Explore o quarto. Chegue perto da porta para sair.'
       : nearbyAnimal ? nearbyAnimalText
       : getObjectiveText(localPosition, [...resources.values()], localInventory, objectiveFires, roomStateAvailable);
   if(ui.objective.textContent !== text) ui.objective.textContent = text;
@@ -8312,13 +8343,7 @@ function advanceFrame(now) {
     localPosition = !canPredict?previousPosition:worldLocation === 'room'
       ? stepRoomPlayer(previousPosition, input, STEP, occupied, [...roomFurniture.values()], currentRoomLayout(), { ...localInventory.attributes, hasteActive:performance.now()<localHasteUntil })
       : stepPlayer(previousPosition, input, STEP, occupied, [...fires.values()], undefined, currentWildlifeCollisionBodies(), { ...localInventory.attributes, hasteActive:performance.now()<localHasteUntil, sprintBurstActive:worldLocation==='clearing'&&performance.now()<localSprintBurstUntil, flightAuthorized:flightPilotAllowed });
-    if(worldLocation==='room'&&canPredict){
-      const layout=currentRoomLayout();
-      if(previousPosition.y<=layout.bounds.bottom-PLAYER_RADIUS)clientRoomEnteredFloor=true;
-      if(crossedRoomExit(previousPosition,localPosition,layout,{enteredFloor:clientRoomEnteredFloor})){
-        sendPendingMovementBeforeInteraction();beginPendingRoomTravel();
-      }
-    }
+    stepLocalDoor(input, now);
     const collision = updateCollisionFeedback(
       { blocked: collisionBlocked, feedback: collisionFeedback },
       previousPosition,

@@ -82,13 +82,34 @@ assets += [wall('parede-baixa-a',30,0),wall('parede-baixa-b',30,1),wall('parede-
            wall('parede-alta-a',52,0),wall('parede-alta-b',52,1),wall('parede-alta-c',52,2),
            wall('canto-baixo',30,1,True),wall('canto-alto',52,2,True)]
 
-for i,(w,h) in enumerate([(19,31),(25,38),(17,27)]):
-    b=p(f'{32-w//2},63 {32-w//2+3},59 {32},58 {32+w//2-3},59 {32+w//2},63',INK)
-    b+=p(f'{32-w//2+2},61 {32-3},10 {32+2},6 {32+w//2-2},61 {32},67',SL_D)
-    b+=p(f'{32-3},10 {32+2},6 {32+5},61 {32},67',SL_L)+p(f'{32-w//2+2},61 {32-3},10 {32},67',SL)
-    b+=p(f'{32-3},10 {32+2},6 {32+1},24 {32-4},28',O)+p(f'{32+2},6 {32+5},61 {32+1},24',ST_D)
-    b+=r(32-w//2+5,59,4,2,M)+r(32+w//2-7,60,3,2,M_L)+r(31,14,2,2,O_L)
-    assets.append(save(f'estalagmite-{i+1}',64,72,b,(32,67),0,'estalagmite'))
+# Estalagmites baixas e cônicas: base larga, ponta a 20-30 px do chão, contorno irregular (seed fixa).
+# Luz vem da esquerda; musgo e veio ocre na base e numa faixa. Pivô (32, 67) no chão.
+def stalagmite(seed,base_hw,height,lean):
+    import random
+    rnd=random.Random(seed)
+    bx,by=32+lean,65
+    n=8
+    L,R=[],[]
+    for k in range(n+1):
+        t=k/n
+        y=round(by-t*height)
+        hw=base_hw*(1-t)**1.25+(0.5 if k==n else 0)
+        L.append((round(bx-hw+rnd.uniform(-0.8,0.8)*(1-t)),y))
+        R.append((round(bx+hw+rnd.uniform(-0.8,0.8)*(1-t)),y))
+    poly=lambda pts: ' '.join(f'{x},{y}' for x,y in pts)
+    centre=[(bx,y) for _,y in L]
+    b=p(poly([(x-1,y) for x,y in L]+[(x+1,y) for x,y in R[::-1]]),INK)
+    b+=p(poly(L+centre[::-1]),SL_L)+p(poly(R+[(bx,y) for _,y in R[::-1]]),SL_D)
+    tip_x,tip_y=L[-1][0],L[-1][1]
+    b+=(r(bx-base_hw//2,by-2,base_hw,1,M)+r(bx+base_hw-4,by-2,3,2,M_L)) if base_hw>=9 else r(bx-2,by-2,4,2,M)
+    for t in (0.35,0.62):
+        k=round(t*n)
+        x,y=L[k][0]+2,L[k][1]
+        b+=r(x,y,2,1,O)
+    b+=r(bx-base_hw-2,by,2*base_hw+4,2,ST_D)+r(tip_x+1,tip_y,1,1,O_L)
+    return b
+for i,(base_hw,height,lean,seed) in enumerate([(9,24,0,3),(11,30,-2,7),(8,20,2,11)]):
+    assets.append(save(f'estalagmite-{i+1}',64,72,stalagmite(seed,base_hw,height,lean),(32,67),0,'estalagmite'))
 
 # Wall torch: bracket in place, followed by four compact flame frames. Shared 32x48 canvas/pivot.
 for i in range(4):

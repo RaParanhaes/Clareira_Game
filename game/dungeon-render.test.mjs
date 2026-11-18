@@ -1,11 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
-  DUNGEON_FRONT_WALL_ALPHA, DUNGEON_GEOMETRY, DUNGEON_LIGHT, collectDungeonLights, collectDungeonThings, createSpriteCache,
-  dungeonIndex, drawDungeonFrame, isOpenCell, projectTile, torchFrame, visibleTileBounds, wallAlphaFor, wallDrawOffset,
-  wallFaceMask, wallVariant,
+  DUNGEON_FLOOR_IDS, DUNGEON_FRONT_WALL_ALPHA, DUNGEON_GEOMETRY, DUNGEON_LIGHT, DUNGEON_TORCH_FRAMES, collectDungeonLights,
+  collectDungeonThings, createSpriteCache, dungeonIndex, drawDungeonFrame, floorTileId, isOpenCell, projectTile, propTileId,
+  torchFrame, visibleTileBounds, wallAlphaFor, wallDrawOffset, wallFaceMask, wallPiece,
 } from './dungeon-render.mjs';
 import { createDungeonArt } from './dungeon-art.mjs';
+import { loadDungeonTileset } from './dungeon-tileset.mjs';
+
+const manifestUrl = new URL('./art/dungeon/manifest.json', import.meta.url);
+const readManifest = async () => JSON.parse(await readFile(manifestUrl, 'utf8'));
 
 // Gerador mock só para teste: grade determinística com borda de rocha, sala central e tochas.
 // Não é o módulo de geração do servidor; serve para validar o renderer contra o contrato {w,h,cells,torches}.
@@ -23,7 +28,7 @@ export function mockLevel(seed = 1, w = 40, h = 40) {
       if (!cells[y * w + x] && isOpenCell({ w, h, cells }, x, y + 1) && rnd() < 0.02) torches.push({ x, y });
     }
   }
-  return { w, h, cells, torches };
+  return { w, h, cells, torches, seed };
 }
 
 // Grade pequena e explícita: piso total, com rochas nas posições dadas.
@@ -41,6 +46,7 @@ function fakeCanvas(log) {
     const ctx = {
       calls, globalAlpha: 1, imageSmoothingEnabled: true, fillStyle: '', globalCompositeOperation: 'source-over',
       save() {}, restore() {}, setTransform() {}, clearRect() {}, fillRect() {}, beginPath() {}, fill() {},
+      translate() {}, scale() {},
       createRadialGradient() { return { addColorStop() {} }; },
       drawImage(img, x, y) { calls.push({ img, x, y, alpha: this.globalAlpha }); },
     };
@@ -48,11 +54,18 @@ function fakeCanvas(log) {
   };
 }
 
+// Tileset falso com as dimensões declaradas no manifest real.
+async function fakeTileset() {
+  const manifest = await readManifest();
+  return new Map(manifest.artefatos.map(a => [a.id, { id: a.id, width: a.tamanho.largura, height: a.tamanho.altura }]));
+}
+
 // Arte de teste: cada sprite é um marcador com a chave que o renderer pediu.
 const tagArt = () => ({
-  floor: v => ({ tag: 'floor', variant: v }),
-  wall: m => ({ tag: 'wall', mask: m }),
-  torch: f => ({ tag: 'torch', frame: f }),
+  floor: id => ({ tag: 'floor', id }),
+  wall: spec => ({ tag: 'wall', id: spec.id, flip: spec.flip }),
+  prop: id => ({ tag: 'prop', id }),
+  torch: frame => ({ tag: 'torch', frame }),
   darken() {},
 });
 
@@ -103,8 +116,9 @@ test('drawDungeonFrame makes only the covering front wall translucent and draws 
   assert.equal(walls.length, 3, 'the three rock cells with visible faces are drawn');
   const cam = projectTile(player.x, player.y), target = projectTile(5.5, 5.5);
   // Compara x e y: (3,3) e (5,5) têm a mesma coluna na tela.
-  const nearX = target.x - cam.x + viewport.width / 2 - DUNGEON_GEOMETRY.halfW;
-  const nearY = target.y - cam.y + viewport.height / 2 + wallDrawOffset().dy;
+  const offset = wallDrawOffset();
+  const nearX = target.x - cam.x + viewport.width / 2 + offset.dx;
+  const nearY = target.y - cam.y + viewport.height / 2 + offset.dy;
   const near = walls.find(c => c.x === nearX && c.y === nearY);
   assert.ok(near, 'the wall at (5,5) is drawn at its projected position');
   assert.equal(near.alpha, DUNGEON_FRONT_WALL_ALPHA);
@@ -114,7 +128,7 @@ test('drawDungeonFrame makes only the covering front wall translucent and draws 
   assert.ok(ctx.calls.indexOf(near) > ctx.calls.indexOf(actor), 'the front wall is drawn after the player');
 });
 
-test('sprite cache builds each key once, evicts the oldest entry and reuses art sprites', () => {
+test('sprite cache builds each key once and evicts the oldest entry', () => {
   let made = 0;
   const cache = createSpriteCache(2);
   const make = () => { made++; return { made }; };
@@ -125,15 +139,22 @@ test('sprite cache builds each key once, evicts the oldest entry and reuses art 
   assert.equal(made, 3, 'a is evicted when the limit is reached');
   cache.get('a', make);
   assert.equal(made, 4, 'asking for an evicted key rebuilds it');
+});
 
+test('the art module serves tileset sprites by id and mirrors a flipped wall once', async () => {
+  const tileset = await fakeTileset();
   const log = { created: [] };
-  const art = createDungeonArt({ createCanvas: fakeCanvas(log) });
-  const w3 = art.wall(3);
-  assert.equal(art.wall(3), w3, 'the same mask returns the same canvas');
-  assert.equal(art.wall(1) === w3, false, 'different masks are different sprites');
-  art.floor(0); art.floor(0);
-  assert.equal(log.created.length, 3, 'wall(3), wall(1) and floor(0) are each built once');
-  assert.equal(art.floor(3), art.floor(0), 'floor variants wrap by palette length');
+  const art = createDungeonArt({ createCanvas: fakeCanvas(log), tileset });
+  assert.equal(art.floor('piso-terra'), tileset.get('piso-terra'), 'floor is the tileset image itself');
+  assert.equal(art.prop('estalagmite-2'), tileset.get('estalagmite-2'));
+  assert.equal(art.torch(2), tileset.get('tocha-frame-3'), 'torch frame n is tocha-frame-(n+1)');
+  assert.equal(art.wall({ id: 'parede-alta-a', flip: false }), tileset.get('parede-alta-a'), 'unflipped wall is the tileset image');
+  const mirror = art.wall({ id: 'parede-alta-a', flip: true });
+  assert.equal(art.wall({ id: 'parede-alta-a', flip: true }), mirror, 'the mirror is cached');
+  assert.equal(log.created.length, 1, 'only the mirror creates a canvas');
+  assert.deepEqual(log.created[0], { w: 96, h: 72 }, 'the mirror keeps the sprite size');
+  assert.throws(() => art.floor('piso-inexistente'), /sprite ausente/, 'a missing sprite fails loudly');
+  assert.throws(() => createDungeonArt({ createCanvas: fakeCanvas(log), tileset: {} }), /Map/);
 });
 
 test('the wall index is computed once per grid and recomputed for a new grid', () => {
@@ -164,25 +185,112 @@ test('visible torches are capped and the player always has a full-reach light', 
   assert.ok(lights.some(l => l.radius === full), 'player light has the full reach');
 });
 
-test('torch flame alternates in two frames and holds still with reduced motion', () => {
-  const frames = Array.from({ length: 8 }, (_, i) => torchFrame(i * 0.25));
-  assert.ok(frames.includes(0) && frames.includes(1), 'the flame alternates');
+test('torch flame cycles through the four tileset frames and holds frame 0 with reduced motion', () => {
+  assert.equal(DUNGEON_TORCH_FRAMES, 4);
+  const seen = new Set(Array.from({ length: 40 }, (_, i) => torchFrame(i / 12)));
+  assert.deepEqual([...seen].sort(), [0, 1, 2, 3], 'all four frames appear over time');
   assert.ok(Array.from({ length: 8 }, (_, i) => torchFrame(i * 0.25, true)).every(f => f === 0), 'reduced motion holds frame 0');
+  assert.notEqual(torchFrame(1, false, 0), torchFrame(1, false, 1), 'neighbouring torches are out of step');
 });
 
-test('rock height varies per tile, deterministically, and stays inside the sprite', () => {
-  const lifts = new Set();
-  for (let y = 0; y < 30; y++) for (let x = 0; x < 30; x++) {
-    const v = wallVariant(x, y);
-    assert.deepEqual(wallVariant(x, y), v, 'same tile, same rock');
-    assert.ok(v.lift >= 0 && v.lift <= DUNGEON_GEOMETRY.wallLiftMax);
-    assert.ok(v.shape >= 0 && v.shape < 4);
-    lifts.add(v.lift);
+test('wall pieces: corners for two faces, straight pieces for one face, mirrored for the L face', () => {
+  assert.equal(wallPiece(0, 4, 4), null, 'no face, no piece');
+  for (let i = 0; i < 40; i++) {
+    const corner = wallPiece(3, i, 2);
+    assert.ok(corner.id === 'canto-alto' || corner.id === 'canto-baixo', corner.id);
+    assert.equal(corner.flip, false);
+    const s = wallPiece(1, i, 2), l = wallPiece(2, i, 2);
+    assert.match(s.id, /^parede-(alta|baixa)-[abc]$/);
+    assert.equal(s.flip, false, 'face S uses the piece as drawn');
+    assert.equal(l.flip, true, 'face L is the mirror of the piece');
+    assert.equal(wallPiece(1, i, 2).id, s.id, 'the same tile always gets the same piece');
   }
-  assert.ok(lifts.size >= 4, 'tiles get several different heights');
-  const art = createDungeonArt({ createCanvas: fakeCanvas({ created: [] }) });
-  assert.notEqual(art.wall(3, { lift: 0, shape: 0 }), art.wall(3, { lift: 2, shape: 0 }), 'different heights are different sprites');
-  assert.equal(art.wall(3, { lift: 2, shape: 1 }), art.wall(3, { lift: 2, shape: 1 }), 'the same variant is reused from cache');
+  const heights = new Set(Array.from({ length: 200 }, (_, i) => wallPiece(1, i, 7).id.split('-')[1]));
+  assert.deepEqual([...heights].sort(), ['alta', 'baixa'], 'both heights appear across the level');
+});
+
+test('every sprite id the renderer asks for exists in the tileset manifest', async () => {
+  const manifest = await readManifest();
+  const ids = new Set(manifest.artefatos.map(a => a.id));
+  for (const id of DUNGEON_FLOOR_IDS) assert.ok(ids.has(id), id);
+  for (let y = 0; y < 60; y++) for (let x = 0; x < 60; x++) {
+    const piece = wallPiece(1 + ((x + y) % 3), x, y, 5);
+    if (piece) assert.ok(ids.has(piece.id), piece.id);
+    const prop = propTileId(x, y, 5);
+    if (prop) assert.ok(ids.has(prop), prop);
+  }
+  for (let f = 0; f < DUNGEON_TORCH_FRAMES; f++) assert.ok(ids.has(`tocha-frame-${f + 1}`));
+});
+
+test('manifest pivots and sizes match the renderer anchors', async () => {
+  const manifest = await readManifest();
+  const G = DUNGEON_GEOMETRY;
+  for (const a of manifest.artefatos) {
+    const expect = {
+      piso: { pivot: G.floorAnchor },
+      parede: { pivot: G.wallAnchor, size: G.wallSize },
+      'parede-canto': { pivot: G.wallAnchor, size: G.wallSize },
+      estalagmite: { pivot: G.propAnchor },
+      tocha: { pivot: G.torchAnchor },
+      'tocha-frame': { pivot: G.torchAnchor },
+    }[a.tipo];
+    if (!expect) continue;
+    assert.deepEqual(a.pivo_contato, { x: expect.pivot.x, y: expect.pivot.y }, `${a.id} pivot`);
+    if (expect.size) assert.deepEqual({ w: a.tamanho.largura, h: a.tamanho.altura }, expect.size, `${a.id} size`);
+  }
+});
+
+test('floor materials mix in soft patches with no checkerboard and rare puddles', () => {
+  const counts = {};
+  let equalRight = 0, pairs = 0, checker = 0, total = 0;
+  for (const seed of [11, 3]) {
+    for (let y = 0; y < 80; y++) for (let x = 0; x < 80; x++) {
+      const id = floorTileId(x, y, seed);
+      assert.equal(floorTileId(x, y, seed), id, 'same seed, same floor');
+      counts[id] = (counts[id] || 0) + 1; total++;
+      if (x < 79) { pairs++; if (floorTileId(x + 1, y, seed) === id) equalRight++; }
+      if (x < 79 && y < 79 && floorTileId(x + 1, y, seed) !== id && floorTileId(x, y + 1, seed) !== id
+        && floorTileId(x + 1, y + 1, seed) === id) checker++;
+    }
+  }
+  assert.deepEqual(Object.keys(counts).sort(), [...DUNGEON_FLOOR_IDS].sort(), 'all four materials appear');
+  assert.ok(counts['piso-poca'] / total < 0.06, 'puddles are rare');
+  assert.ok(equalRight / pairs > 0.5, 'neighbours mostly share a material, in patches');
+  assert.ok(checker / total < 0.05, 'no checkerboard pattern');
+  let differs = 0;
+  for (let y = 0; y < 40; y++) for (let x = 0; x < 40; x++) if (floorTileId(x, y, 11) !== floorTileId(x, y, 3)) differs++;
+  assert.ok(differs > 200, 'a different seed gives a different map');
+});
+
+test('stalagmites are decoration on floor, never on puddles, and deterministic', () => {
+  let props = 0;
+  for (let y = 0; y < 60; y++) for (let x = 0; x < 60; x++) {
+    const id = propTileId(x, y, 4);
+    assert.equal(propTileId(x, y, 4), id);
+    if (id) {
+      props++;
+      assert.notEqual(floorTileId(x, y, 4), 'piso-poca');
+      assert.match(id, /^estalagmite-[123]$/);
+    }
+  }
+  assert.ok(props > 0 && props < (60 * 60) / 8, 'a few stalagmites, not a forest');
+});
+
+test('loadDungeonTileset reads the manifest and loads every sprite into a map', async () => {
+  const manifest = await readManifest();
+  const requested = [];
+  const tileset = await loadDungeonTileset({
+    baseUrl: 'https://exemplo.test/art/dungeon/',
+    fetchJson: async url => { requested.push(url); return manifest; },
+    loadImage: async url => ({ url }),
+  });
+  assert.equal(requested[0], 'https://exemplo.test/art/dungeon/manifest.json');
+  assert.equal(tileset.size, manifest.artefatos.length);
+  assert.equal(tileset.get('parede-alta-b').url, 'https://exemplo.test/art/dungeon/parede-alta-b.png');
+  await assert.rejects(
+    loadDungeonTileset({ baseUrl: 'https://exemplo.test/', fetchJson: async () => ({}), loadImage: async () => ({}) }),
+    /sem lista de artefatos/,
+  );
 });
 
 test('ambient darkness keeps about 20 to 30 percent of the room readable', () => {

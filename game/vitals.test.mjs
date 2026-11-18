@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  applyDamage, applyDeath, createVitals, deathDestination, deathOutcome, dimensionTravelCancelledDetails, downedRefusal, releaseAnimalsFromPlayer, damageFromAttack, faintOutcome, isDowned, maxHealth, regenStep, vitalsSnapshot, wakeIfDue,
+  applyDamage, applyDeath, createVitals, deathDestination, deathOutcome, dimensionTravelCancelledDetails, downedRefusal, releaseAnimalsFromPlayer, restoreVitals, vitalsResumeSnapshot, damageFromAttack, faintOutcome, isDowned, maxHealth, regenStep, vitalsSnapshot, wakeIfDue,
 } from './vitals.mjs';
 import { countdownSeconds, createVitalsHud, deathText, FAINT_TEXT, vitalsHudState, WAKE_TEXT } from './vitals-hud.mjs';
 import { stepWildlifePopulation, WILDLIFE_BY_ID } from './wildlife.mjs';
@@ -182,6 +182,55 @@ test('desmaio solta só o agressor e os provocados por este jogador', () => {
   assert.deepEqual([mine.provokedUntil, mine.state], [0, 'explorando']);
   assert.deepEqual([other.provokedUntil, other.state], [9000, 'atacando']);
   assert.equal(attacker.state, 'explorando');
+});
+
+test('reconectar durante o desmaio mantém o caído, o prazo e o dano acumulado', () => {
+  const max = maxHealth(1);
+  const vitals = createVitals(1);
+  applyDamage(vitals, max, 1000, max);                       // zera a vida: desmaia no local
+  applyDamage(vitals, 3, 2000, max);                         // golpe no caído soma ao dano acumulado
+  const saved = vitalsResumeSnapshot(vitals);
+  const back = restoreVitals(JSON.parse(JSON.stringify(saved)), 1, 3000);
+  assert.equal(isDowned(back, 3000), true);
+  assert.equal(back.fainted, true);
+  assert.equal(back.downedUntil, 1000 + 10000);
+  assert.equal(back.faintDamage, 3);
+  assert.equal(back.hp, vitals.hp);
+  // O dano que faltava para morrer continua contando depois da reconexão.
+  const lethal = Math.ceil(max * .5) - 3;
+  assert.equal(applyDamage(back, lethal, 4000, max).dead, true);
+});
+
+test('reconectar depois do fim do desmaio aplica o despertar: 30% da vida e imunidade', () => {
+  const max = maxHealth(1);
+  const vitals = createVitals(1);
+  applyDamage(vitals, max, 1000, max);
+  const back = restoreVitals(vitalsResumeSnapshot(vitals), 1, 1000 + 10000 + 1);
+  assert.equal(back.fainted, false);
+  assert.equal(back.faintDamage, 0);
+  assert.equal(back.hp, faintOutcome(max).hp);
+  assert.equal(back.immuneUntil, 1000 + 10000 + 1 + faintOutcome(max).immuneMs);
+});
+
+test('reconexão sem snapshot de desmaio começa com a vida cheia, como antes', () => {
+  const back = restoreVitals(null, 1, 5000);
+  assert.equal(back.fainted, false);
+  assert.equal(back.hp, maxHealth(1));
+  assert.equal(vitalsResumeSnapshot(undefined), null);
+});
+
+test('morte solta os animais que atacavam o jogador caído, inclusive os monstros', () => {
+  const max = maxHealth(1);
+  const vitals = createVitals(1);
+  const bear = { id: 'urso', provokedBy: 'p1', provokedUntil: 99999, state: 'atacando' };
+  const fox = { id: 'raposa', provokedBy: 'p1', provokedUntil: 99999, state: 'atacando' };
+  applyDamage(vitals, max, 1000, max);                       // desmaio: o alvo fica com os monstros
+  assert.equal(applyDamage(vitals, max, 2000, max).dead, true); // dano do caído chega à morte
+  // Mesma sequência de killPlayer no servidor: aplica a morte e solta os animais do jogador.
+  applyDeath(vitals, 2000, max, 'na vila');
+  releaseAnimalsFromPlayer([bear, fox], 'p1', null, 2000);
+  assert.deepEqual([bear.provokedUntil, bear.state], [0, 'explorando']);
+  assert.deepEqual([fox.provokedUntil, fox.state], [0, 'explorando']);
 });
 
 function animal(id, speciesId, x, y, overrides = {}) {

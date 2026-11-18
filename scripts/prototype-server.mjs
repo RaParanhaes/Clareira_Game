@@ -73,7 +73,7 @@ import {
   campfireFlameStrength, campfireRemainingMs,
 } from '../game/campfire-life.mjs';
 import {
-  applyDamage, applyDeath, createVitals, damageFromAttack, deathDestination, dimensionTravelCancelledDetails, downedRefusal, isDowned, maxHealth, regenStep, releaseAnimalsFromPlayer, vitalsSnapshot, wakeIfDue,
+  applyDamage, applyDeath, createVitals, damageFromAttack, deathDestination, dimensionTravelCancelledDetails, downedRefusal, isDowned, maxHealth, regenStep, releaseAnimalsFromPlayer, restoreVitals, vitalsResumeSnapshot, vitalsSnapshot, wakeIfDue,
 } from '../game/vitals.mjs';
 
 function wildlifeOutsideVillage(position,dimensionId,padding=4) {
@@ -1117,6 +1117,8 @@ export function createPrototypeServer({
     player.input = { x: 0, y: 0 }; player.commands = []; player.inputSeq = player.receivedSeq;
     player.moving = false; player.sitting = false; player.emote = null;
     applyDeath(vitals, at, max, place);
+    // Animais que atacavam o jogador caído largam o alvo; a morte também encerra a provocação.
+    releaseAnimalsFromPlayer(wildlifeFor(dimensionId).values(), player.id, null, at);
     indexPlayer(player.socket, player);
     notice(player.socket, `Você caiu… e acordou ${place}.`, 'soft');
   };
@@ -1874,6 +1876,8 @@ export function createPrototypeServer({
       appearance:resume?.appearance||(!profile.guest?await storage.loadAppearance(profile.id).catch(()=>normalizeAppearance()):normalizeAppearance()),
       objectCatalogRevisionSeen: null,
     };
+    // Desmaio e dano acumulado sobrevivem à reconexão (o snapshot de resume é guardado ao sair).
+    if (resume?.vitals) player.vitals = restoreVitals(resume.vitals, player.inventory?.level, now());
     player.persistedLocation = canRestorePosition && durableVisit
       && sameLocationCheckpoint(locationCheckpoint(player), durableVisit) ? durableVisit : null;
     if (resume?.viewportWidth && resume?.viewportHeight) applyViewport(player, resume.viewportWidth, resume.viewportHeight);
@@ -4269,7 +4273,8 @@ export function createPrototypeServer({
           homeRoomKey:player.homeRoomKey,roomKey:player.roomKey,roomFurniture:player.roomFurniture.map(item=>({...item})),
           homeFurniture:player.homeRoomState.furniture.map(item=>({...item})),roomOwnerName:player.roomState.name,
           inventory:inventorySnapshot(player.inventory),color:player.color,appearance:player.appearance,
-          viewportWidth:player.viewportWidth,viewportHeight:player.viewportHeight});
+          viewportWidth:player.viewportWidth,viewportHeight:player.viewportHeight,
+          vitals:vitalsResumeSnapshot(player.vitals)});
         if(resumableSessions.size>128)resumableSessions.delete(resumableSessions.keys().next().value);
       }
       peers.delete(socket);

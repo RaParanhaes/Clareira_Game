@@ -138,6 +138,28 @@ export function releaseAnimalsFromPlayer(animals, playerId, attackerId, now) {
   }
 }
 
+// Reconexão: o desmaio e o dano acumulado não podem sumir ao sair do jogo. Só vai o que define o estado de caído.
+export const vitalsResumeSnapshot = vitals => vitals ? {
+  hp: vitals.hp, fainted: vitals.fainted === true, downedUntil: vitals.downedUntil,
+  faintDamage: vitals.faintDamage, immuneUntil: vitals.immuneUntil,
+} : null;
+
+// Ao reconectar: se o desmaio ainda está no prazo, continua caído com o dano acumulado;
+// se o prazo já passou, aplica o despertar (30% da vida, no mesmo lugar, com imunidade).
+export function restoreVitals(saved, level, now) {
+  const vitals = createVitals(level);
+  if (!saved) return vitals;
+  Object.assign(vitals, {
+    hp: Number.isFinite(saved.hp) ? saved.hp : vitals.hp,
+    fainted: saved.fainted === true,
+    downedUntil: Number.isFinite(saved.downedUntil) ? saved.downedUntil : 0,
+    faintDamage: Number.isFinite(saved.faintDamage) ? saved.faintDamage : 0,
+    immuneUntil: Number.isFinite(saved.immuneUntil) ? saved.immuneUntil : 0,
+  });
+  wakeIfDue(vitals, now, maxHealth(level));
+  return vitals;
+}
+
 export const vitalsSnapshot = (vitals, max) => ({
   hp: Math.max(vitals.hp > 0 ? 1 : 0, Math.floor(vitals.hp)), max, downedUntil: vitals.downedUntil,
   deathSeq: vitals.deathSeq || 0, deathPlace: vitals.deathPlace || '',

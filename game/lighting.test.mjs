@@ -38,7 +38,7 @@ test('flame variation stays gentle and freezes for reduced motion',async()=>{con
 import {celestialLightState,createShadowDirectionResolver,buildingLocalFill,nightVeilColor} from './lighting.mjs';
 test('central lighting: veil colour per theme with a warm-slate fallback', () => {
  assert.equal(nightVeilColor('dark'), '#000000');
- assert.equal(nightVeilColor('unknown-theme'), '#0c1a2a');
+ assert.equal(nightVeilColor('unknown-theme'), '#10150f');
 });
 test('central lighting: no celestial light means no global light', () => {
  assert.equal(celestialLightState({sunlightStrength:0,moonlightStrength:0,daylight:0}), null);

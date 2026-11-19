@@ -1,31 +1,48 @@
-// Barra de vida discreta e aviso de desmaio. A lógica é pura; o DOM só recebe o resultado.
+// Barra de vida discreta, contagem do desmaio e aviso de morte. A lógica é pura; o DOM só recebe o resultado.
 export const FAINT_TEXT = 'Você desmaiou… respire.';
-export const wakeText = dimensionId => dimensionId === 'surface'
-  ? 'Você desmaiou… acordou na vila. Nada se perdeu.'
-  : 'Você desmaiou… acordou no ponto de partida. Nada se perdeu.';
+export const WAKE_TEXT = 'Você se levantou…';
+export const deathText = place => `Você caiu… e acordou ${place || 'na vila'}.`;
 
 // prev: estado visual do quadro anterior. Retorna o próximo estado visual.
-export function vitalsHudState(prev, vitals, { dimensionId = 'surface' } = {}) {
+// vitals.downedMs: tempo restante do desmaio no instante do snapshot. vitals.deathSeq: conta as mortas.
+export function vitalsHudState(prev, vitals) {
   if (!vitals || !Number.isFinite(vitals.max) || vitals.max <= 0) {
-    return { visible: false, downed: false, hp: 0, max: 0, ratio: 0, message: '', hurt: false, full: false };
+    return { visible: false, downed: false, died: false, hp: 0, max: 0, ratio: 0, message: '', kind: '', hurt: false, full: false, deathSeq: 0, downedMs: 0 };
   }
-  const downed = Number(vitals.downedMs) > 0;
+  const downedMs = Math.max(0, Number(vitals.downedMs) || 0);
+  const downed = downedMs > 0;
   const hp = Math.max(0, Math.min(vitals.max, Math.round(vitals.hp)));
-  const hurt = Boolean(prev) && hp < prev.hp && !downed;
-  let message = '';
+  const deathSeq = Number(vitals.deathSeq) || 0;
+  const died = Boolean(prev) && deathSeq > (prev.deathSeq || 0);
+  const hurt = Boolean(prev) && hp < prev.hp && !downed && !died;
+  let message = '', kind = '';
   if (downed) message = FAINT_TEXT;
-  else if (prev?.downed) message = wakeText(dimensionId);
-  return { visible: true, downed, hp, max: vitals.max, ratio: hp / vitals.max, message, hurt, full: hp >= vitals.max };
+  else if (died) { message = deathText(vitals.deathPlace); kind = 'death'; }
+  else if (prev?.downed) message = WAKE_TEXT;
+  return { visible: true, downed, died, downedMs, deathSeq, hp, max: vitals.max, ratio: hp / vitals.max, message, kind, hurt, full: hp >= vitals.max };
 }
+
+// Segundos que faltam para levantar (10…1). Zero quando o tempo já passou e o servidor ainda não confirmou.
+export const countdownSeconds = (untilMs, nowMs) => Math.max(0, Math.min(10, Math.ceil((untilMs - nowMs) / 1000)));
 
 export function createVitalsHud(root) {
   if (!root) return { update() {} };
   const fill = root.querySelector('.vitals-fill'), label = root.querySelector('.vitals-label'), note = root.querySelector('.vitals-note');
-  let prev = null, hurtFrame = 0;
-  note.addEventListener('animationend', () => { note.hidden = true; note.classList.remove('is-timed'); });
+  let prev = null, hurtFrame = 0, countFrame = 0, downedUntil = 0;
+  note.addEventListener('animationend', () => { note.hidden = true; note.classList.remove('is-timed', 'is-death'); });
+
+  // A contagem roda por requestAnimationFrame, não por temporizador: lê o relógio a cada quadro.
+  const paintCountdown = () => {
+    countFrame = 0;
+    if (!prev?.downed) return;
+    const left = countdownSeconds(downedUntil, performance.now());
+    note.textContent = left > 0 ? `${FAINT_TEXT} ${left}` : FAINT_TEXT;
+    if (left > 0) countFrame = requestAnimationFrame(paintCountdown);
+  };
+
   return {
-    update(vitals, context) {
-      const state = vitalsHudState(prev, vitals, context);
+    update(vitals) {
+      const state = vitalsHudState(prev, vitals);
       prev = state;
       root.hidden = !state.visible;
       if (!state.visible) return state;
@@ -41,12 +58,19 @@ export function createVitalsHud(root) {
         cancelAnimationFrame(hurtFrame);
         hurtFrame = requestAnimationFrame(() => root.classList.add('is-hurt'));
       }
-      if (state.message) {
-        // O recolhimento do aviso é uma animação CSS (.is-timed); caído, o aviso fica até acordar.
+      if (state.downed) {
+        downedUntil = performance.now() + state.downedMs;
+        cancelAnimationFrame(countFrame);
+        paintCountdown();
+        note.hidden = false;
+        note.classList.remove('is-timed', 'is-death');
+      } else if (state.message) {
+        // Aviso de morte e de despertar: somem sozinhos pela animação CSS (.is-timed).
         note.textContent = state.message;
         note.hidden = false;
-        note.classList.remove('is-timed');
-        if (!state.downed) requestAnimationFrame(() => note.classList.add('is-timed'));
+        note.classList.remove('is-timed', 'is-death');
+        if (state.kind === 'death') note.classList.add('is-death');
+        requestAnimationFrame(() => note.classList.add('is-timed'));
       }
       return state;
     },

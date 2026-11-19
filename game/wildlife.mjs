@@ -398,6 +398,16 @@ function chooseBehavior(animal, definition, context, events) {
   animal.sheltered=false;
   const player = closest(context.players, animal, Math.max(definition.senses.sight, definition.senses.hearing, definition.senses.smell) + 1,
     candidate => playerPerception(animal, candidate, definition, {isOccluded:context.isOccluded,windNoise:context.windNoise,night:context.night}).seen);
+  // Desmaio: o animal que não é monstro perde o interesse no jogador caído e se afasta. Monstros seguem atacando.
+  if(player&&definition.aggression!=='monster'&&context.isDownedPlayer?.(player.item)){
+    if(animal.provokedBy===player.item.id){animal.provokedUntil=0;animal.provokedBy=null;}
+    const threat=player.item.position||player.item;
+    const dx=animal.x-threat.x,dy=animal.y-threat.y,length=Math.hypot(dx,dy)||1;
+    animal.state='fugindo';animal.fleeUntil=context.now+3600;
+    animal.targetX=Math.max(1,Math.min(context.worldSize-1,animal.x+dx/length*6));
+    animal.targetY=Math.max(1,Math.min(context.worldSize-1,animal.y+dy/length*6));
+    return;
+  }
   if(player){
     animal.awareness=playerPerception(animal,player.item,definition,{isOccluded:context.isOccluded,windNoise:context.windNoise,night:context.night}).sense;
     animal.awarenessUntil=context.now+1400;
@@ -556,7 +566,7 @@ function chooseBehavior(animal, definition, context, events) {
 }
 
 export function stepWildlifePopulation(population, {dimensionId='surface', players=[], now=Date.now(), deltaSeconds=1/30,
-  night=false, hours=12, worldSize=1000, canOccupy=()=>true, isOccluded=()=>false, findWater=()=>null, windNoise=0,
+  night=false, hours=12, worldSize=1000, canOccupy=()=>true, isOccluded=()=>false, findWater=()=>null, windNoise=0, isDownedPlayer=()=>false,
   playerRadius=.25, maxActiveDistance=42, populationLimit=WILDLIFE_POPULATION_LIMIT, profile=null} = {}) {
   const animals=[...population.values()].filter(animal=>animal.dimensionId===dimensionId);
   const activePlayers=players.filter(player=>player.location==='clearing'&&(player.dimensionId||'surface')===dimensionId);
@@ -583,7 +593,7 @@ export function stepWildlifePopulation(population, {dimensionId='surface', playe
   };
   const groupMembers=new Map();
   for(const animal of animals){const members=groupMembers.get(animal.groupId)||[];members.push(animal);groupMembers.set(animal.groupId,members);}
-  const context={animals:activeAnimals,population,players:activePlayers,playerRadius,now,worldSize,night,hours,windNoise,
+  const context={animals:activeAnimals,population,players:activePlayers,playerRadius,now,worldSize,night,hours,windNoise,isDownedPlayer,
     cellSize,nearbyGrid,nearbyAnimals,groupMembers,
     canOccupy:profileStats?(...args)=>{profileStats.canOccupyCalls=(profileStats.canOccupyCalls||0)+1;return canOccupy(...args);}:canOccupy,
     isOccluded:profileStats?(...args)=>{profileStats.isOccludedCalls=(profileStats.isOccludedCalls||0)+1;return isOccluded(...args);}:isOccluded,

@@ -33,6 +33,12 @@ function stepsFrom(level, origin) {
 
 const inRect = (p, r) => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h;
 
+// Sala sintética para o reaparecimento: 12 pontos em linha, espaçados de 3 tiles, longe de jogadores em (0,0).
+function roomSpawner(species, max = 4) {
+  const spawnPoints = Array.from({ length: 12 }, (_, i) => ({ x: 100 + i * 3, y: 50 }));
+  return { roomId: 'rT', kind: 'cave', max, respawnMs: 5 * MIN, species, spawnPoints };
+}
+
 function spawnPlan(seed, level) {
   return planDungeonSpawns(generateDungeon(seed, level));
 }
@@ -167,7 +173,7 @@ test('drop fixo: osso em 40% em toda espécie, sem redução de anti-farm', () =
 });
 
 test('anti-farm só pelo reaparecimento: sala limpa de novo espera 5 min e segue no teto da sala', () => {
-  const spawner = spawnPlan(SEEDS[0], 1).spawners.find(s => s.spawnPoints.length > 0);
+  const spawner = roomSpawner(['caveBat']);
   const base = { spawner, aliveInRoom: 0, aliveInInstance: 0, players: [{ x: 0, y: 0 }], now: 20 * MIN, lastRespawnAt: null };
   assert.equal(planRespawn({ ...base, lastRoomDeathAt: 20 * MIN - MIN }).reason, 'sala-recente');
   assert.equal(planRespawn({ ...base, lastRoomDeathAt: 20 * MIN - 6 * MIN }).ok, true);
@@ -175,7 +181,7 @@ test('anti-farm só pelo reaparecimento: sala limpa de novo espera 5 min e segue
 });
 
 test('reaparecimento: só com sala abaixo do teto, intervalo vencido e sem jogador por perto', () => {
-  const spawner = spawnPlan(SEEDS[0], 1).spawners.find(s => s.spawnPoints.length > 0);
+  const spawner = roomSpawner(['caveBat']);
   const far = [{ x: 0, y: 0 }];
   const base = { spawner, aliveInRoom: 0, aliveInInstance: 0, players: far, now: 10 * MIN, lastRespawnAt: null, lastRoomDeathAt: null };
 
@@ -196,6 +202,45 @@ test('reaparecimento: só com sala abaixo do teto, intervalo vencido e sem jogad
 
   const occupiedAll = new Set(spawner.spawnPoints.map(p => `${p.x},${p.y}`));
   assert.equal(planRespawn({ ...base, occupied: occupiedAll }).reason, 'sem-ponto-livre');
+});
+
+test('bando reaparece inteiro: rato 3 a 4, lobo em dupla, todos em pontos livres e longe dos jogadores', () => {
+  const far = [{ x: 0, y: 0 }];
+  const rats = planRespawn({ spawner: roomSpawner(['stoneRat']), players: far, now: 10 * MIN, rotation: 0 });
+  assert.equal(rats.ok, true);
+  assert.ok(rats.size >= 3 && rats.size <= 4, `bando de ${rats.size}`);
+  assert.equal(rats.points.length, rats.size);
+  assert.equal(new Set(rats.points.map(p => `${p.x},${p.y}`)).size, rats.size, 'pontos distintos');
+  for (const p of rats.points) {
+    assert.ok(Math.hypot(p.x, p.y) >= DUNGEON_RULES.playerClearanceTiles);
+  }
+  const wolves = planRespawn({ spawner: roomSpawner(['gloomWolf']), players: far, now: 10 * MIN, rotation: 0 });
+  assert.equal(wolves.ok, true);
+  assert.equal(wolves.size, 2);
+  assert.equal(wolves.points.length, 2);
+});
+
+test('com só uma vaga na sala, nenhum rato nasce; o grupo espera o próximo ciclo', () => {
+  const spawner = roomSpawner(['stoneRat'], 4);
+  const far = [{ x: 0, y: 0 }];
+  const oneSlot = planRespawn({ spawner, aliveInRoom: 3, players: far, now: 10 * MIN, rotation: 0 });
+  assert.equal(oneSlot.ok, false);
+  assert.equal(oneSlot.reason, 'sem-vaga-grupo');
+  assert.equal(oneSlot.points, undefined, 'nenhum ponto de rato é devolvido');
+  // Com a sala vazia o mesmo grupo volta inteiro.
+  assert.equal(planRespawn({ spawner, aliveInRoom: 0, players: far, now: 10 * MIN, rotation: 0 }).ok, true);
+  // Só uma vaga na instância também barra o grupo.
+  const instanceOneSlot = planRespawn({ spawner, aliveInInstance: 35, players: far, now: 10 * MIN, rotation: 0 });
+  assert.equal(instanceOneSlot.reason, 'sem-vaga-grupo');
+  // Dupla de lobo com uma vaga também espera.
+  assert.equal(planRespawn({ spawner: roomSpawner(['gloomWolf']), aliveInRoom: 3, players: far, now: 10 * MIN }).reason, 'sem-vaga-grupo');
+});
+
+test('espécie solitária volta uma por vez, mesmo com uma vaga', () => {
+  const result = planRespawn({ spawner: roomSpawner(['caveBat']), aliveInRoom: 3, players: [{ x: 0, y: 0 }], now: 10 * MIN });
+  assert.equal(result.ok, true);
+  assert.equal(result.size, 1);
+  assert.equal(result.points.length, 1);
 });
 
 test('reaparecimento nunca escolhe ponto a menos de 14 tiles de um jogador', () => {

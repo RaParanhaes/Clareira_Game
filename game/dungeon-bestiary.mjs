@@ -171,8 +171,11 @@ export function planDungeonSpawns(dungeon) {
   return plan;
 }
 
-// Uma tentativa de reaparecimento numa sala. Devolve { ok:true, point, species } ou { ok:false, reason }.
-// rotation escolhe a espécie da lista da sala (quem nasce, em ordem determinística).
+// Uma tentativa de reaparecimento numa sala. Devolve { ok:true, point, points, species, size } ou { ok:false, reason }.
+// rotation escolhe a espécie da lista da sala (em ordem determinística) e o tamanho do bando, dentro do mínimo e máximo.
+// Regra de bando (decisão do coordenador, substitui o "um por vez" da §4): rato e lobo voltam com o grupo inteiro
+// (rato 3 a 4, lobo 2) e só quando há vaga para o grupo todo dentro do teto da sala e da instância; senão esperam
+// o próximo ciclo ('sem-vaga-grupo'). Espécies solitárias voltam uma por vez (size 1).
 export function planRespawn({
   spawner, aliveInRoom = 0, aliveInInstance = 0, players = [], occupied = new Set(),
   now, lastRespawnAt = null, lastRoomDeathAt = null, rotation = 0,
@@ -182,11 +185,20 @@ export function planRespawn({
   if (aliveInInstance >= DUNGEON_RULES.instanceMaxAlive) return reject('instancia-cheia');
   if (lastRespawnAt !== null && now - lastRespawnAt < spawner.respawnMs) return reject('intervalo');
   if (lastRoomDeathAt !== null && now - lastRoomDeathAt < spawner.respawnMs) return reject('sala-recente');
+  const species = spawner.species[rotation % spawner.species.length];
+  const { min, max: maxGroup } = groupOf(species);
+  const size = min + (Math.floor(rotation / spawner.species.length) % (maxGroup - min + 1));
+  const slots = Math.min(spawner.max - aliveInRoom, DUNGEON_RULES.instanceMaxAlive - aliveInInstance);
+  if (size > slots) return reject('sem-vaga-grupo');
   const free = spawner.spawnPoints.filter(p => !occupied.has(`${p.x},${p.y}`));
   if (free.length === 0) return reject('sem-ponto-livre');
   const clear = free.filter(p => players.every(pl => Math.hypot(pl.x - p.x, pl.y - p.y) >= DUNGEON_RULES.playerClearanceTiles));
   if (clear.length === 0) return reject('jogador-perto');
-  return { ok: true, point: clear[0], species: spawner.species[rotation % spawner.species.length] };
+  if (clear.length < size) return reject('sem-vaga-grupo');
+  // O grupo nasce junto: o ponto âncora e os pontos livres mais próximos dele.
+  const anchor = clear[0];
+  const points = clear.slice().sort((a, b) => dist2(a, anchor) - dist2(b, anchor) || a.y - b.y || a.x - b.x).slice(0, size);
+  return { ok: true, point: anchor, points, species, size };
 }
 
 // BFS de passos a partir de origem sobre piso aberto. -1 = inalcançável.

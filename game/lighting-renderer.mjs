@@ -23,6 +23,16 @@ const NIGHT_LIGHT_FPS=30;
 
 const NIGHT_MASK_PAD=640;
 
+// Night grade: overlaying the frame on itself deepens shadows, brightens lit
+// areas and strengthens colour, so the dim scene keeps depth instead of fading flat.
+const gradeCanvas=document.createElement('canvas');
+function gradeNightFrame(strength){
+ const source=D.ctx.canvas;if(!(strength>0)||!source.width||!source.height)return;
+ if(gradeCanvas.width!==source.width||gradeCanvas.height!==source.height){gradeCanvas.width=source.width;gradeCanvas.height=source.height;}
+ const grade=gradeCanvas.getContext('2d');grade.setTransform(1,0,0,1,0,0);grade.globalCompositeOperation='copy';grade.drawImage(source,0,0);
+ D.ctx.save();D.ctx.globalCompositeOperation='overlay';D.ctx.globalAlpha=Math.min(.6,strength);
+ D.ctx.drawImage(gradeCanvas,0,0,source.width,source.height,0,0,D.viewWidth,D.viewHeight);D.ctx.restore();
+}
 function paintNightMask(anchor=D.camera){
  const shiftX=-((D.camera.x-anchor.x)-(D.camera.y-anchor.y))*D.TILE_X;
  const shiftY=-((D.camera.x-anchor.x)+(D.camera.y-anchor.y))*D.TILE_Y;
@@ -30,6 +40,7 @@ function paintNightMask(anchor=D.camera){
  D.ctx.drawImage(nightMask,(NIGHT_MASK_PAD-shiftX)*NIGHT_MASK_SCALE,(NIGHT_MASK_PAD-shiftY)*NIGHT_MASK_SCALE,
    D.viewWidth*NIGHT_MASK_SCALE,D.viewHeight*NIGHT_MASK_SCALE,0,0,D.viewWidth,D.viewHeight);
  D.ctx.restore();
+ gradeNightFrame(.55*Math.min(1,D.gameDay.night));
 }
 
 function carriedLanternSources(){
@@ -94,6 +105,8 @@ function drawNight(){
  const fireProfile=isArrival?{reach:CAMPFIRE_LIGHT_RADIUS_TILES,falloffExponent:edgePower}
    :nightEmitterProfile(CAMPFIRE_LIGHT_RADIUS_TILES,edgePower,{night:nightFactor,hasMoon:D.gameDay.hasMoon});
  mask.globalCompositeOperation='source-over';mask.globalAlpha=exteriorNightOpacity(D.gameDay,{theme:D.dimensionTheme,dimensionId:D.worldDimensionId});mask.fillStyle=nightVeilColor(D.dimensionTheme);mask.fillRect(-NIGHT_MASK_PAD,-NIGHT_MASK_PAD,D.viewWidth+NIGHT_MASK_PAD*2,D.viewHeight+NIGHT_MASK_PAD*2);mask.globalAlpha=1;
+ // Darker frame edges give the lit centre depth; a flat veil reads as fog laid over the scene.
+ if(D.dimensionTheme==='forest'){const cx=D.viewWidth/2,cy=D.viewHeight/2,edge=Math.hypot(cx,cy),vig=mask.createRadialGradient(cx,cy,edge*.42,cx,cy,edge*1.05);vig.addColorStop(0,'rgba(4,6,4,0)');vig.addColorStop(1,`rgba(4,6,4,${(.34*nightFactor).toFixed(3)})`);mask.fillStyle=vig;mask.fillRect(-NIGHT_MASK_PAD,-NIGHT_MASK_PAD,D.viewWidth+NIGHT_MASK_PAD*2,D.viewHeight+NIGHT_MASK_PAD*2);}
  mask.globalCompositeOperation='destination-out';
  if(isArrival&&D.arrivalFireIgnition()<1){
   const hearth=D.dimensionList.find(item=>item.id===D.worldDimensionId)?.campfire;

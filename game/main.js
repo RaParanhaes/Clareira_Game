@@ -37,10 +37,7 @@ import { assetScenesFor, createAssetLoader } from './content-assets.mjs';
 import { furnitureVisual,furnitureUse,roomFurnitureBedOccupantDepth,roomFurnitureDepthAnchor,roomFurnitureDrawLayers,roomFurnitureFootprintRadius,roomFurnitureRadius } from './furniture.mjs';
 import { compareSceneDepth } from './depth-order.mjs';
 import { LAIR_MOUTH_PATH_RADIUS, drawLairChest, drawLairMouthLayer, findLairMouthAtPoint, findNearestLairMouth, lairPromptText, lairSceneThings, lairStatusText } from './lair-art.mjs';
-import { DUNGEON_CLIENT_SEED, drawDungeonFrame, parseDungeonClientId } from './dungeon-render.mjs';
-import { createDungeonArt } from './dungeon-art.mjs';
-import { loadDungeonTileset } from './dungeon-tileset.mjs';
-import { generateDungeon } from './dungeon-gen.mjs';
+import { createDungeonClient } from './dungeon-client.mjs';
 import { contentById } from './content-catalog.mjs';
 import { MEDIEVAL_FURNITURE, MEDIEVAL_FURNITURE_CATEGORIES } from './medieval-furniture.mjs';
 import { mergeQueuedState } from './state-inbox.mjs';
@@ -120,7 +117,7 @@ import {
   canPlaceRoomFurniture, roomFurnitureSupport, hasClearInteractionPath, CLEARING_DOOR, getObjectiveText, nearestCollectible, PLAYER_RADIUS, PLAYER_SPEED,
   RESOURCE_NODES, SPAWN, SHELTER_BOUNDS, SHELTER_WALL_CLEARANCE, SPAWN_CAMPFIRE, isPathTile,
   SOLID_TREES, SOLID_WATER, WORLD_CHUNK_SIZE, getFallenTreesInBounds, getSolidTreesInBounds, getTreeGrowthInBounds, getResourcesInBounds, getRocksInBounds, getLakesInBounds,
-  stepPlayer, stepRoomPlayer, WORLD_SIZE, applyWorldDefinition, getWorldDefinition, getRoomLayout, setActiveDungeonLevel,
+  stepPlayer, stepRoomPlayer, WORLD_SIZE, applyWorldDefinition, getWorldDefinition, getRoomLayout,
   DIMENSION_COORDINATE_OFFSET, ROOM_FURNITURE_LIMIT,
   WORLD_TILE_X as BASE_TILE_X, WORLD_TILE_Y as BASE_TILE_Y, createWorldMapOverview, worldGeometryCacheKey,
 } from './world.mjs';
@@ -372,11 +369,9 @@ let recurringLeasesAvailable = false;
 let worldRoomLodgingMode = null;
 let cabinKeys = [], issuedCabinKeys = [], cabinOccupancy = [], propertyListings = [];
 let lairs = [];
-// Masmorra ativa (Covil do Ninho): { dimensionId, level } enquanto a dimensão atual é uma instância dg-ninho-*.
-let dungeonView = null;
-let dungeonArt = null;
-let dungeonTilesetRequest = null;
-const dungeonLevelCache = new Map();
+const dungeonClient = createDungeonClient({
+  createCanvas: (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; },
+});
 const warmedCabinsNearby=new Set();
 let resourceContracts = [];
 let marketQuotes = {};
@@ -2571,7 +2566,7 @@ function connect() {
         ? worldRoomKind === 'lobby' ? roomOwnerName || 'Recepção da Vila'
           : worldRoomKind === 'lodging' ? roomOwnerName || 'Sua hospedagem'
             : roomCanEdit ? 'Seu quarto' : `Quarto de ${roomOwnerName || 'outra pessoa'}`
-        : (message.dimension?.name || dungeonTitleFor(worldDimensionId) || dimensionList.find(dimension => dimension.id === worldDimensionId)?.name || contentById('place.clearing').label));
+        : (dungeonTitleFor(worldDimensionId) || message.dimension?.name || dimensionList.find(dimension => dimension.id === worldDimensionId)?.name || contentById('place.clearing').label));
       ui.roomBuildTools.hidden = worldLocation !== 'room'||!roomCanEdit;
       ui.worldMapToggle.hidden=worldLocation!=='clearing'||isDungeonScene();mapUi.miniMap.hidden=worldLocation!=='clearing'||isDungeonScene();requestMiniMapRedraw();
         ui.roomBuildToggle.hidden=!roomCanEdit;
@@ -4162,70 +4157,21 @@ function touchLairMouth(lair) {
   else requestWalkPath({ x: lair.mouth.x, y: lair.mouth.y });
 }
 
-// Masmorra (Covil do Ninho). A dimensão dg-ninho-n<N>-<inst> usa a grade gerada da seed, não o terreno do bosque.
-// A seed vem do snapshot (dungeon.seed) ou do padrão do cliente. Entrada e saída são decididas pelo servidor.
-function dungeonLevelFor(seed, level) {
-  const key = `${seed}:${level}`;
-  if (!dungeonLevelCache.has(key)) dungeonLevelCache.set(key, generateDungeon(seed, level));
-  return dungeonLevelCache.get(key);
-}
+function syncDungeonDimension(dimensionId, snapshotDungeon) { dungeonClient.sync(dimensionId, snapshotDungeon); }
+function dungeonTitleFor(dimensionId) { return dungeonClient.title(dimensionId); }
 
-function ensureDungeonArt() {
-  if (dungeonArt || dungeonTilesetRequest) return;
-  dungeonTilesetRequest = loadDungeonTileset().then(tileset => {
-    dungeonArt = createDungeonArt({
-      createCanvas: (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; },
-      tileset,
-    });
-    dungeonTilesetRequest = null;
-  }).catch(error => {
-    dungeonTilesetRequest = null;
-    console.warn('Arte da masmorra não carregou; a cena fica preta até a próxima entrada.', error);
-  });
-}
-
-// Chamado a cada snapshot: liga a grade da masmorra ao entrar e desliga ao sair (colisão volta ao terreno).
-function syncDungeonDimension(dimensionId, snapshotDungeon) {
-  const parsed = parseDungeonClientId(dimensionId);
-  if (!parsed) {
-    if (dungeonView) { dungeonView = null; setActiveDungeonLevel(null); }
-    return;
-  }
-  if (dungeonView?.dimensionId === dimensionId) return;
-  const seed = Number.isInteger(snapshotDungeon?.seed) ? snapshotDungeon.seed : DUNGEON_CLIENT_SEED;
-  const level = dungeonLevelFor(seed, parsed.level);
-  dungeonView = { dimensionId, level };
-  setActiveDungeonLevel(level);
-  ensureDungeonArt();
-}
-
-// Título do HUD da masmorra (as instâncias não estão em dimensionList; o nome vem do id).
-function dungeonTitleFor(dimensionId) {
-  const parsed = parseDungeonClientId(dimensionId);
-  return parsed ? `Covil do Ninho · Nível ${parsed.level}` : null;
-}
-
-// Passagem de saída da masmorra (exit da grade). Fica fora de nearestInteractionDoor: ali o gatilho do cliente
-// começa a capa de transição, e a saída só deve pedir ao servidor quando o jogador apertar E.
 function nearestDungeonExit() {
-  if (!isDungeonScene()) return null;
-  const { x, y } = dungeonView.level.exit;
-  const distance = Math.hypot(localPosition.x - (x + .5), localPosition.y - (y + .5));
-  return distance <= 1.5 ? { x: x + .5, y: y + .5, distance } : null;
+  return isDungeonScene() ? dungeonClient.exit(worldDimensionId, localPosition) : null;
 }
 
 function isDungeonScene() {
-  return worldLocation === 'clearing' && Boolean(dungeonView) && worldDimensionId === dungeonView.dimensionId;
+  return worldLocation === 'clearing' && dungeonClient.isActive(worldDimensionId);
 }
 
-// Cena da masmorra: piso, paredes, tochas, luz e escuridão do renderer; o avatar entra na ordem de profundidade.
 function drawDungeonScene(self, nameplateIds, pickupFrame) {
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, viewWidth, viewHeight);
-  if (!dungeonArt || !dungeonView) return;
-  drawDungeonFrame(ctx, {
-    grid: dungeonView.level, camera, viewport: { width: viewWidth, height: viewHeight },
-    player: localRenderPosition, time: worldClock, reducedMotion, art: dungeonArt,
+  dungeonClient.draw(ctx, {
+    dimensionId: worldDimensionId, camera, viewport: { width: viewWidth, height: viewHeight },
+    player: localRenderPosition, time: worldClock, reducedMotion,
     drawActor: () => drawAvatar(self, worldClock, true, false, pickupFrame, nameplateIds),
   });
 }

@@ -694,6 +694,14 @@ export function createPrototypeServer({
   };
   // Só para testes (opção testHooks): posiciona o jogador na grade e lê o que o servidor guardou dele.
   const testingHooks = {
+    placeNearLairMouth(playerId) {
+      const player = [...peers.values()].find(entry => entry.id === playerId);
+      if (!player || player.location !== 'clearing' || (player.dimensionId || 'surface') !== 'surface') return false;
+      player.position = { ...player.position, x: LAIR_MOUTH_DOOR.x - 2.1, y: LAIR_MOUTH_DOOR.y, vx: 0, vy: 0 };
+      indexPlayer(player.socket, player);
+      broadcast(false);
+      return true;
+    },
     placeInDungeon(playerId, point) {
       const player = [...peers.values()].find(entry => entry.id === playerId);
       if (!player || !isDungeonDimensionId(player.dimensionId)) return false;
@@ -703,7 +711,9 @@ export function createPrototypeServer({
     },
     playerState(playerId) {
       const player = [...peers.values()].find(entry => entry.id === playerId);
-      return player ? { dimensionId: player.dimensionId, location: player.location, respawnPoint: player.respawnPoint ?? null } : null;
+      return player ? { dimensionId: player.dimensionId, location: player.location, respawnPoint: player.respawnPoint ?? null,
+        position: { ...player.position }, input: { ...(player.input || {}) }, moving: player.moving === true,
+        doorTrigger: { ...(player.doorTrigger || {}) } } : null;
     },
     // Quem ocupa a vaga de uma instância (chaves de sessão); null se a instância não existe.
     dungeonInstancePlayers(dimensionId) {
@@ -800,7 +810,7 @@ export function createPrototypeServer({
     catalogs.set(catalogKey, doors);
     return doors;
   };
-  const stepPlayerDoor = (player, at = performance.now()) => {
+  const stepPlayerDoor = (player, at = performance.now(), movement = null) => {
     if (player.location === 'room' && player.staffRoomReturn) return;
     if (player.doorUsePending || player.pendingDimensionTravel
         || activeDimensionTransits.has(player.pendingDimensionTransitId) || player.dimensionTransit) return;
@@ -831,7 +841,8 @@ export function createPrototypeServer({
       location: player.location, roomLayout,
       furniture: player.location === 'room' ? player.roomFurniture : undefined,
     });
-    const doorInput = player.input?.x || player.input?.y ? player.input : player.roomDoorDirection || { x: 0, y: 0 };
+    const doorInput = movement?.x || movement?.y ? movement
+      : player.input?.x || player.input?.y ? player.input : player.roomDoorDirection || { x: 0, y: 0 };
     const mustFaceDoor = !roomLayout || roomLayout.elevation !== 'flat'
       || player.roomKind === 'lodging' && isCabin(player.roomBuildingId);
     const doorDirectionDot = doorInput.x * (door.x - player.position.x) + doorInput.y * (door.y - player.position.y);
@@ -4649,7 +4660,10 @@ export function createPrototypeServer({
         }
       }
       player.moving = player.position.x !== previous.x || player.position.y !== previous.y;
-      stepPlayerDoor(player);
+      stepPlayerDoor(player, performance.now(), {
+        x: player.position.x - previous.x,
+        y: player.position.y - previous.y,
+      });
       if(player.location==='clearing'&&isPersonalArrivalDimensionId(player.dimensionId)){
         if(player.arrivalTutorial?.phase==='welcome'){
           const guide=dimensionById(dimensions,player.dimensionId).guide;

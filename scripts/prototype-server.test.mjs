@@ -113,9 +113,20 @@ test('door proximity enters and exits the reception, then rearms only after leav
   let state = await waitFor(player, message => message.type === 'state' && message.players.length === 1,
     2500, 'door test player');
   const id = state.players[0].id;
-  player.send(JSON.stringify({ type: 'input', ...directionToward(state.players[0], door) }));
-  state = await waitFor(player, message => message.type === 'state'
-    && message.players.find(item => item.id === id)?.location === 'room', 5000, 'automatic reception entry');
+  let entrySeq = 0;
+  for (let attempt = 0; attempt < 8 && state.players.find(item => item.id === id)?.location === 'clearing'; attempt++) {
+    const direction = directionToward(state.players.find(item => item.id === id), door);
+    const firstSeq = entrySeq + 1;
+    entrySeq += 12;
+    const nextState = waitFor(player, message => message.type === 'state'
+      && (message.players.find(item => item.id === id)?.location === 'room'
+        || message.players.find(item => item.id === id)?.inputSeq >= entrySeq), 2500, 'sequenced door approach');
+    player.send(JSON.stringify({ type: 'input', location: 'clearing', commands: Array.from({ length: 12 }, (_, index) => ({
+      seq: firstSeq + index, ...direction, motion: true,
+    })) }));
+    state = await nextState;
+  }
+  assert.equal(state.players.find(item => item.id === id)?.location, 'room', 'automatic reception entry');
   assert.equal(state.roomKind, 'lobby');
   player.send(JSON.stringify({ type: 'input', x: 0, y: 0 }));
   await new Promise(resolve => setTimeout(resolve, 1900));

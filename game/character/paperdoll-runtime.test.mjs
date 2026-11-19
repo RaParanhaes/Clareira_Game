@@ -126,3 +126,59 @@ test('o preload padrão cobre só parado e andar e avisa o ouvinte', async () =>
   assert.equal(ready[0].failed, 0);
   assert.ok(calls.length > 0 && calls.every(url => !url.includes('golpear')), 'golpear não foi carregado');
 });
+
+test('só o traje camponês desenha; armadura, manto e aparência legada decidem pelo alias', async () => {
+  const { runtime, ctx } = setup();
+  await runtime.preload(DEFAULT_APPEARANCE);
+  const info = { action: 'idle', facing: 'south' };
+  for (const outfitId of ['outfit.commoner', 'outfit.white-base']) {
+    assert.equal(runtime.tryDraw(ctx, 80, 120, { ...DEFAULT_APPEARANCE, outfitId }, info), true, outfitId);
+  }
+  for (const outfitId of ['outfit.dark-armor', 'outfit.light-armor', 'outfit.mage-robe', 'outfit.dimension-coat']) {
+    assert.equal(runtime.tryDraw(ctx, 80, 120, { ...DEFAULT_APPEARANCE, outfitId }, info), false, outfitId);
+  }
+  const { outfitId: _omit, ...legacy } = DEFAULT_APPEARANCE;
+  assert.equal(runtime.tryDraw(ctx, 80, 120, { ...legacy, outfit: 'white-base' }, info), true, 'legado camponês');
+  assert.equal(runtime.tryDraw(ctx, 80, 120, { ...legacy, outfit: 'dark-armor' }, info), false, 'legado armadura');
+  assert.equal(await runtime.preload({ ...DEFAULT_APPEARANCE, outfitId: 'outfit.dark-armor' }), null);
+});
+
+test('manifest com falha tenta de novo só depois do intervalo, sem martelar a rede', async () => {
+  let clock = 1000;
+  let loads = 0;
+  const { createCanvas } = createFakeCanvasFactory();
+  const runtime = createPaperdollRuntime({
+    enabled: true,
+    loadManifest: async () => { loads++; if (loads === 1) throw new Error('rede'); return { manifest, baseUrl: PAPERDOLL_BASE_URL }; },
+    loadImage: createDiskImageLoader({ calls: [] }),
+    createCanvas,
+    now: () => clock,
+    retryMs: 5000,
+    onError: () => {},
+  });
+  const ctx = createFakeCanvasFactory().createCanvas(160, 160).getContext('2d');
+  const info = { action: 'idle', facing: 'south' };
+  assert.equal(runtime.tryDraw(ctx, 80, 120, DEFAULT_APPEARANCE, info), false);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(runtime.state(), 'failed');
+  for (let i = 0; i < 20; i++) runtime.tryDraw(ctx, 80, 120, DEFAULT_APPEARANCE, info);
+  clock += 4999;
+  runtime.tryDraw(ctx, 80, 120, DEFAULT_APPEARANCE, info);
+  assert.equal(loads, 1, 'sem nova tentativa antes de 5000 ms');
+  clock += 1;
+  assert.equal(runtime.tryDraw(ctx, 80, 120, DEFAULT_APPEARANCE, info), false);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(loads, 2, 'nova tentativa depois do intervalo');
+  await runtime.preload(DEFAULT_APPEARANCE);
+  assert.equal(runtime.state(), 'ready');
+  assert.equal(runtime.tryDraw(ctx, 80, 120, DEFAULT_APPEARANCE, info), true);
+});
+
+test('preload padrão carrega parado E andar (sem troca de estilo no primeiro passo)', async () => {
+  const { runtime, ctx } = setup();
+  await runtime.preload(DEFAULT_APPEARANCE);
+  assert.equal(runtime.tryDraw(ctx, 80, 120, DEFAULT_APPEARANCE, { action: 'idle', facing: 'south' }), true);
+  for (const facing of manifest.facings) {
+    assert.equal(runtime.tryDraw(ctx, 80, 120, DEFAULT_APPEARANCE, { action: 'walk', facing, phase: 0.3, moving: true }), true, `andar ${facing}`);
+  }
+});

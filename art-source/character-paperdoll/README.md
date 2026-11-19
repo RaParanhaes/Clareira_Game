@@ -39,14 +39,16 @@ Ordem de desenho: `ferramenta_tras`, `corpo`, `calca_botas`, `tunica`, `gorro`, 
 
    Cada processo também grava `mao_anchors_<TAG>.json` em `OUT`; a união deles é o `mao_anchors.json` deste diretório (o `merge_anchors.py` da rodada A7 faz a união e fica nas evidências).
 
+   **Reprodutibilidade:** o build dos atlas depende da pasta de quadros passada em `--frames`, que não está no repositório. Sem rodar o Blender de novo (comando acima, 115 a 170 s por processo, `timeout 300`), os atlas só se reproduzem a partir de uma cópia dessa pasta; os atlas versionados em `game/art/` são o resultado aprovado.
+
 2. Montar os atlas, o manifest e conferir as camadas:
 
    ```sh
-   npm run art:paperdoll:build
+   npm run art:paperdoll:build -- --frames /caminho/frames
    # ou: node scripts/build-paperdoll-atlases.mjs --frames /caminho/frames --out game/art/avatar-frames/character-paperdoll-v1
    ```
 
-   O build (15 s, Node puro, sem dependências) falha se algum quadro não for 96x96, se houver alfa parcial, se existir cor fora das rampas do manifest ou se a soma das camadas diferir da `composta`.
+   O script `art:paperdoll:build` não tem caminho fixo: sem `--frames` falha com mensagem clara. O build (15 s, Node puro, sem dependências) falha se algum quadro não for 96x96, se houver alfa parcial, se existir cor fora das rampas do manifest ou se a soma das camadas diferir da `composta`.
 
 ## Conferência da soma das camadas
 

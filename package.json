@@ -26,7 +26,7 @@
     "art:cottage:check": "node scripts/check-cottage-art.mjs",
     "art:fern:build": "blender --background --factory-startup --threads 4 --python-exit-code 1 --python scripts/blender/build-fern-cabin.py",
     "art:fern:check": "node scripts/check-fern-art.mjs",
-    "art:paperdoll:build": "node scripts/build-paperdoll-atlases.mjs --frames \"$HOME/clareira-evidencias/2026-11-17-character-teste-camadas/A7-blender/frames\" --out game/art/avatar-frames/character-paperdoll-v1",
+    "art:paperdoll:build": "node scripts/build-paperdoll-atlases.mjs --out game/art/avatar-frames/character-paperdoll-v1",
     "forest:inventory": "node scripts/export-initial-forest-inventory.mjs"
   },
   "dependencies": {

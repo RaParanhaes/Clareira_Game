@@ -10,6 +10,18 @@ import { createPaperdollRenderer } from './paperdoll-renderer.mjs';
 export const PAPERDOLL_FLAG_KEY = 'clareira.avatar';
 export const PAPERDOLL_FLAG_VALUE = 'paperdoll';
 // Só as animações que o jogo usa hoje; `golpear` fica fora até existir estado de ferramenta no jogo.
+// Só o traje camponês tem arte em camadas; armadura, manto etc. caem no desenho antigo.
+export const PAPERDOLL_OUTFIT_IDS = Object.freeze(['outfit.commoner', 'outfit.white-base']);
+export const PAPERDOLL_MANIFEST_RETRY_MS = 5000;
+
+/** Aparência sem outfitId usa o alias legado `outfit` ('white-base'); sem nenhum dos dois vale o padrão (camponês). */
+export function isPaperdollOutfit(appearance) {
+  if (!appearance) return false;
+  const id = typeof appearance.outfitId === 'string' ? appearance.outfitId
+    : typeof appearance.outfit === 'string' ? `outfit.${appearance.outfit}` : 'outfit.white-base';
+  return PAPERDOLL_OUTFIT_IDS.includes(id);
+}
+
 export const PAPERDOLL_DEFAULT_PRELOAD = Object.freeze(['parado', 'andar']);
 
 /** URL (?avatar=) vence o armazenamento; valor desconhecido na URL não liga nada. */
@@ -75,6 +87,7 @@ export function createPaperdollRuntime({
   createCanvas = browserCanvas,
   now = () => Date.now(),
   onReady = null,
+  retryMs = PAPERDOLL_MANIFEST_RETRY_MS,
   onError = error => console.warn('Personagem em camadas indisponível; usando o desenho clássico.', error),
 } = {}) {
   let state = enabled ? 'idle' : 'off'; // off | idle | loading | ready | failed
@@ -82,9 +95,12 @@ export function createPaperdollRuntime({
   let manifestPromise = null;
   const preloaded = new Set();
   let lastError = null;
+  let failedAt = 0;
 
   function ensureRenderer() {
     if (!enabled || manifestPromise) return manifestPromise;
+    // Falha antiga: tenta de novo só depois de retryMs (relógio injetável), nunca a cada quadro.
+    if (state === 'failed' && now() - failedAt < retryMs) return Promise.resolve(null);
     state = 'loading';
     manifestPromise = Promise.resolve().then(loadManifest).then(({ manifest, baseUrl }) => {
       renderer = createPaperdollRenderer({ manifest, baseUrl, loadImage, createCanvas, now });
@@ -92,6 +108,8 @@ export function createPaperdollRuntime({
       return renderer;
     }).catch(error => {
       state = 'failed';
+      failedAt = now();
+      manifestPromise = null;
       lastError = error;
       try { onError(error); } catch { /* o aviso não pode derrubar o jogo */ }
       return null;
@@ -100,7 +118,7 @@ export function createPaperdollRuntime({
   }
 
   async function preload(appearance, { anims = PAPERDOLL_DEFAULT_PRELOAD } = {}) {
-    if (!enabled) return null;
+    if (!enabled || !isPaperdollOutfit(appearance)) return null;
     const active = await ensureRenderer();
     if (!active || !appearance) return null;
     const result = await active.preload(appearance, { anims });
@@ -109,7 +127,7 @@ export function createPaperdollRuntime({
   }
 
   function tryDraw(context, x, y, appearance, info = {}) {
-    if (!enabled || !context || !appearance) return false;
+    if (!enabled || !context || !appearance || !isPaperdollOutfit(appearance)) return false;
     if (!renderer) {
       void ensureRenderer();
       return false;

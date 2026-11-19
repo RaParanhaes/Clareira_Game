@@ -117,7 +117,8 @@ function isEmpty(data) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.frames || !args.out) {
-    throw new Error('Uso: build-paperdoll-atlases.mjs --frames <pasta> --out <pasta> [--anchors <json>]');
+    throw new Error('Faltam argumentos. Uso: build-paperdoll-atlases.mjs --frames <pasta com os PNG do Blender> --out <pasta> [--anchors <json>]. '
+      + 'Com npm: npm run art:paperdoll:build -- --frames <pasta>. Os quadros vêm do Blender (veja art-source/character-paperdoll/README.md).');
   }
   const framesDir = path.resolve(args.frames);
   const outDir = path.resolve(args.out);

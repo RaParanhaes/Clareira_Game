@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { generateDungeon } from './dungeon-gen.mjs';
 import { WILDLIFE_SPECIES } from './wildlife.mjs';
 import {
-  DUNGEON_RULES, DUNGEON_SPECIES, scaleSpecies, dropsFor, dropFactorFor, recordRoomClear,
+  DUNGEON_RULES, DUNGEON_SPECIES, scaleSpecies, dropsFor, groupOf,
   planDungeonSpawns, planRespawn, speciesIdsForLevel,
 } from './dungeon-bestiary.mjs';
 
@@ -49,6 +49,14 @@ test('cinco espécies, todas com forms existentes em wildlife.mjs e sem moeda no
   }
 });
 
+test('ids da masmorra seguem a §4 e não colidem com a fauna de wildlife.mjs', () => {
+  assert.deepEqual(DUNGEON_SPECIES.map(s => s.id), ['stoneRat', 'caveBat', 'blindSnake', 'gloomWolf', 'coldWraith']);
+  const wildIds = new Set(WILDLIFE_SPECIES.map(s => s.id));
+  for (const species of DUNGEON_SPECIES) {
+    assert.ok(!wildIds.has(species.id), `${species.id} não colide com a fauna`);
+  }
+});
+
 test('vida e dano crescem com a profundidade, de forma estrita do nível 1 ao 5', () => {
   for (const species of DUNGEON_SPECIES) {
     const levels = [1, 2, 3, 4, 5].map(n => scaleSpecies(species.id, n));
@@ -60,13 +68,13 @@ test('vida e dano crescem com a profundidade, de forma estrita do nível 1 ao 5'
     assert.ok(levels[4].health > levels[0].health, `${species.id} vida cresce`);
     assert.ok(levels[4].damage > levels[0].damage, `${species.id} dano cresce`);
   }
-  assert.deepEqual(scaleSpecies('rat', 1), { id: 'rat', level: 1, behavior: 'swarm', health: 2, force: 0.55, damage: 2, reach: 0.57, cooldownMs: 1200, speed: 2.8, wakeRadius: 7, leash: 8 });
+  assert.deepEqual(scaleSpecies('stoneRat', 1), { id: 'stoneRat', level: 1, behavior: 'swarm', health: 2, force: 0.55, damage: 2, reach: 0.57, cooldownMs: 1200, speed: 2.8, wakeRadius: 7, leash: 8 });
 });
 
 test('a sombra só aparece no nível 3 e o lobo no 2', () => {
-  assert.deepEqual(speciesIdsForLevel(1), ['rat', 'bat', 'snake']);
-  assert.deepEqual(speciesIdsForLevel(2), ['rat', 'bat', 'snake', 'wolf']);
-  assert.ok(speciesIdsForLevel(3).includes('wraith'));
+  assert.deepEqual(speciesIdsForLevel(1), ['stoneRat', 'caveBat', 'blindSnake']);
+  assert.deepEqual(speciesIdsForLevel(2), ['stoneRat', 'caveBat', 'blindSnake', 'gloomWolf']);
+  assert.ok(speciesIdsForLevel(3).includes('coldWraith'));
 });
 
 test('determinismo: mesma seed e nível dão o mesmo plano; seed diferente muda o plano', () => {
@@ -119,37 +127,51 @@ test('nada nasce na arena, na sala inicial ou a menos de 14 passos da entrada', 
 
 test('o plano só usa espécies liberadas no nível', () => {
   const level1 = spawnPlan(SEEDS[2], 1);
-  assert.ok(level1.initial.every(e => ['rat', 'bat', 'snake'].includes(e.species)));
+  assert.ok(level1.initial.every(e => ['stoneRat', 'caveBat', 'blindSnake'].includes(e.species)));
   const level3 = spawnPlan(SEEDS[2], 3);
   assert.ok(level3.initial.every(e => speciesIdsForLevel(3).includes(e.species)));
 });
 
-test('anti-farm: a mesma sala limpa de novo no período perde drops', () => {
-  assert.equal(dropFactorFor(0), 1);
-  assert.equal(dropFactorFor(1), 0.5);
-  assert.equal(dropFactorFor(2), 0.25);
-  assert.equal(dropFactorFor(9), 0);
-  let history = {};
-  const factors = [];
-  for (let i = 0; i < 5; i++) {
-    const step = recordRoomClear(history, 'r3', 1000 + i * MIN);
-    history = step.history;
-    factors.push(step.dropFactor);
+test('composição: ratos nascem em bandos de 3 a 4, lobos em duplas, os demais sozinhos', () => {
+  let sawRatBand = false;
+  let sawWolfPair = false;
+  for (const seed of SEEDS) {
+    for (const level of LEVELS) {
+      const plan = spawnPlan(seed, level);
+      for (const spawner of plan.spawners) {
+        const members = plan.initial.filter(e => e.roomId === spawner.roomId);
+        const count = id => members.filter(e => e.species === id).length;
+        const rats = count('stoneRat');
+        const wolves = count('gloomWolf');
+        assert.ok(rats === 0 || (rats >= 3 && rats <= 4), `bando de ratos em ${spawner.roomId}: ${rats}`);
+        assert.equal(wolves % 2, 0, `lobos em duplas em ${spawner.roomId}`);
+        if (rats) sawRatBand = true;
+        if (wolves) sawWolfPair = true;
+        for (const entry of members) {
+          if (entry.species === 'stoneRat' || entry.species === 'gloomWolf') continue;
+          assert.ok(['caveBat', 'blindSnake', 'coldWraith'].includes(entry.species), entry.species);
+        }
+      }
+    }
   }
-  assert.deepEqual(factors, [1, 0.5, 0.25, 0, 0]);
-  assert.deepEqual(dropsFor('rat', 0.5), [{ item: 'bone', chance: 0.2 }]);
-  assert.deepEqual(dropsFor('rat', 0), [{ item: 'bone', chance: 0 }]);
+  assert.ok(sawRatBand, 'algum plano tem bando de ratos');
+  assert.ok(sawWolfPair, 'algum plano tem dupla de lobos');
 });
 
-test('anti-farm: fora da janela de 10 minutos o drop volta ao normal e outra sala não é afetada', () => {
-  let history = {};
-  history = recordRoomClear(history, 'r1', 0).history;
-  history = recordRoomClear(history, 'r1', MIN).history;
-  const other = recordRoomClear(history, 'r2', 2 * MIN);
-  assert.equal(other.dropFactor, 1, 'outra sala começa cheia');
-  const later = recordRoomClear(history, 'r1', DUNGEON_RULES.antiFarmWindowMs + 2 * MIN);
-  assert.equal(later.dropFactor, 1, 'janela expirada');
-  assert.equal(history.r1.length, 2, 'histórico original não foi mutado');
+test('drop fixo: osso em 40% em toda espécie, sem redução de anti-farm', () => {
+  for (const species of DUNGEON_SPECIES) {
+    assert.deepEqual(dropsFor(species), [{ item: 'bone', chance: 0.4 }], species.id);
+  }
+  assert.equal(groupOf('stoneRat').min, 3);
+  assert.equal(groupOf('gloomWolf').min, 2);
+});
+
+test('anti-farm só pelo reaparecimento: sala limpa de novo espera 5 min e segue no teto da sala', () => {
+  const spawner = spawnPlan(SEEDS[0], 1).spawners.find(s => s.spawnPoints.length > 0);
+  const base = { spawner, aliveInRoom: 0, aliveInInstance: 0, players: [{ x: 0, y: 0 }], now: 20 * MIN, lastRespawnAt: null };
+  assert.equal(planRespawn({ ...base, lastRoomDeathAt: 20 * MIN - MIN }).reason, 'sala-recente');
+  assert.equal(planRespawn({ ...base, lastRoomDeathAt: 20 * MIN - 6 * MIN }).ok, true);
+  assert.equal(planRespawn({ ...base, aliveInRoom: spawner.max }).reason, 'sala-cheia');
 });
 
 test('reaparecimento: só com sala abaixo do teto, intervalo vencido e sem jogador por perto', () => {

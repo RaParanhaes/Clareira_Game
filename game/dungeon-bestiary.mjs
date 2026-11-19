@@ -13,7 +13,6 @@ export const DUNGEON_RULES = Object.freeze({
   playerClearanceTiles: 14,
   entranceSafeTiles: 14,
   antiFarmWindowMs: 10 * MINUTE_MS,
-  dropFactors: Object.freeze([1, 0.5, 0.25, 0]),
   spawnPointsPerRoom: 12,
 });
 
@@ -27,35 +26,37 @@ export const DUNGEON_SCALE = Object.freeze({
   speedCap: 0.4,
 });
 
+// Drop fixo, sem redução por anti-farm (ARQUITETURA §4): osso 40% em todo monstro comum.
 const BASE_DROP = Object.freeze({ item: 'bone', chance: 0.4 });
 
+// group: tamanho do bando que nasce junto numa sala (sorteado entre min e max, por seed).
 export const DUNGEON_SPECIES = Object.freeze([
   {
-    id: 'rat', label: 'Rato-da-pedra', form: 'rat', behavior: 'swarm', minLevel: 1,
+    id: 'stoneRat', label: 'Rato-da-pedra', form: 'rat', behavior: 'swarm', minLevel: 1, group: { min: 3, max: 4 },
     baseHealth: 2, baseForce: 0.55, reach: 0.57, cooldownMs: 1200, baseSpeed: 2.8,
     wakeRadius: 7, leash: 8,
     colors: { body: '#5d5862', shadow: '#2c2a31', light: '#837b86', accent: '#a7948f', mark: '#1e1d22' },
   },
   {
-    id: 'bat', label: 'Morcego-da-gruta', form: 'raptor', behavior: 'flyer', minLevel: 1,
+    id: 'caveBat', label: 'Morcego-da-gruta', form: 'raptor', behavior: 'flyer', minLevel: 1, group: { min: 1, max: 1 },
     baseHealth: 2, baseForce: 0.75, reach: 0.8, cooldownMs: 1400, baseSpeed: 5.0,
     wakeRadius: 9, leash: 12,
     colors: { body: '#3e3a4c', shadow: '#24212d', light: '#6c6682', accent: '#b7a6c9', mark: '#171520' },
   },
   {
-    id: 'snake', label: 'Cobra-cega', form: 'snake', behavior: 'ambush', minLevel: 1,
+    id: 'blindSnake', label: 'Cobra-cega', form: 'snake', behavior: 'ambush', minLevel: 1, group: { min: 1, max: 1 },
     baseHealth: 3, baseForce: 1.0, reach: 0.82, cooldownMs: 1700, baseSpeed: 1.7,
     wakeRadius: 3, leash: 5,
     colors: { body: '#4f5a48', shadow: '#2a3127', light: '#7a8a70', accent: '#b5ab7a', mark: '#1c221c' },
   },
   {
-    id: 'wolf', label: 'Lobo-de-gruta', form: 'wolf', behavior: 'pack', minLevel: 2,
+    id: 'gloomWolf', label: 'Lobo-de-gruta', form: 'wolf', behavior: 'pack', minLevel: 2, group: { min: 2, max: 2 },
     baseHealth: 5, baseForce: 1.1, reach: 1.2, cooldownMs: 1400, baseSpeed: 4.0,
     wakeRadius: 10, leash: 14,
     colors: { body: '#4b4f56', shadow: '#282b30', light: '#7d838c', accent: '#9aa3ad', mark: '#17191c' },
   },
   {
-    id: 'wraith', label: 'Sombra fria', form: 'ashWraith', behavior: 'stalker', minLevel: 3,
+    id: 'coldWraith', label: 'Sombra fria', form: 'ashWraith', behavior: 'stalker', minLevel: 3, group: { min: 1, max: 1 },
     baseHealth: 8, baseForce: 1.5, reach: 1.25, cooldownMs: 1700, baseSpeed: 3.1,
     wakeRadius: 6, leash: 10,
     colors: { body: '#3b4c58', shadow: '#1f2a33', light: '#6f8c9c', accent: '#b9dbe8', mark: '#132028' },
@@ -90,29 +91,18 @@ export function scaleSpecies(speciesOrId, level) {
   };
 }
 
-// Drops sem moeda. O fator vem de dropFactorFor (anti-farm); 1 = normal.
-export function dropsFor(speciesOrId, dropFactor = 1) {
+// Drops da espécie. Sempre iguais: o anti-farm não esconde drop; ele só limita reaparecimento (planRespawn).
+export function dropsFor(speciesOrId) {
   const species = typeof speciesOrId === 'string' ? DUNGEON_SPECIES_BY_ID.get(speciesOrId) : speciesOrId;
   if (!species) throw new Error(`espécie desconhecida na masmorra: ${speciesOrId}`);
-  const factor = Math.min(1, Math.max(0, dropFactor));
-  return species.drops.map(drop => ({ item: drop.item, chance: round3(drop.chance * factor) }));
+  return species.drops.map(drop => ({ item: drop.item, chance: drop.chance }));
 }
 
-// Anti-farm: quantas limpezas recentes da mesma sala já existem (na janela) define o fator de drop.
-export function dropFactorFor(recentClears) {
-  const factors = DUNGEON_RULES.dropFactors;
-  return factors[Math.min(Math.max(0, recentClears), factors.length - 1)];
-}
-
-// Registra uma limpeza (sala sem monstros vivos depois de ter tido). Devolve novo histórico e o fator desta limpeza.
-// Não muta o histórico recebido.
-export function recordRoomClear(history = {}, roomId, now, windowMs = DUNGEON_RULES.antiFarmWindowMs) {
-  const previous = (history[roomId] || []).filter(at => now - at < windowMs && now >= at);
-  const dropFactor = dropFactorFor(previous.length);
-  return {
-    history: { ...history, [roomId]: [...previous, now] },
-    dropFactor,
-  };
+// Tamanho do bando de uma espécie (min e max).
+export function groupOf(speciesOrId) {
+  const species = typeof speciesOrId === 'string' ? DUNGEON_SPECIES_BY_ID.get(speciesOrId) : speciesOrId;
+  if (!species) throw new Error(`espécie desconhecida na masmorra: ${speciesOrId}`);
+  return species.group;
 }
 
 // Planejamento inicial: quem nasce onde, a partir do nível gerado (dungeon-gen.mjs).
@@ -149,19 +139,32 @@ export function planDungeonSpawns(dungeon) {
     const max = Math.min(DUNGEON_RULES.roomMaxAlive, 1 + Math.floor((room.w * room.h) / 60) + (level >= 2 ? 1 : 0));
     const spawnPoints = shuffle(candidates, rand).slice(0, DUNGEON_RULES.spawnPointsPerRoom);
     const wanted = Math.min(spawnPoints.length, 1 + Math.floor(rand() * max));
-    plan.spawners.push({ roomId, kind: room.kind, max, respawnMs: DUNGEON_RULES.respawnMs, species: pool, spawnPoints });
-    rooms2.push({ roomId, spawnPoints, wanted, placed: 0 });
+    // Só espécies cujo bando cabe no teto da sala (bando de ratos não entra numa sala de 2).
+    const fit = pool.filter(id => groupOf(id).min <= max);
+    plan.spawners.push({ roomId, kind: room.kind, max, respawnMs: DUNGEON_RULES.respawnMs, species: fit, spawnPoints });
+    rooms2.push({ roomId, spawnPoints, units: composeRoom(wanted, fit, rand), used: new Set(), nextUnit: 0 });
   });
 
-  for (let pass = 0; pass < DUNGEON_RULES.roomMaxAlive; pass++) {
+  // Passo 2: cada passada põe o próximo bando inteiro de cada sala, em volta de um ponto âncora.
+  // Bando que não cabe no teto da instância espera; o resto da sala segue.
+  let progress = true;
+  while (progress) {
+    progress = false;
     for (const room of rooms2) {
-      if (total >= DUNGEON_RULES.instanceMaxAlive) break;
-      if (room.placed >= room.wanted || room.placed >= room.spawnPoints.length) continue;
-      const point = room.spawnPoints[room.placed];
-      const species = pool[Math.floor(rand() * pool.length)];
-      plan.initial.push({ roomId: room.roomId, species, x: point.x, y: point.y });
-      room.placed++;
-      total++;
+      const unit = room.units[room.nextUnit];
+      if (!unit || total + unit.size > DUNGEON_RULES.instanceMaxAlive) continue;
+      const free = room.spawnPoints.filter(p => !room.used.has(`${p.x},${p.y}`));
+      const anchor = free[0];
+      const picks = free
+        .sort((a, b) => dist2(a, anchor) - dist2(b, anchor) || a.y - b.y || a.x - b.x)
+        .slice(0, unit.size);
+      for (const point of picks) {
+        room.used.add(`${point.x},${point.y}`);
+        plan.initial.push({ roomId: room.roomId, species: unit.species, x: point.x, y: point.y });
+      }
+      total += unit.size;
+      room.nextUnit++;
+      progress = true;
     }
   }
 
@@ -206,6 +209,28 @@ export function distancesFrom(dungeon, origin) {
     }
   }
   return dist;
+}
+
+// Monta os bandos de uma sala até `wanted` monstros. Cada bando tem tamanho sorteado entre min e max da espécie
+// e só entra se couber no que falta. Sempre há espécie de bando 1, então a sala fecha no `wanted`.
+function composeRoom(wanted, pool, rand) {
+  const units = [];
+  let left = wanted;
+  while (left > 0) {
+    const options = pool.filter(id => groupOf(id).min <= left);
+    if (options.length === 0) break;
+    const species = options[Math.floor(rand() * options.length)];
+    const { min, max } = groupOf(species);
+    const size = Math.min(left, min + Math.floor(rand() * (max - min + 1)));
+    units.push({ species, size });
+    left -= size;
+  }
+  return units;
+}
+
+function dist2(a, b) {
+  const dx = a.x - b.x, dy = a.y - b.y;
+  return dx * dx + dy * dy;
 }
 
 function shuffle(list, rand) {

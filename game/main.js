@@ -135,6 +135,7 @@ import { decayRenderCorrection, reconcilePrediction, renderCorrectionOffset, sho
 import { createSceneArt } from './scene-art.mjs';
 import {centerWorldMapOn,drawWorldMap,hitTestWorldMapMarker,mapMarkers,screenToWorldMap,visibleWorldMapMarkers,worldMapTransform,worldMapDetailBounds,worldMapDetailTiles,WORLD_MAP_MAX_ZOOM} from './world-map.mjs';
 import {AVATAR_SPRITE_SPEC,AVATAR_SPRITE_WORLD_SCALE,advanceAvatarSpritePhase,drawAvatarSprite,getAvatarComposition,getAvatarSpriteVariant,preloadAvatarAnimationActions,preloadAvatarIdle,preloadAvatarSprites,selectAvatarFrame,setAvatarSpritesReadyListener} from './avatar-sprites.mjs';
+import {isPaperdollEnabled,preloadPaperdoll,setPaperdollReadyListener,tryDrawPaperdollAvatar} from './character/paperdoll-runtime.mjs';
 import {advanceAvatarMotion} from './avatar-motion.mjs';
 import {canvasAvatarCacheStats,drawCanvasAvatar} from './canvas-avatar.mjs';
 import { WILDLIFE_BY_ID, wildlifeCollisionBodies, canObserveWildlifeShelter } from './wildlife.mjs';
@@ -2060,6 +2061,7 @@ function prepareSceneAssets(scene, appearance, position=localPosition, dimension
       if(isCurrentLoad())progress.complete('avatar:idle');
     });
     const avatarAssets=preloadAvatarSprites(appearance).then(()=>{if(isCurrentLoad())progress.complete('avatar:sprites')});
+    if(isPaperdollEnabled())void preloadPaperdoll(appearance).catch(()=>{});
     // Emote/action frames are optional: decode them during the first load without blocking entry.
     if(initialWarmup&&!reducedMotion){
       const animationVariant=getAvatarSpriteVariant(appearance);
@@ -2406,6 +2408,7 @@ function connect() {
         if (remoteAvatarVariants.get(player.id) !== avatarVariant) {
           remoteAvatarVariants.set(player.id, avatarVariant);
           void preloadAvatarSprites(player.appearance).catch(() => {});
+          if (isPaperdollEnabled()) void preloadPaperdoll(player.appearance).catch(() => {});
         }
       }
       let samples = remotePositions.get(player.id) || [];
@@ -6628,7 +6631,8 @@ function drawAvatar(player, time, isSelf = false, shareTarget = false, pickupFra
     else drawCanvasAvatar(ctx,px,py,selected,appearance,{animation,smooth:smoothAvatar,surfaceLight});
     drawAvatarSprite(ctx,px,py,selected,appearance,{layerRoles:['aura-front'],smooth:smoothAvatar});
   };
-  const drawBody=()=>{if(!drawAvatarSprite(ctx,px,py,selected,appearance,{smooth:smoothAvatar,surfaceLight}))drawCanvasFallback();};
+  const paperdollInfo=isPaperdollEnabled()?{action:selected.action,facing,phase,moving:moving&&!swimming,running:running&&!swimming,reducedMotion,nowMs:Date.now()}:null;
+  const drawBody=()=>{if(paperdollInfo&&tryDrawPaperdollAvatar(ctx,px,py,appearance,paperdollInfo))return;if(!drawAvatarSprite(ctx,px,py,selected,appearance,{smooth:smoothAvatar,surfaceLight}))drawCanvasFallback();};
   if(rimSource&&!pose.lying&&!swimming)drawActorRimLight(px,py,rimSource,p,drawBody);
   if(pose.lying){
     const skew=Math.atan2(TILE_Y,TILE_X),angles=[-Math.PI/2+skew,Math.PI/2-skew,Math.PI/2+skew,-Math.PI/2-skew];
@@ -9515,7 +9519,7 @@ function renderAppearancePreview(){
  if(previewSpriteKey!==variantKey){previewSpriteKey=variantKey;void preloadAvatarSprites(appearance).catch(error=>console.error('Falha ao carregar a prévia PNG do personagem',error));}
  context.fillStyle='rgba(174,177,158,.22)';context.beginPath();context.ellipse(80,170,22,7,0,0,Math.PI*2);context.fill();
  context.fillStyle='rgba(3,11,20,.55)';context.beginPath();context.ellipse(80,168,12,3,0,0,Math.PI*2);context.fill();
- drawAvatarSprite(context,80,168,selected,appearance,{scale:2});
+ if(!(isPaperdollEnabled()&&tryDrawPaperdollAvatar(context,80,168,appearance,{action:selected.action,facing,phase:0,reducedMotion,scale:2,nowMs:Date.now()})))drawAvatarSprite(context,80,168,selected,appearance,{scale:2});
 }
 function animateAppearancePreview(timestamp){
  if(!appearanceDialog.open){previewFrame=0;return;}
@@ -9530,6 +9534,7 @@ appearanceForm.elements.namedItem('body').addEventListener('change',renderAppear
 appearanceForm.addEventListener('change',renderAppearancePreview);document.querySelector('#appearance-open').addEventListener('click',renderAppearancePreview);
 // The running RAF already draws ready sprites on its next frame.
 setAvatarSpritesReadyListener(()=>{if(appearanceDialog.open)renderAppearancePreview();});
+setPaperdollReadyListener(()=>{if(appearanceDialog.open)renderAppearancePreview();});
 createDraggableHud({
   container: document.querySelector('.canvas-wrap'),
   items: [

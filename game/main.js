@@ -36,7 +36,11 @@ import { FALLEN_TREE_HALF_LENGTH, FALLEN_TREE_HEIGHT, FALLEN_TREE_RADIUS } from 
 import { assetScenesFor, createAssetLoader } from './content-assets.mjs';
 import { furnitureVisual,furnitureUse,roomFurnitureBedOccupantDepth,roomFurnitureDepthAnchor,roomFurnitureDrawLayers,roomFurnitureFootprintRadius,roomFurnitureRadius } from './furniture.mjs';
 import { compareSceneDepth } from './depth-order.mjs';
-import { LAIR_CHEST_PATH_RADIUS, drawLairChest, drawLairMouthLayer, findLairChestAtPoint, findNearestLairChest, lairPromptText, lairSceneThings, lairStatusText } from './lair-art.mjs';
+import { LAIR_MOUTH_PATH_RADIUS, drawLairChest, drawLairMouthLayer, findLairMouthAtPoint, findNearestLairMouth, lairPromptText, lairSceneThings, lairStatusText } from './lair-art.mjs';
+import { DUNGEON_CLIENT_SEED, drawDungeonFrame, parseDungeonClientId } from './dungeon-render.mjs';
+import { createDungeonArt } from './dungeon-art.mjs';
+import { loadDungeonTileset } from './dungeon-tileset.mjs';
+import { generateDungeon } from './dungeon-gen.mjs';
 import { contentById } from './content-catalog.mjs';
 import { MEDIEVAL_FURNITURE, MEDIEVAL_FURNITURE_CATEGORIES } from './medieval-furniture.mjs';
 import { mergeQueuedState } from './state-inbox.mjs';
@@ -116,7 +120,7 @@ import {
   canPlaceRoomFurniture, roomFurnitureSupport, hasClearInteractionPath, CLEARING_DOOR, getObjectiveText, nearestCollectible, PLAYER_RADIUS, PLAYER_SPEED,
   RESOURCE_NODES, SPAWN, SHELTER_BOUNDS, SHELTER_WALL_CLEARANCE, SPAWN_CAMPFIRE, isPathTile,
   SOLID_TREES, SOLID_WATER, WORLD_CHUNK_SIZE, getFallenTreesInBounds, getSolidTreesInBounds, getTreeGrowthInBounds, getResourcesInBounds, getRocksInBounds, getLakesInBounds,
-  stepPlayer, stepRoomPlayer, WORLD_SIZE, applyWorldDefinition, getWorldDefinition, getRoomLayout,
+  stepPlayer, stepRoomPlayer, WORLD_SIZE, applyWorldDefinition, getWorldDefinition, getRoomLayout, setActiveDungeonLevel,
   DIMENSION_COORDINATE_OFFSET, ROOM_FURNITURE_LIMIT,
   WORLD_TILE_X as BASE_TILE_X, WORLD_TILE_Y as BASE_TILE_Y, createWorldMapOverview, worldGeometryCacheKey,
 } from './world.mjs';
@@ -368,6 +372,11 @@ let recurringLeasesAvailable = false;
 let worldRoomLodgingMode = null;
 let cabinKeys = [], issuedCabinKeys = [], cabinOccupancy = [], propertyListings = [];
 let lairs = [];
+// Masmorra ativa (Covil do Ninho): { dimensionId, level } enquanto a dimensão atual é uma instância dg-ninho-*.
+let dungeonView = null;
+let dungeonArt = null;
+let dungeonTilesetRequest = null;
+const dungeonLevelCache = new Map();
 const warmedCabinsNearby=new Set();
 let resourceContracts = [];
 let marketQuotes = {};
@@ -2331,6 +2340,7 @@ function connect() {
       }
     }
     const snapshotDimensionId = message.dimensionId || worldDimensionId;
+    syncDungeonDimension(snapshotDimensionId, message.dungeon);
     const dimensionChanged = snapshotDimensionId !== worldDimensionId;
     const leavingArrivalTutorial=dimensionChanged&&worldDimensionId.startsWith('arrival-');
     if(leavingArrivalTutorial&&snapshotDimensionId==='surface')forestArrivalNoticePending=true;
@@ -2555,15 +2565,15 @@ function connect() {
           : { ...localPosition };
         walkPath = [];
         pendingInputs = []; outboundInputs = [];
-        document.querySelector('#weather-text').textContent=worldLocation==='room'?'sem vento':(message.dimension?.theme==='dark'?'uma fogueira no breu':message.dimension?.theme==='sky'?'vento das alturas':message.dimension?.theme==='inferno'?'calor profundo':message.dimension?.theme==='magic'?'brisa encantada':message.dimension?.theme==='energy'?'correntes de energia':message.dimension?.theme==='giants'?'vento das montanhas':'brisa calma');
+        document.querySelector('#weather-text').textContent=worldLocation==='room'||dungeonTitleFor(worldDimensionId)?'sem vento':(message.dimension?.theme==='dark'?'uma fogueira no breu':message.dimension?.theme==='sky'?'vento das alturas':message.dimension?.theme==='inferno'?'calor profundo':message.dimension?.theme==='magic'?'brisa encantada':message.dimension?.theme==='energy'?'correntes de energia':message.dimension?.theme==='giants'?'vento das montanhas':'brisa calma');
       }
       setHudText(ui.worldTitle, worldLocation === 'room'
         ? worldRoomKind === 'lobby' ? roomOwnerName || 'Recepção da Vila'
           : worldRoomKind === 'lodging' ? roomOwnerName || 'Sua hospedagem'
             : roomCanEdit ? 'Seu quarto' : `Quarto de ${roomOwnerName || 'outra pessoa'}`
-        : (message.dimension?.name || dimensionList.find(dimension => dimension.id === worldDimensionId)?.name || contentById('place.clearing').label));
+        : (message.dimension?.name || dungeonTitleFor(worldDimensionId) || dimensionList.find(dimension => dimension.id === worldDimensionId)?.name || contentById('place.clearing').label));
       ui.roomBuildTools.hidden = worldLocation !== 'room'||!roomCanEdit;
-      ui.worldMapToggle.hidden=worldLocation!=='clearing';mapUi.miniMap.hidden=worldLocation!=='clearing';requestMiniMapRedraw();
+      ui.worldMapToggle.hidden=worldLocation!=='clearing'||isDungeonScene();mapUi.miniMap.hidden=worldLocation!=='clearing'||isDungeonScene();requestMiniMapRedraw();
         ui.roomBuildToggle.hidden=!roomCanEdit;
         for(const element of [ui.roomPlace,ui.roomCategory,ui.roomKind,ui.roomMove,ui.roomRotate,ui.roomRemove])element.hidden=!roomCanEdit;
       canvas.setAttribute('aria-label', worldLocation === 'room'
@@ -3044,8 +3054,8 @@ function setWalkDestination(event) {
     roomBuildMode=null;ui.roomBuildOptions.hidden=true;ui.roomBuildToggle.setAttribute('aria-expanded','false');updateRoomBuildButtons();updateRoomObjectCard(item);return;
   }
   if (worldLocation === 'clearing') {
-    const chestLair = lairChestAtPointer(event);
-    if (chestLair) { touchLairChest(chestLair); return; }
+    const mouthLair = lairMouthAtPointer(event);
+    if (mouthLair) { touchLairMouth(mouthLair); return; }
   }
   const editing=worldLocation==='room'&&(roomBuildMode==='place'||roomBuildMode==='move'&&roomMovingId);
   const targetStarted=renderProfiler?performance.now():0;
@@ -4129,27 +4139,95 @@ function nearestWildlifeTarget(position=localPosition,maxDistance=1.45) {
   return nearest?{...nearest,distance:gap}:null;
 }
 
-// Baú do covil alcançável: mesmo raio e mesmo caminho que o servidor confere.
-function nearestLairChest(position=localPosition) {
+// Boca do covil alcançável: mesmo raio e mesmo caminho que o servidor confere. Não usa lair.chest.
+function nearestLairMouth(position=localPosition) {
   if (worldLocation !== 'clearing') return null;
-  return findNearestLairChest(lairs, position, {
-    hasPath: (from, to) => hasClearInteractionPath(from, to, { fires: [...fires.values()], targetRadius: LAIR_CHEST_PATH_RADIUS }),
+  return findNearestLairMouth(lairs, position, {
+    hasPath: (from, to) => hasClearInteractionPath(from, to, { fires: [...fires.values()], targetRadius: LAIR_MOUTH_PATH_RADIUS }),
   });
 }
 
-// Baú sob o ponteiro: só o próprio baú; a boca e as sombras não recebem toque.
-function lairChestAtPointer(event) {
+// Boca sob o ponteiro; as sombras e o chão não recebem toque.
+function lairMouthAtPointer(event) {
   const bounds = canvas.getBoundingClientRect();
-  return findLairChestAtPoint(lairs, { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
-    chest => point(chest.x, chest.y), spriteScale);
+  return findLairMouthAtPoint(lairs, { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
+    mouth => point(mouth.x, mouth.y), spriteScale);
 }
 
-// Toque no baú: ao alcance envia a intenção (o servidor decide); fora dele caminha até o baú.
-function touchLairChest(lair) {
+// Toque na boca: ao alcance pede a entrada (o servidor decide); fora dele caminha até ela.
+function touchLairMouth(lair) {
   announce(lairPromptText(lair, rawGameDayTimestampMs()));
-  const near = nearestLairChest();
-  if (near?.id === lair.id) sendPlayerCommand({ type: 'action', name: 'openTreasure', lairId: lair.id });
-  else requestWalkPath({ x: lair.chest.x, y: lair.chest.y });
+  const near = nearestLairMouth();
+  if (near?.id === lair.id) action('interact');
+  else requestWalkPath({ x: lair.mouth.x, y: lair.mouth.y });
+}
+
+// Masmorra (Covil do Ninho). A dimensão dg-ninho-n<N>-<inst> usa a grade gerada da seed, não o terreno do bosque.
+// A seed vem do snapshot (dungeon.seed) ou do padrão do cliente. Entrada e saída são decididas pelo servidor.
+function dungeonLevelFor(seed, level) {
+  const key = `${seed}:${level}`;
+  if (!dungeonLevelCache.has(key)) dungeonLevelCache.set(key, generateDungeon(seed, level));
+  return dungeonLevelCache.get(key);
+}
+
+function ensureDungeonArt() {
+  if (dungeonArt || dungeonTilesetRequest) return;
+  dungeonTilesetRequest = loadDungeonTileset().then(tileset => {
+    dungeonArt = createDungeonArt({
+      createCanvas: (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; },
+      tileset,
+    });
+    dungeonTilesetRequest = null;
+  }).catch(error => {
+    dungeonTilesetRequest = null;
+    console.warn('Arte da masmorra não carregou; a cena fica preta até a próxima entrada.', error);
+  });
+}
+
+// Chamado a cada snapshot: liga a grade da masmorra ao entrar e desliga ao sair (colisão volta ao terreno).
+function syncDungeonDimension(dimensionId, snapshotDungeon) {
+  const parsed = parseDungeonClientId(dimensionId);
+  if (!parsed) {
+    if (dungeonView) { dungeonView = null; setActiveDungeonLevel(null); }
+    return;
+  }
+  if (dungeonView?.dimensionId === dimensionId) return;
+  const seed = Number.isInteger(snapshotDungeon?.seed) ? snapshotDungeon.seed : DUNGEON_CLIENT_SEED;
+  const level = dungeonLevelFor(seed, parsed.level);
+  dungeonView = { dimensionId, level };
+  setActiveDungeonLevel(level);
+  ensureDungeonArt();
+}
+
+// Título do HUD da masmorra (as instâncias não estão em dimensionList; o nome vem do id).
+function dungeonTitleFor(dimensionId) {
+  const parsed = parseDungeonClientId(dimensionId);
+  return parsed ? `Covil do Ninho · Nível ${parsed.level}` : null;
+}
+
+// Passagem de saída da masmorra (exit da grade). Fica fora de nearestInteractionDoor: ali o gatilho do cliente
+// começa a capa de transição, e a saída só deve pedir ao servidor quando o jogador apertar E.
+function nearestDungeonExit() {
+  if (!isDungeonScene()) return null;
+  const { x, y } = dungeonView.level.exit;
+  const distance = Math.hypot(localPosition.x - (x + .5), localPosition.y - (y + .5));
+  return distance <= 1.5 ? { x: x + .5, y: y + .5, distance } : null;
+}
+
+function isDungeonScene() {
+  return worldLocation === 'clearing' && Boolean(dungeonView) && worldDimensionId === dungeonView.dimensionId;
+}
+
+// Cena da masmorra: piso, paredes, tochas, luz e escuridão do renderer; o avatar entra na ordem de profundidade.
+function drawDungeonScene(self, nameplateIds, pickupFrame) {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, viewWidth, viewHeight);
+  if (!dungeonArt || !dungeonView) return;
+  drawDungeonFrame(ctx, {
+    grid: dungeonView.level, camera, viewport: { width: viewWidth, height: viewHeight },
+    player: localRenderPosition, time: worldClock, reducedMotion, art: dungeonArt,
+    drawActor: () => drawAvatar(self, worldClock, true, false, pickupFrame, nameplateIds),
+  });
 }
 
 function nearestVisitTarget() {
@@ -4291,7 +4369,8 @@ function updateContextActionLabel() {
     describe(description);
     return;
   }
-  const lair = nearestLairChest();
+  if (nearestDungeonExit()) { describe('Saída da caverna. Pressione E para subir.'); return; }
+  const lair = nearestLairMouth();
   if (lair) { describe(lairPromptText(lair, rawGameDayTimestampMs())); return; }
   const animal = nearestWildlifeTarget();
   if (animal) {
@@ -4355,6 +4434,8 @@ function action(name) {
     const guide=nearestTutorialGuide();
     if(guide){sendPlayerCommand({type:'action',name:'talkTutorialGuide'});return;}
     if (openReceptionServices()) return;
+    const passage = nearestDungeonExit();
+    if (passage && passage.distance <= 1.15) { action('interact'); return; }
     const door = nearestInteractionDoor();
     if (door && door.distance <= 1.15) {
       action('interact');
@@ -4362,10 +4443,10 @@ function action(name) {
     }
     if (useNearestRoomFurniture()) return;
     if (worldLocation === 'room') { announce('Aproxime-se da porta, de um móvel utilizável ou de um ponto de atendimento.'); return; }
-    const lair = nearestLairChest();
+    const lair = nearestLairMouth();
     if (lair) {
-      // Perto do baú a intenção sempre vai ao servidor, que decide. O snapshot só dá o texto da dica.
-      sendPlayerCommand({ type: 'action', name: 'openTreasure', lairId: lair.id });
+      // Perto da boca a intenção vai ao servidor, que decide a entrada (raio e caminho livre). O snapshot só dá o texto.
+      action('interact');
       return;
     }
     if(nearestWildlifeTarget()){action('hunt');return;}
@@ -7049,7 +7130,7 @@ function updateObjective() {
   const nearReceptionService = Boolean(nearestReceptionService());
   const objectiveFires=[...fires.values()];
   const nearbyAnimal=nearestWildlifeTarget(localRenderPosition,5.5);
-  const nearLair=nearestLairChest();
+  const nearLair=nearestLairMouth();
   const nearbySpecies=nearbyAnimal&&WILDLIFE_BY_ID.get(nearbyAnimal.speciesId);
   const shelterNames={burrow:'toca',cave:'caverna',thicket:'moita',den:'covil','tree-hollow':'oco de árvore','root-hollow':'raízes','high-nest':'ninho alto','canopy-nest':'copa','hedge-nest':'cerca viva','pond-edge':'beira d’água','warm-rock':'pedras quentes','open-meadow':'campo aberto','barn-edge':'abrigo do rebanho','rock-shelter':'abrigo de pedra','tall-grass':'capim alto'};
   const nearbyAnimalText=nearbyAnimal?`${nearbySpecies?.label||'Animal'} · ${nearbyAnimal.lifeStage} · ${nearbyAnimal.state.replaceAll('-',' ')}. ${(nearbySpecies?.lifeGoal||'explorar o bosque').split(',')[0]}. Abrigo: ${shelterNames[nearbySpecies?.shelter]||'vegetação'}. ${nearbyAnimal.awareness?`Notou você por ${nearbyAnimal.awareness}.`:'Agache com C para se aproximar em silêncio.'}`:'';
@@ -7130,7 +7211,8 @@ function drawScene() {
       :localRenderPosition;
     camera=followCamera(camera,cameraTarget,reducedMotion,cameraDelta);
   }
-  if(worldLocation==='clearing'){
+  const inDungeon=isDungeonScene();
+  if(worldLocation==='clearing'&&!inDungeon){
     const visible=visibleTerrainChunks();
     const hardLimit=sceneArt.stats().terrainChunkHardLimit||160;
     if(visible.length>hardLimit){
@@ -7176,11 +7258,11 @@ function drawScene() {
   const shake=arrivalCameraShake();
   if(shake){ctx.save();ctx.translate(shake.x,shake.y);}
   markRenderPhase('setup');
-  drawBackground();
+  if(!inDungeon)drawBackground();
   markRenderPhase('background');
   renderProfiler?.mark('background', performance.now());
   groundShadows.begin(viewWidth,viewHeight);
-  drawWorldShadows(frameFires,litFires);
+  if(!inDungeon)drawWorldShadows(frameFires,litFires);
   renderProfiler?.mark('shadows', performance.now());
   markRenderPhase('shadows');
   const pickupFrame = getPickupFeedbackFrame(pickupFeedback, performance.now(), reducedMotion);
@@ -7331,7 +7413,7 @@ function drawScene() {
   }
   // Diffuse light belongs to the ground. Drawing it after actors replaces their
   // material contrast with luminous haze, even when their alpha is unchanged.
-  if(worldLocation==='clearing'&&gameDay.night>0){
+  if(worldLocation==='clearing'&&!inDungeon&&gameDay.night>0){
     ctx.save();ctx.globalCompositeOperation='screen';paintSceneLightmaps(ctx,.07*gameDay.night);ctx.restore();
     paintFirelightColor(worldClock,gameDay.night);
   }
@@ -7378,6 +7460,8 @@ function drawScene() {
     : null;
   const terrainStreaming=isTerrainPixelationActive();
   markRenderPhase('entityPreparation');
+  // Na masmorra o desenho é do renderer da masmorra (chão, paredes e avatar na ordem de profundidade): o laço de entidades não roda.
+  if(inDungeon){drawDungeonScene(self,visibleNameplateIds,pickupFrame);things.length=0;}
   teleportEffects.drawUnder(ctx,worldDimensionId,clientServerTime(),(x,y)=>point(x,y,camera,0),spriteScale);
   for (const thing of things) {
     if(thing.type==='terrain-face')drawNaturalTerrainFace(thing.face);
@@ -7489,8 +7573,7 @@ function drawDaylightAtmosphere() {
   drawPickupResponse(pickupFrame);
   drawCollisionResponse(collisionFrame);
   drawBerryOfferResponses();
-  drawNight();
-  drawDaylightAtmosphere();
+  if(!inDungeon){drawNight();drawDaylightAtmosphere();}
   if (worldLocation === 'clearing' && worldDimensionId === 'surface') {
     const skyTime = gameDayTimestampMs();
     const weatherNow = effectiveWeatherAt(skyTime, currentSky());

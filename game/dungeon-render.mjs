@@ -32,6 +32,19 @@ export const DUNGEON_LIGHT = Object.freeze({
   torchStrength: 1,
 });
 export const DUNGEON_TORCH_FRAMES = 4;
+
+// Semente do Covil do Ninho. Tem de ser igual a DUNGEON_SEED em scripts/dungeon-instances.mjs
+// (aquele arquivo importa crypto do Node e não roda no navegador). O snapshot pode trazer outra em dungeon.seed.
+export const DUNGEON_CLIENT_SEED = 0x4e494e48;
+const DUNGEON_ID_RE = /^dg-ninho-n([1-9][0-9]?)-([0-9a-f]{10})$/;
+
+// Id da dimensão de instância (dg-ninho-n<N>-<inst>) -> { level, instanceId, modelId }, ou null para outras dimensões.
+export function parseDungeonClientId(id) {
+  const match = typeof id === 'string' ? DUNGEON_ID_RE.exec(id) : null;
+  if (!match) return null;
+  const level = Number(match[1]);
+  return { lairId: 'ninho', level, instanceId: match[2], modelId: `dg-ninho-n${level}` };
+}
 const TORCH_FPS = 6;   // 4 quadros em 6 por segundo: chama viva, sem tremor
 const VIEW_MARGIN_TILES = 3;
 const CHUNK_TILES = 16; // lado do chunk do índice, em tiles

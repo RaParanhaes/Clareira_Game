@@ -8,6 +8,8 @@ import { formatLairCountdown } from './lairs.mjs';
 // pivô dos personagens (célula 96×96, pivô em y 84).
 export const LAIR_MOUTH = Object.freeze({ width: 96, height: 88, anchorX: 48, anchorY: 84 });
 export const LAIR_INTERACT_RADIUS = 1.8;
+// Caminho livre até a boca, em tiles (mesmo critério do baú antes da mudança).
+export const LAIR_MOUTH_PATH_RADIUS = 0.3;
 export const LAIR_CHEST_PATH_RADIUS = 0.3;
 
 // PNG de interior já existente (medieval-baus-10, "cofre de relíquias").
@@ -247,17 +249,48 @@ export function drawLairChest(ctx, point, state, scale, cache) {
 export const LAIR_BACK_DEPTH_OFFSET = -0.6;
 export const LAIR_FRONT_DEPTH_OFFSET = 0.01;
 
+// A boca é sempre desenhada (é a entrada). O baú só existe quando o snapshot traz posição para ele.
 export function lairSceneThings(lairs) {
   const things = [];
   for (const lair of Array.isArray(lairs) ? lairs : []) {
     if (!Number.isFinite(lair?.mouth?.x) || !Number.isFinite(lair?.mouth?.y)) continue;
-    if (!Number.isFinite(lair?.chest?.x) || !Number.isFinite(lair?.chest?.y)) continue;
     const { x, y } = lair.mouth;
     things.push({ type: 'lair-mouth', layer: 'back', lairId: lair.id, x, y, sortX: x + LAIR_BACK_DEPTH_OFFSET, sortY: y + LAIR_BACK_DEPTH_OFFSET });
     things.push({ type: 'lair-mouth', layer: 'front', lairId: lair.id, x, y, sortX: x + LAIR_FRONT_DEPTH_OFFSET, sortY: y + LAIR_FRONT_DEPTH_OFFSET });
-    things.push({ type: 'lair-chest', lairId: lair.id, x: lair.chest.x, y: lair.chest.y, state: lair.state });
+    if (Number.isFinite(lair?.chest?.x) && Number.isFinite(lair?.chest?.y)) {
+      things.push({ type: 'lair-chest', lairId: lair.id, x: lair.chest.x, y: lair.chest.y, state: lair.state });
+    }
   }
   return things;
+}
+
+// Boca sob o ponteiro (coordenadas do canvas): retângulo da arte, com o contato no chão. toScreen(mouth) projeta o ponto.
+export function findLairMouthAtPoint(lairs, pointer, toScreen, scale) {
+  for (const lair of Array.isArray(lairs) ? lairs : []) {
+    if (!Number.isFinite(lair?.mouth?.x) || !Number.isFinite(lair?.mouth?.y)) continue;
+    const p = toScreen(lair.mouth);
+    const x0 = p.x - LAIR_MOUTH.anchorX * scale, y0 = p.y - LAIR_MOUTH.anchorY * scale;
+    if (pointer.x >= x0 && pointer.x <= x0 + LAIR_MOUTH.width * scale && pointer.y >= y0 && pointer.y <= y0 + LAIR_MOUTH.height * scale) return lair;
+  }
+  return null;
+}
+
+// Covil alcançável pela boca (exterior). Não depende de lair.chest: a boca é a entrada.
+// hasPath(from, to) é injetado, como em findNearestLairChest.
+export function findNearestLairMouth(lairs, position, { hasPath, radius = LAIR_INTERACT_RADIUS } = {}) {
+  if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return null;
+  let nearest = null;
+  let gap = radius;
+  for (const lair of Array.isArray(lairs) ? lairs : []) {
+    const mouth = lair?.mouth;
+    if (!Number.isFinite(mouth?.x) || !Number.isFinite(mouth?.y)) continue;
+    const distance = Math.hypot(position.x - mouth.x, position.y - mouth.y);
+    if (distance > gap) continue;
+    if (typeof hasPath === 'function' && !hasPath(position, mouth)) continue;
+    nearest = lair;
+    gap = distance;
+  }
+  return nearest ? { ...nearest, distance: gap } : null;
 }
 
 // Escolhe o baú alcançável mais próximo. hasPath(from, to) é injetado: no
@@ -280,6 +313,7 @@ export function findNearestLairChest(lairs, position, { hasPath, radius = LAIR_I
 
 // Texto do botão de ação (aria-label/title) para o baú próximo.
 export function lairPromptText(lair, now) {
+  if (!Number.isFinite(lair?.chest?.x)) return 'Entrar no covil';
   if (lair?.state === 'guarded') return 'Guardiões vigiam o baú';
   if (lair?.state === 'ready') return 'Abrir o baú do covil';
   if (lair?.state === 'cooldown') return Number.isFinite(lair.readyAt) ? `Baú vazio · volta em ${formatLairCountdown(lair.readyAt - now)}` : 'Baú vazio · volta em breve';
@@ -290,6 +324,7 @@ export function lairPromptText(lair, now) {
 // Texto do objetivo e do aviso local. O sucesso ("+2 pratas e Espada curta de
 // ferro") vem do servidor; o cliente não o inventa.
 export function lairStatusText(lair, now) {
+  if (lair?.mouth && !Number.isFinite(lair?.chest?.x)) return 'Ande até a boca do covil ou pressione E para entrar.';
   if (lair?.state === 'guarded') return 'Os guardiões ainda vigiam o baú.';
   if (lair?.state === 'ready') return 'O covil está limpo. Pressione E ou toque em Usar para abrir o baú.';
   if (lair?.state === 'cooldown') return Number.isFinite(lair.readyAt) ? `O baú volta a encher em ${formatLairCountdown(lair.readyAt - now)}.` : 'O baú volta a encher em breve.';

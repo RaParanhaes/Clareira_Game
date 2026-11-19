@@ -20,7 +20,8 @@ export function nightEmitterProfile(baseReach,baseFalloff=1.7,{night=1,hasMoon=f
 // Moonless forest nights retain a faint ambient fill. Moonlight lifts the scene,
 // but stays subdued enough for nearby windows, fires, and lanterns to read clearly.
 export function exteriorNightOpacity(day,{theme='forest',dimensionId='surface'}={}){
- const night=theme==='dark'?.36+day.night*.64:day.night;
+ // Forest dusk eases in (power curve) so the veil never reads as a flat fog before real night.
+ const night=theme==='dark'?.36+day.night*.64:theme==='forest'?day.night**2.2:day.night;
  const darkness=dimensionId.startsWith('arrival-')?.90
   :theme==='forest'?(day.hasMoon?.82:.91)
   :({dark:.995,sky:.62,magic:.82,inferno:.84,giants:.94,energy:.82})[theme]??.92;
@@ -45,8 +46,8 @@ export function flameLightEnvelope(time,fire={x:0,y:0},reducedMotion=false){if(r
 
 // Central lighting decisions: what each light is (colour, direction, strength, occlusion).
 // Drawing stays in the renderers; these functions only decide.
-export const NIGHT_VEIL_COLORS=Object.freeze({dark:'#000000',sky:'#173044',magic:'#06091b',inferno:'#120604',giants:'#06100e',energy:'#020a18'});
-export function nightVeilColor(theme){return NIGHT_VEIL_COLORS[theme]||'#0c1a2a';}
+export const NIGHT_VEIL_COLORS=Object.freeze({forest:'#10150f',dark:'#000000',sky:'#173044',magic:'#06091b',inferno:'#120604',giants:'#06100e',energy:'#020a18'});
+export function nightVeilColor(theme){return NIGHT_VEIL_COLORS[theme]||'#10150f';}
 
 export function celestialLightState(gameDay){
   const sunStrength=gameDay.sunlightStrength??gameDay.daylight;

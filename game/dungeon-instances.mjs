@@ -4,28 +4,14 @@
 // Sem persistência: a instância some 30 s depois que o último jogador sai.
 import { createHash } from 'node:crypto';
 import { generateDungeon } from './dungeon-gen.mjs';
+import { DUNGEON_SEED, dungeonDimensionId } from './dungeon-ids.mjs';
 
-export const DUNGEON_LAIR_ID = 'ninho';
+// Os ids e a seed ficam em dungeon-ids.mjs (sem node:crypto), para o cliente também usá-los.
+export { DUNGEON_LAIR_ID, DUNGEON_SEED, dungeonModelId, dungeonDimensionId, parseDungeonDimensionId, isDungeonDimensionId } from './dungeon-ids.mjs';
 export const DUNGEON_MAX_ACTIVE = 12;
 export const DUNGEON_IDLE_MS = 30_000;
-// Seed fixa do covil: todas as instâncias de um nível têm o mesmo labirinto.
-export const DUNGEON_SEED = 0x4e494e48; // 'NINH'
 
-const DUNGEON_ID_PATTERN = /^dg-ninho-n([1-9][0-9]?)-([0-9a-f]{10})$/;
-
-export const dungeonModelId = level => `dg-${DUNGEON_LAIR_ID}-n${level}`;
-export const dungeonDimensionId = (level, instanceId) => `${dungeonModelId(level)}-${instanceId}`;
-
-export function parseDungeonDimensionId(id) {
-  const match = typeof id === 'string' ? DUNGEON_ID_PATTERN.exec(id) : null;
-  if (!match) return null;
-  const level = Number(match[1]);
-  return { lairId: DUNGEON_LAIR_ID, level, instanceId: match[2], modelId: dungeonModelId(level) };
-}
-
-export const isDungeonDimensionId = id => parseDungeonDimensionId(id) !== null;
-
-// Chave de grupo: solo usa o próprio perfil. Quando houver grupo, ele passa a ser a chave.
+// Chave de grupo: a conta (convidado: a sessão). Reconectar não ocupa outra vaga.
 export function instanceIdFor(groupKey) {
   return createHash('sha256').update(`ninho:${groupKey}`).digest('hex').slice(0, 10);
 }

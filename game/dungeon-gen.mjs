@@ -1,3 +1,15 @@
+// SNAPSHOT PARA O CLIENTE (servidor -> jogador, no estado pessoal da sala; só quando o jogador está numa masmorra):
+//   dungeon: {
+//     dimensionId: 'dg-ninho-n<N>-<inst>',  // id da instância (o cliente troca de dimensão por este id)
+//     seed: <number>,                        // seed do nível (DUNGEON_SEED); o cliente gera a mesma grade
+//     level: <1..>,                          // número do nível
+//     exit: { x, y },                        // célula da escada de saída (volta à boca)
+//     boss: { alive: <bool> },               // chefe da arena vivo; false depois da queda
+//     chest: { state, readyAt },             // baú do chefe: state = 'trancado' | 'sem-parte' | 'recarregando' | 'pronto'
+//                                            // readyAt = ms (epoch) quando recarrega, senão null
+//   }
+//   null fora da masmorra. Chefe e baú só saem para o cliente com este bloco (nunca como animal da fauna comum).
+//
 // Gerador puro e determinístico do labirinto da masmorra do Covil do Ninho.
 // Mesma seed e mesmo nível dão a mesma grade, no servidor e no navegador. Sem DOM, sem Math.random, sem Date.
 //

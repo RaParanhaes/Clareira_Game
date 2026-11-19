@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LAIRS, createLairGuards, formatLairCountdown, lairView } from './lairs.mjs';
+import { createDungeonBoss, dungeonChestView, dungeonChestLair, DUNGEON_REWARDS } from './lairs.mjs';
+import { dungeonLevel } from './dungeon-instances.mjs';
 import { WILDLIFE_BY_ID, wildlifeIsActive, wildlifeStage, stepWildlifePopulation } from './wildlife.mjs';
 import { damageFromAttack } from './vitals.mjs';
 import { WORLD_SIZE, canOccupy } from './world.mjs';
@@ -80,4 +82,31 @@ test('recarga aparece em mm:ss, arredondada para cima', () => {
   assert.equal(formatLairCountdown(125000), '02:05');
   assert.equal(formatLairCountdown(1200000), '20:00');
   assert.equal(formatLairCountdown(-5), '00:00');
+});
+
+
+test('chefe da masmorra fica no centro da arena, preso à coleira da própria arena', () => {
+  const { boss } = dungeonLevel(1);
+  const animal = createDungeonBoss({ level: 1, dimensionId: 'dg-ninho-n1-0123456789', arena: boss.arena, center: boss.center, now: 0 });
+  assert.equal(animal.lairId, 'ninho-n1');
+  assert.equal(animal.dungeonBoss, true);
+  assert.deepEqual([animal.x, animal.y], [boss.center.x + 0.5, boss.center.y + 0.5]);
+  assert.equal(animal.homeX, animal.x);
+  // Coleira menor que o meio da arena: o chefe não sai do retângulo da arena quando está em casa.
+  assert.ok(animal.leash <= Math.min(boss.arena.w, boss.arena.h) / 2, 'coleira cabe na arena');
+  assert.ok(animal.health > 6, 'vida de chefe, acima da do guardião comum');
+});
+
+test('estado do baú: trancado com chefe vivo, sem parte depois da queda, recarga e pronto', () => {
+  assert.deepEqual(dungeonChestView({ bossAlive: true, contributor: true, now: 1000 }), { state: 'trancado', readyAt: null });
+  assert.deepEqual(dungeonChestView({ bossAlive: false, contributor: false, now: 1000 }), { state: 'sem-parte', readyAt: null });
+  assert.deepEqual(dungeonChestView({ bossAlive: false, contributor: true, availableAt: 5000, now: 1000 }), { state: 'recarregando', readyAt: 5000 });
+  assert.deepEqual(dungeonChestView({ bossAlive: false, contributor: true, availableAt: 500, now: 1000 }), { state: 'pronto', readyAt: null });
+});
+
+test('baú da masmorra usa a recompensa do nível e o id ninho-n<N>', () => {
+  const lair = dungeonChestLair(1, { x: 9, y: 3 });
+  assert.equal(lair.id, 'ninho-n1');
+  assert.deepEqual(lair.chest, { x: 9.5, y: 3.5 });
+  assert.deepEqual(lair.reward, DUNGEON_REWARDS[1]);
 });

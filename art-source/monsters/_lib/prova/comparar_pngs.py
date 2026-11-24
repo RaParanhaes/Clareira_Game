@@ -1,6 +1,6 @@
 """Compara PNGs RGBA 8 bits pixel a pixel (sem dependencias: zlib do Python).
 
-Uso: python3 comparar_pngs.py <pasta_a> <pasta_b> [--nomes padrao] > relatorio.json
+Uso: python3 comparar_pngs.py <pasta_a> <pasta_b> [--nomes padrao] [--esperar N] > relatorio.json (exit 1 se falhar)
 Compara todos os PNG de <pasta_a> que existem com o mesmo nome em <pasta_b>.
 Saida: JSON com, por arquivo, total de pixels diferentes (RGBA) e a maior diferenca por canal.
 """
@@ -70,18 +70,40 @@ def comparar(a, b):
     return {"pixels": wa * ha, "pixels_diferentes": dif_px, "maior_diferenca_RGBA": max_canal}
 
 
-if __name__ == "__main__":
-    pa, pb = sys.argv[1], sys.argv[2]
-    padrao = sys.argv[sys.argv.index("--nomes") + 1] if "--nomes" in sys.argv else "*.png"
+def main(argv):
+    """Uso: comparar_pngs.py <pasta_a> <pasta_b> [--nomes padrao] [--esperar N]
+
+    Sai com codigo 1 (e nao so JSON) se: nenhum arquivo foi comparado, falta arquivo de A em B, houver erro
+    de leitura ou tamanho, houver pixel diferente, ou se --esperar N e a quantidade comparada nao for N.
+    """
+    pa, pb = argv[1], argv[2]
+    padrao = argv[argv.index("--nomes") + 1] if "--nomes" in argv else "*.png"
+    esperar = int(argv[argv.index("--esperar") + 1]) if "--esperar" in argv else None
+    arquivos_a = sorted(glob.glob(os.path.join(pa, padrao)))
     res = {}
-    for arq in sorted(glob.glob(os.path.join(pa, padrao))):
+    for arq in arquivos_a:
         nome = os.path.basename(arq)
         alvo = os.path.join(pb, nome)
         if not os.path.exists(alvo):
             res[nome] = {"erro": "ausente em B"}
             continue
         res[nome] = comparar(arq, alvo)
-    total = sum(r.get("pixels_diferentes", 0) for r in res.values() if "erro" not in r)
+    comparados = [k for k, r in res.items() if "erro" not in r]
+    total = sum(res[k]["pixels_diferentes"] for k in comparados)
     erros = [k for k, r in res.items() if "erro" in r]
-    print(json.dumps({"arquivos": len(res), "pixels_diferentes_total": total, "com_erro": erros, "detalhe": res},
-                     ensure_ascii=False, indent=1))
+    falhas = []
+    if not arquivos_a:
+        falhas.append("nenhum arquivo em A (%s)" % pa)
+    if erros:
+        falhas.append("arquivos com erro ou ausentes: %d" % len(erros))
+    if total:
+        falhas.append("pixels diferentes: %d" % total)
+    if esperar is not None and len(comparados) != esperar:
+        falhas.append("cobertura: comparados %d, esperados %d" % (len(comparados), esperar))
+    print(json.dumps({"arquivos": len(res), "comparados": len(comparados), "pixels_diferentes_total": total,
+                      "com_erro": erros, "falhas": falhas, "detalhe": res}, ensure_ascii=False, indent=1))
+    return 1 if falhas else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

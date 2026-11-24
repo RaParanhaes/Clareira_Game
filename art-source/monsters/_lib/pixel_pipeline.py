@@ -42,7 +42,13 @@ DIR_SCREEN = {"S": (0, 1), "SE": (1, 1), "L": (1, 0), "NE": (1, -1), "N": (0, -1
 # Direcoes bilaterais: 5 renders (S, SE, L, NE, N) e 3 espelhos horizontais.
 ESPELHO_DE = {"O": "L", "SO": "SE", "NO": "NE"}
 BILATERAL_RENDER = ["S", "SE", "L", "NE", "N"]
+RADIAL4 = ["SE", "NE", "SO", "NO"]          # modo radial (slime, aranha): mesma ordem de FOUR em game/monster-sprites.mjs
 
+# Escala fisica do personagem A7: 43.92 px por metro na celula 96 (camera ortografica, mesma do build-blender.py).
+# Todas as especies usam esta mesma escala; o tamanho do monstro sai da malha em metros, sem autofit.
+# Valor exato confirmado por prova/bloco_pela_lib.py (ppu_silhueta do A7) antes do uso.
+PPU_REF_96 = 43.915583775317494          # exato: ppu_silhueta(rest do A7, 5, 83) medido pela prova (PROVA_ESCALA)
+ORIGEM_Y_96 = 84                         # pe (z = 0) do modelo cai na linha 84 da celula 96 (pivo do jogo)
 THR_T = {5: [0.84, 0.68, 0.50, 0.33], 4: [0.78, 0.58, 0.38], 3: [0.62, 0.40], 2: [0.5], 1: []}
 OUTLINE = (30, 19, 17)                   # contorno externo 1 px
 INNER = (56, 40, 33)                     # linhas internas 1 px
@@ -61,11 +67,39 @@ N4 = ((-1, 0), (1, 0), (0, -1), (0, 1))
 N8 = tuple((dy, dx) for dy in (-1, 0, 1) for dx in (-1, 0, 1) if (dy, dx) != (0, 0))
 
 
+def ppu_extensao(pontos, ppu, origin_y):
+    """Topo e base (em pixels, y para baixo) da silhueta de `pontos` com a camera de escala ppu.
+
+    Usa os 8 giros em Z, como o build do camponese. Projecao: y = origin_y - (p . UP) * ppu.
+    """
+    Rcam = Euler((math.radians(60), 0, math.radians(45)), "XYZ").to_matrix()
+    UP_NP = np.array(Rcam @ Vector((0, 1, 0)), np.float64)
+    ups = []
+    for k in range(8):
+        Rz = np.array(Matrix.Rotation(k * math.pi / 4, 3, "Z"))
+        ups.append((pontos @ Rz.T) @ UP_NP)
+    ups = np.concatenate(ups)
+    return origin_y - ups.max() * ppu, origin_y - ups.min() * ppu
+
+
+def ppu_silhueta(pontos, sil_top, sil_base):
+    """Escala do build do camponese (autofit antigo, so para a prova): cabe a silhueta em [sil_top, sil_base]."""
+    Rcam = Euler((math.radians(60), 0, math.radians(45)), "XYZ").to_matrix()
+    UP_NP = np.array(Rcam @ Vector((0, 1, 0)), np.float64)
+    ups = []
+    for k in range(8):
+        Rz = np.array(Matrix.Rotation(k * math.pi / 4, 3, "Z"))
+        ups.append((pontos @ Rz.T) @ UP_NP)
+    ups = np.concatenate(ups)
+    ppu = (sil_base - sil_top + 1) / (ups.max() - ups.min())
+    return ppu, sil_top + ups.max() * ppu
+
+
 class Estilo:
     """Parametros de uma especie. Valores de tile=96 reproduzem o camponese A7 sem mudanca."""
 
     def __init__(self, tile, mats, camadas, linha_ok=None, textura=None, pele=(), sem_linha=(),
-                 sil=(5, 83), pivo=None, paleta_max=PALETA_MAX):
+                 sil=(5, 83), pivo=None, paleta_max=PALETA_MAX, ppu=None, origem_y=None):
         self.tile = int(tile)
         self.ss = SS
         self.res = self.tile * SS
@@ -73,6 +107,9 @@ class Estilo:
         self.sil_top = int(round(sil[0] * k))
         self.sil_base = int(round(sil[1] * k))
         self.pivo = pivo if pivo is not None else (self.tile // 2, int(round(84 * k)))
+        # escala fisica: px por metro no tile dado (sem autofit). origem_y = linha do pe do modelo.
+        self.ppu = float(ppu) if ppu is not None else PPU_REF_96 * k
+        self.origem_y = float(origem_y) if origem_y is not None else float(self.pivo[1])
         self.ao_r = int(round(AO_R_BASE * k))
         self.nomes = list(mats.keys())
         self.nm = len(self.nomes)
@@ -320,7 +357,11 @@ def extent(img):
 
 
 def espelhar(cel):
-    """Espelho horizontal de uma celula (direcoes O, SO, NO a partir de L, SE, NE)."""
+    """Espelho horizontal de uma celula. ATENCAO: so e fiel se a luz for simetrica no eixo do espelho.
+
+    A luz da biblioteca (LK, LF) e assimetrica; espelhar uma direcao inverte a luz. Por isso os monstros
+    renderizam todas as direcoes que usam (8 ou 4), sem espelho. Esta funcao fica para o camponese A7.
+    """
     return cel[:, ::-1].copy()
 
 
@@ -341,8 +382,12 @@ class Pipeline:
         self.ocultar = ()             # prefixos de nome a esconder (ex.: ferramenta de teste)
 
     # --- camera e render
-    def camera_iso(self, pontos):
-        """Camera ortografica X=60, Z=45; escala (PPU) medida pela silhueta de `pontos` (N x 3, coordenadas de modelo)."""
+    def camera_iso(self, pontos=None):
+        """Camera ortografica X=60, Z=45 com escala FISICA fixa (e.ppu, px por metro) e pe do modelo em e.origem_y.
+
+        Sem autofit: o tamanho da especie e o tamanho real em metros. Se `pontos` (N x 3, coordenadas de modelo)
+        for dado, confere que a silhueta cabe na celula e falha se nao couber.
+        """
         e = self.e
         cam_data = bpy.data.cameras.new("CamIso")
         cam_data.type = "ORTHO"
@@ -354,22 +399,18 @@ class Pipeline:
         UP = Rcam @ Vector((0, 1, 0))
         BACK = Rcam @ Vector((0, 0, 1))
         RIGHT = Rcam @ Vector((1, 0, 0))
-        UP_NP = np.array(UP, np.float64)
-        ups = []
-        for k in range(8):
-            Rz = np.array(Matrix.Rotation(k * math.pi / 4, 3, "Z"))
-            ups.append((pontos @ Rz.T) @ UP_NP)
-        ups = np.concatenate(ups)
-        max_up, min_up = ups.max(), ups.min()
-        ppu = (e.sil_base - e.sil_top + 1) / (max_up - min_up)
-        origin_y = e.sil_top + max_up * ppu
+        ppu, origin_y = e.ppu, e.origem_y
+        if pontos is not None:
+            top, base = ppu_extensao(pontos, ppu, origin_y)
+            if top < 0 or base > e.tile:
+                raise ValueError("silhueta fora da celula: topo %.1f base %.1f (celula %d)" % (top, base, e.tile))
         cam_data.ortho_scale = e.tile / ppu
         cam.location = UP * ((origin_y - e.tile / 2) / ppu) + BACK * 10
         self.cam = cam
         self.up, self.back, self.right = UP, BACK, RIGHT
         self.up_np, self.back_np, self.right_np = (np.array(v, np.float64) for v in (UP, BACK, RIGHT))
         self.ppu, self.origin_y, self.pix = ppu, origin_y, 1.0 / ppu
-        print("PPU", round(ppu, 2), "origem_y", round(origin_y, 2))
+        print("PPU", repr(ppu), "origem_y", repr(origin_y))
         return cam
 
     def preparar_render(self):

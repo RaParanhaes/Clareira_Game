@@ -1,11 +1,13 @@
 """Cubo de teste da biblioteca pixel_pipeline (fatia D0 do plano masmorra v2).
 
-Quatro animacoes (parado 4, andar 6, atacar 6, morrer 6), 8 direcoes: 5 renders bilaterais
-(S, SE, L, NE, N) e 3 espelhos horizontais (O, SO, NO). Sai um atlas por animacao (linhas = 8 direcoes,
+Quatro animacoes (parado 4, andar 6, atacar 6, morrer 6), 8 direcoes ou 4 (radial).
+todas as direcoes usadas (8 ou 4, sem espelho). Sai um atlas por animacao (linhas = direcoes,
 colunas = quadros), manifest.json e uma folha de contato com todas as animacoes.
 
-Ambiente: REPO (raiz do worktree), OUTDIR (pasta de saida), TILE (96 ou 192).
-Rodar: REPO=... OUTDIR=... TILE=96 timeout 300 blender -b --factory-startup -P cubo_teste.py
+Ambiente: REPO (raiz do worktree), OUTDIR (pasta de saida), TILE (96 ou 192), DIRS (8 ou 4).
+DIRS=8: as 8 direcoes renderizadas (sem espelho: a luz nao e simetrica). DIRS=4: modo radial, SE, NE, SO, NO,
+na ordem de game/monster-sprites.mjs (FOUR).
+Rodar: REPO=... OUTDIR=... TILE=96 DIRS=8 timeout 600 blender -b --factory-startup -P cubo_teste.py
 """
 import json
 import math
@@ -21,8 +23,11 @@ sys.path.insert(0, os.path.join(REPO, "art-source", "monsters", "_lib"))
 import pixel_pipeline as PP  # noqa: E402
 
 TILE = int(os.environ.get("TILE", "96"))
+DIRS = os.environ.get("DIRS", "8")
+assert DIRS in ("8", "4"), DIRS
+RENDER = PP.GAME_DIRS if DIRS == "8" else PP.RADIAL4
 OUTDIR = os.environ["OUTDIR"]
-SAIDA = os.path.join(OUTDIR, "cubo-%d" % TILE)
+SAIDA = os.path.join(OUTDIR, "cubo-%d-%s" % (TILE, DIRS))
 os.makedirs(SAIDA, exist_ok=True)
 H = 0.30                                  # meia aresta do cubo (m); altura 2H, base no chao
 
@@ -31,7 +36,10 @@ MATS = {
     "lado_claro": dict(r=[(196, 144, 94), (164, 116, 74), (132, 90, 58)], layer="corpo", w=1.0, dith=0.03, bias=0.0, ao=0.6),
     "lado_escuro": dict(r=[(124, 84, 56), (100, 66, 44), (76, 50, 36)], layer="corpo", w=1.0, dith=0.03, bias=0.0, ao=0.6),
 }
-ESTILO = PP.Estilo(tile=TILE, mats=MATS, camadas=["corpo"])
+# Cubo de 0,6 m: a base iso projeta ~20 px abaixo do centro. O pe do teste fica na linha 66 (nao 84) para caber
+# na celula; a prova de encaixe e o check de silhueta da camera (ValueError se nao couber).
+ESTILO = PP.Estilo(tile=TILE, mats=MATS, camadas=["corpo"], origem_y=66.0 * TILE / 96.0,
+                   pivo=(TILE // 2, int(round(66 * TILE / 96.0))))
 
 # ------------------------------------------------------------------ malha: quatro objetos, um material cada
 QUADS = {
@@ -115,7 +123,7 @@ for anim, nf, _, _ in ANIMS:
                 pontos.append(tuple(M @ v.co))
 pontos = np.array(pontos, np.float64)
 PIPE = PP.Pipeline(ESTILO, PARTS, os.path.join(OUTDIR, "_tmp_cubo_%d.png" % TILE))
-PIPE.camera_iso(pontos)
+PIPE.camera_iso(pontos)                   # escala fisica fixa (sem autofit); confere que cabe na celula
 PIPE.preparar_render()
 RIGHT_V, BACK_V = PIPE.right, PIPE.back
 
@@ -140,7 +148,7 @@ manifest_anims = {}
 PIPE.modo = "livre"
 for anim, nf, fps, loop in ANIMS:
     frames = {}
-    for dname in PP.BILATERAL_RENDER:
+    for dname in RENDER:
         cels = []
         for f in range(nf):
             pousar(pose(anim, f), yaw_para(dname))
@@ -148,14 +156,8 @@ for anim, nf, fps, loop in ANIMS:
             rgba, _, _, _, _ = PIPE.estagio(["corpo"], "corpo")
             cels.append(rgba)
         frames[dname] = cels
-    linhas = []
-    for d in PP.GAME_DIRS:
-        if d in frames:
-            linhas.append(frames[d])
-        else:
-            linhas.append([PP.espelhar(c) for c in frames[PP.ESPELHO_DE[d]]])
-    atlas[anim] = linhas
-    PP.save_png(PP.montar_atlas(linhas), os.path.join(SAIDA, "%s.png" % anim))
+    atlas[anim] = [frames[d] for d in RENDER]          # linhas na ordem de RENDER, colunas = quadros
+    PP.save_png(PP.montar_atlas(atlas[anim]), os.path.join(SAIDA, "%s.png" % anim))
     manifest_anims[anim] = {"frames": nf, "fps": fps, "loop": loop}
     if anim == "atacar":
         manifest_anims[anim]["golpe_quadro"] = 3
@@ -164,7 +166,7 @@ for anim, nf, fps, loop in ANIMS:
 
 # ------------------------------------------------------------------ folha de contato (todas as animacoes, fundo neutro)
 def folha(atlas_por_anim, caminho):
-    blocos =[PP.montar_atlas(atlas_por_anim[a]) for a in atlas_por_anim]
+    blocos = [PP.montar_atlas(atlas_por_anim[a]) for a in atlas_por_anim]
     arr = np.concatenate(blocos, axis=1)
     h, w = arr.shape[:2]
     fundo = np.array([92, 104, 96], np.uint8)
@@ -183,23 +185,25 @@ def folha(atlas_por_anim, caminho):
 
 folha(atlas, os.path.join(OUTDIR, "folha-cubo-%d.png" % TILE))
 
+# Formato lido por game/monster-sprites.mjs: especies[id] com cell, pivo, dirs e anims.
 manifest = {
     "versao": 1,
-    "especie": "cubo_teste",
-    "tile": TILE,
-    "pivo": list(ESTILO.pivo),
-    "dirs": "8e",
-    "direcoes": PP.GAME_DIRS,
-    "espelho": PP.ESPELHO_DE,
-    "render_pelo_menos": PP.BILATERAL_RENDER,
-    "escala_camera": round(float(PIPE.ppu), 3),
-    "anims": manifest_anims,
-    "atlas": {a: "%s.png" % a for a in atlas},
-    "nota": "teste da biblioteca: cubo de 0,6 m, sem contorno de especie; nao e arte de monstro",
+    "especies": {
+        "cubo_teste": {
+            "cell": TILE,
+            "pivo": list(ESTILO.pivo),
+            "dirs": DIRS,
+            "direcoes": RENDER,
+            "escala": 0.6,
+            "anims": manifest_anims,
+            "nota": "teste da biblioteca: cubo de 0,6 m, nao e arte de monstro",
+        }
+    },
+    "escala_fisica": {"ppu_por_metro": PIPE.ppu, "origem_y": PIPE.origin_y, "fonte": "PPU_REF_96 (A7)"},
 }
 with open(os.path.join(SAIDA, "manifest.json"), "w", encoding="utf-8") as fh:
     json.dump(manifest, fh, indent=1, ensure_ascii=False)
 tmp = PIPE.tmp
 if os.path.exists(tmp):
     os.remove(tmp)
-print("DONE tile", TILE, "ppu", round(PIPE.ppu, 2))
+print("DONE tile", TILE, "dirs", DIRS, "ppu", repr(PIPE.ppu))

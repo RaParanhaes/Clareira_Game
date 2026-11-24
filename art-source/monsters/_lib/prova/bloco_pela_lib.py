@@ -6,10 +6,15 @@ import pixel_pipeline as PP
 
 #@HOOKS@#
 
+rest = np.concatenate([np.array([v.co[:] for v in ob.data.vertices]) for ob in PARTS if ob["layer"] != "ferramenta"])
+# Referencia A7: o autofit antigo (so aqui, na prova) deve bater com a escala fisica fixa da biblioteca.
+PPU_AUTOFIT, ORIGEM_AUTOFIT = PP.ppu_silhueta(rest, 5, 83)
+print("PROVA_ESCALA autofit_A7", repr(PPU_AUTOFIT), repr(ORIGEM_AUTOFIT), "biblioteca", repr(PP.PPU_REF_96))
+assert abs(PPU_AUTOFIT - PP.PPU_REF_96) < 0.005, "PPU_REF_96 diferente da escala do A7"
 ESTILO = PP.Estilo(tile=TILE, mats=MATS, camadas=LAYERS, linha_ok=LINE_OK, textura=cloth,
                    pele=("pele", "cabelo", "barba", "sobr", "iris", "olhob", "boca"),
-                   sem_linha=("iris", "olhob", "boca", "sobr"))
-rest = np.concatenate([np.array([v.co[:] for v in ob.data.vertices]) for ob in PARTS if ob["layer"] != "ferramenta"])
+                   sem_linha=("iris", "olhob", "boca", "sobr"),
+                   ppu=PP.PPU_REF_96, origem_y=ORIGEM_AUTOFIT)
 PIPE = PP.Pipeline(ESTILO, PARTS, TMP)
 cam = PIPE.camera_iso(rest)
 PIPE.preparar_render()

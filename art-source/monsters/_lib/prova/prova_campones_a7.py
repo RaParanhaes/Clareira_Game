@@ -7,12 +7,19 @@ Roda o build-blender.py do camponese sem alterar o arquivo. Dois modos (env MODO
         continuam os do build original.
 
 Ambiente: REPO (raiz do worktree), OUTDIR (pasta de saida), OUTABS (pasta dos quadros), TAG,
-ANIMS, DIRS, FMAX (ver build-blender.py).
+ANIMS (padrao parado,andar: ciclo completo), DIRS (padrao as 8 direcoes), FMAX (ver build-blender.py).
+golpear fica de fora desta prova (amostra antes, em s0); rodar com ANIMS=golpear para incluir.
 
-Rodar: REPO=... OUTDIR=... MODO=lib timeout 300 blender -b --factory-startup -P prova_campones_a7.py
+Prova completa (4 processos: orig/lib x 2 metades de direcoes; cada um ~3 min, timeout 900):
+  REPO=... OUTDIR=... OUTABS=.../frames MODO=orig|lib TAG=... ANIMS=parado,andar DIRS=S,SE,L,NE
+  REPO=... OUTDIR=... OUTABS=.../frames MODO=orig|lib TAG=... ANIMS=parado,andar DIRS=N,NO,O,SO
+  Comparacao: python3 comparar_pngs.py <orig/frames> <lib/frames> --esperar 384   (exit 1 se falhar)
+Resultado medido em 2026-11-24: 768 arquivos, 0 pixels diferentes.
 """
 import os
 
+os.environ.setdefault("ANIMS", "parado,andar")
+os.environ.setdefault("DIRS", "S,SE,L,NE,N,NO,O,SO")
 REPO = os.environ["REPO"]
 LIB_DIR = os.path.join(REPO, "art-source", "monsters", "_lib")
 BB = os.path.join(REPO, "art-source", "character-paperdoll", "build-blender.py")

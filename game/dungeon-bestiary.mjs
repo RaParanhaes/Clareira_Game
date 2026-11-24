@@ -77,7 +77,8 @@ export function bossFor(level) { return BOSSES.find(boss => boss.level === Math.
 export function guardianFor(level) {
   const band = bandOfLevel(level);
   if (bossFor(level)) return null;
-  return DUNGEON_SPECIES.find(species => level >= band.minLevel && level <= band.maxLevel && species.bands[0] <= band.minLevel && species.bands[1] >= band.minLevel) || null;
+  return DUNGEON_SPECIES.find(species => level >= band.minLevel && level <= band.maxLevel && species.bands[0] <= band.minLevel && species.bands[1] >= band.minLevel)
+    || (level >= 3 ? DUNGEON_SPECIES_BY_ID.get('caveBear') : null);
 }
 
 // Números do nível: k é a distância do início da faixa, limitada a seis níveis.
@@ -88,12 +89,14 @@ export function scaleSpecies(speciesOrId, level) {
   const band = bandOfLevel(n);
   const isBoss = BOSSES.includes(species);
   const k = isBoss ? 0 : Math.min(6, Math.max(0, n - band.minLevel));
-  const health = Math.max(1, Math.ceil(species.baseHealth * (1 + 0.15 * k)));
-  const force = round2(species.baseForce * (1 + 0.08 * k));
+  // Guardião das faixas intermediárias: endurece a vida e a força, com o dano comum limitado a 10.
+  const isIntermediateGuardian = !isBoss && n >= 3 && guardianFor(n)?.id === species.id;
+  const health = Math.max(1, Math.ceil(species.baseHealth * (isIntermediateGuardian ? 2.5 : 1) * (1 + 0.15 * k)));
+  const force = round2(species.baseForce * (isIntermediateGuardian ? 1.2 : 1) * (1 + 0.08 * k));
   const speed = round2(species.baseSpeed + Math.min(0.3, 0.05 * k));
   return {
     id: species.id, level: n, band: band.id, k, behavior: species.behavior, kind: species.kind, armor: species.armor,
-    health, force, damage: Math.max(1, Math.round(force * 4)),
+    health, force, damage: isBoss ? Math.max(1, Math.round(force * 4)) : Math.min(10, Math.max(1, Math.round(force * 4))),
     reach: species.reach, cooldownMs: species.cooldownMs, speed,
     wakeRadius: species.wakeRadius, leash: species.leash,
   };
@@ -109,10 +112,14 @@ export function dungeonWildlifeDefinition(id) {
   if (!species) return null;
   return {
     id: species.id, label: species.label, form: species.form, size: [...species.size], colors: { ...species.colors },
-    stats: { health: species.baseHealth, speed: species.baseSpeed, radius: species.size[0] / 100 },
-    drops: species.drops.map(drop => [drop.item, 1, drop.chance]),
-    attack: { mode: species.kind, when: 'intruder', reach: species.reach, force: species.baseForce, cooldownMs: species.cooldownMs },
-    isMonster: true, family: species.family, sprite: species.sprite, bands: [...species.bands], armor: species.armor, kind: species.kind,
+    stats: { health: species.baseHealth, speed: species.baseSpeed, radius: species.family === 'bear' ? 0.48 : round3(species.size[0] / 100) },
+    // `drops` segue wildlife.mjs: [item, quantidade]. `dropChances`, por índice, preserva as chances
+    // que o consumidor deve aplicar ao sortear cada drop (o gerador comum wildlife-hunt usa chance no 3o campo).
+    drops: species.drops.map(drop => [drop.item, drop.quantity ?? 1]),
+    dropChances: species.drops.map(drop => drop.chance),
+    attack: { mode: species.family === 'bear' ? 'swipe' : species.family === 'spider' ? 'bite' : 'bite', when: species.id === 'elderBear' ? 'intruder' : 'cornered', reach: species.reach, force: species.baseForce, cooldownMs: species.cooldownMs },
+    senses: { sight: species.wakeRadius ?? 5, hearing: 8, smell: 6, night: 1, cone: 3 },
+    aggression: 'monster', isMonster: true, family: species.family, sprite: species.sprite, bands: [...species.bands], armor: species.armor, kind: species.kind,
   };
 }
 
@@ -135,6 +142,7 @@ export function planDungeonSpawns(dungeon) {
   const rooms = dungeon.rooms || [];
   const arena = dungeon.boss?.arena || null;
   const pool = speciesIdsForLevel(level);
+  if (pool.length === 0) return { ok: false, level, pool, spawners: [], initial: [], instanceMaxAlive: DUNGEON_RULES.instanceMaxAlive, reason: 'sem-especies' };
   const dist = distancesFrom(dungeon, dungeon.entrance);
   const rand = createRandom(hash32([seed >>> 0, level >>> 0, 0x5afe]));
   const inArena = (x, y) => !!arena && x >= arena.x && x < arena.x + arena.w && y >= arena.y && y < arena.y + arena.h;
@@ -203,6 +211,7 @@ export function planRespawn({
   now, lastRespawnAt = null, lastRoomDeathAt = null, rotation = 0,
 }) {
   const reject = reason => ({ ok: false, reason });
+  if (!spawner || !Array.isArray(spawner.species) || spawner.species.length === 0) return reject('sem-especies');
   if (aliveInRoom >= spawner.max) return reject('sala-cheia');
   if (aliveInInstance >= DUNGEON_RULES.instanceMaxAlive) return reject('instancia-cheia');
   if (lastRespawnAt !== null && now - lastRespawnAt < spawner.respawnMs) return reject('intervalo');

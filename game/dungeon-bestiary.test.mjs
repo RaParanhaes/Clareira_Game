@@ -68,6 +68,15 @@ test('F1 números usam k relativo à faixa e a fórmula aprovada', () => {
   assert.equal(scaleSpecies(synthetic, 30).health, 19);
 });
 
+test('dano comum fica limitado a 10 nos níveis 1 a 20 e o guardião intermediário escala', () => {
+  for (let level = 1; level <= 20; level++) {
+    for (const species of DUNGEON_SPECIES) assert.ok(scaleSpecies(species, level).damage <= 10, `${species.id} nível ${level}`);
+  }
+  const guardian = scaleSpecies('caveBear', 3);
+  assert.equal(guardian.health, Math.ceil(DUNGEON_SPECIES.find(s => s.id === 'caveBear').baseHealth * 2.5));
+  assert.equal(guardian.force, 2.64);
+});
+
 test('ids F1 não colidem com fauna, v1 foi removido, e wildlife adapter expõe os ids', () => {
   const retired = ['stoneRat', 'caveBat', 'blindSnake', 'gloomWolf', 'coldWraith'];
   const ids = [...DUNGEON_SPECIES, ...BOSSES].map(s => s.id);
@@ -80,11 +89,31 @@ test('ids F1 não colidem com fauna, v1 foi removido, e wildlife adapter expõe 
   assert.equal(dungeonWildlifeDefinition('elderBear').id, 'elderBear');
 });
 
+test('adapter de masmorra mantém o contrato de uma espécie real do wildlife', () => {
+  const bear = dungeonWildlifeDefinition('caveBear');
+  const wildlifeBear = WILDLIFE_BY_ID.get('bear');
+  assert.deepEqual(bear.drops.map(drop => drop.length), wildlifeBear.drops.map(drop => drop.length));
+  assert.ok(bear.drops.every(([item, quantity]) => typeof item === 'string' && Number.isFinite(quantity)));
+  assert.ok(bear.dropChances.every(chance => chance >= 0 && chance <= 1));
+  assert.equal(bear.stats.radius, wildlifeBear.stats.radius);
+  assert.equal(bear.aggression, 'monster');
+  assert.ok(['swipe', 'bite', 'scratch', 'kick', 'charge', 'pounce', 'swoop'].includes(bear.attack.mode));
+  assert.ok(['cornered', 'intruder', 'nest-threatened', 'hungry-or-provoked', 'cornered-or-provoked'].includes(bear.attack.when));
+  assert.deepEqual(Object.keys(bear.senses).sort(), Object.keys(wildlifeBear.senses).sort());
+});
+
 test('cada nível contém apenas espécies cujas faixas o incluem', () => {
   for (let level = 1; level <= 20; level++) {
     const expected = DUNGEON_SPECIES.filter(s => level >= s.bands[0] && level <= s.bands[1]).map(s => s.id);
     assert.deepEqual(speciesIdsForLevel(level), expected);
   }
+});
+
+test('faixa vazia não planeja nascimentos e reaparecimento vazio é rejeitado sem erro', () => {
+  const plan = planDungeonSpawns(generateDungeon(SEEDS[0], 3));
+  assert.equal(plan.ok, false);
+  assert.deepEqual(plan.initial, []);
+  assert.equal(planRespawn({ spawner: roomSpawner([]), now: 10 * MIN }).ok, false);
 });
 
 test('spawns determinísticos, com teto por sala e instância e sem arena nem entrada', () => {

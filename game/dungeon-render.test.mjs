@@ -7,6 +7,7 @@ import {
   torchFrame, visibleTileBounds, wallAlphaFor, wallDrawOffset, wallFaceMask, wallPiece,
 } from './dungeon-render.mjs';
 import { createDungeonArt } from './dungeon-art.mjs';
+import { compareSceneDepth } from './depth-order.mjs';
 import { loadDungeonTileset } from './dungeon-tileset.mjs';
 import { dungeonFixtureLevel, validateDungeonLevel } from './dungeon-contract.mjs';
 
@@ -92,6 +93,20 @@ test('a wall behind the player draws before it and a wall in front draws after i
   const front = collectDungeonThings({ grid, bounds, player: { x: 4.5, y: 4.5 } });
   assert.ok(front.findIndex(t => t.type === 'wall') > front.findIndex(t => t.type === 'player'),
     'wall at depth 11 sits in front of a player at depth 9');
+});
+
+test('dungeon actors, including a wildlife animal, join the shared depth-sorted draw list', () => {
+  const grid = gridWithRock([[5, 5]]);
+  const bounds = { minX: 0, minY: 0, maxX: 11, maxY: 11 };
+  const animal = { type: 'animal', id: 'bat-1', x: 4.5, y: 5.5, animal: { id: 'bat-1' } };
+  const remotePlayer = { type: 'remote-player', id: 'player-2', x: 6.5, y: 6.5, player: { id: 'player-2' } };
+  const things = collectDungeonThings({ grid, bounds, player: { x: 3.5, y: 4.5 }, actors: [animal, remotePlayer] });
+  assert.ok(things.some(thing => thing.type === 'animal' && thing.id === 'bat-1'),
+    'the animal from the dungeon dimension is included in the draw list');
+  assert.ok(things.some(thing => thing.type === 'remote-player' && thing.id === 'player-2'),
+    'a second group member is included in the draw list');
+  assert.deepEqual(things, [...things].sort(compareSceneDepth),
+    'actors and dungeon geometry use the same depth comparator');
 });
 
 test('a front wall covering the body is translucent, while a far or behind wall stays opaque', () => {
@@ -312,6 +327,18 @@ test('torch light is warm and stronger than the player light, which is neutral',
   assert.equal(still.find(l => l.warm).radius, DUNGEON_LIGHT.torchReachTiles * DUNGEON_LIGHT.pxPerTile, 'reduced motion keeps the torch radius fixed');
   const wobble = Math.abs(torch.radius / (DUNGEON_LIGHT.torchReachTiles * DUNGEON_LIGHT.pxPerTile) - 1);
   assert.ok(wobble <= DUNGEON_LIGHT.flicker + 1e-9, 'the torch varies only a little');
+});
+
+test('the dungeon boss has a local warm light so its sprite stays readable beyond player light', () => {
+  const things = [
+    { type: 'player', x: 14.5, y: 14.5 },
+    { type: 'animal', x: 9.5, y: 10.5, animal: { dungeonBoss: true } },
+  ];
+  const lights = collectDungeonLights({ things, camera: { x: 14.5, y: 14.5 }, viewport: { width: 400, height: 300 } });
+  const bossLight = lights.find(light => light.warm);
+  assert.ok(bossLight, 'a separate warm light is centered on the boss');
+  assert.equal(bossLight.radius, 2.6 * DUNGEON_LIGHT.pxPerTile);
+  assert.equal(bossLight.strength, 0.8);
 });
 
 test('mock level is deterministic and keeps torches on rock with open floor below', () => {

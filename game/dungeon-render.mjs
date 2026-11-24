@@ -182,7 +182,7 @@ function inBounds(thing, b) {
 
 // Lista ordenada de coisas visíveis: paredes, estalagmites, tochas e o jogador.
 // Só percorre os chunks que tocam a vista. stats (opcional) recebe chunks e items visitados, para medir o custo.
-export function collectDungeonThings({ grid, bounds, player, torchLimit = DUNGEON_LIGHT.maxTorches, stats = {} }) {
+export function collectDungeonThings({ grid, bounds, player, actors = [], torchLimit = DUNGEON_LIGHT.maxTorches, stats = {} }) {
   const index = dungeonIndex(grid);
   const things = [], torches = [];
   const cx0 = Math.max(0, Math.floor(bounds.minX / CHUNK_TILES)), cx1 = Math.min(index.chunkW - 1, Math.floor(bounds.maxX / CHUNK_TILES));
@@ -203,6 +203,10 @@ export function collectDungeonThings({ grid, bounds, player, torchLimit = DUNGEO
   torches.sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y));
   things.push(...torches.slice(0, torchLimit));
   things.push({ type: 'player', id: 'player', sortId: 'player', x: player.x, y: player.y, sortX: player.x, sortY: player.y, sortZ: 0 });
+  for (const actor of actors) {
+    if (!actor || !Number.isFinite(actor.x) || !Number.isFinite(actor.y)) continue;
+    things.push({ ...actor, sortX: actor.x, sortY: actor.y, sortId: actor.sortId || actor.id || actor.type });
+  }
   things.sort(compareSceneDepth);
   return things;
 }
@@ -228,9 +232,12 @@ export function collectDungeonLights({ things, camera, viewport, time, reducedMo
   };
   const lights = [];
   for (const thing of things) {
-    if (thing.type === 'player') {
+    if (thing.type === 'player' || thing.type === 'remote-player') {
       const s = toScreen(thing);
       lights.push({ x: s.x, y: s.y - 24, radius: DUNGEON_LIGHT.playerReachTiles * DUNGEON_LIGHT.pxPerTile, warm: false, strength: DUNGEON_LIGHT.playerStrength });
+    } else if (thing.type === 'animal' && thing.animal?.dungeonBoss) {
+      const s = toScreen(thing);
+      lights.push({ x: s.x, y: s.y - 18, radius: 2.6 * DUNGEON_LIGHT.pxPerTile, warm: true, strength: 0.8 });
     } else if (thing.type === 'torch') {
       const s = toScreen({ x: thing.sortX, y: thing.sortY });
       const seed = thing.x * 1.7 + thing.y * 0.63;
@@ -275,7 +282,7 @@ export function createSpriteCache(limit = 512) {
 // art: { floor(id), wall(spec), prop(id), torch(frame), darken(ctx, lights, w, h) } (ver dungeon-art.mjs).
 // drawActor(ctx, thing, screen) desenha o jogador (o avatar é responsabilidade do chamador).
 // Retorna contagens de custo: visitedCells (células do retângulo da vista) e visitedChunks.
-export function drawDungeonFrame(ctx, { grid, camera, viewport, player, time = 0, reducedMotion = false, art, drawActor }) {
+export function drawDungeonFrame(ctx, { grid, camera, viewport, player, actors = [], time = 0, reducedMotion = false, art, drawActor, drawEntity }) {
   const bounds = visibleTileBounds(camera, viewport);
   const cam = projectTile(camera.x, camera.y);
   const camX = Math.round(cam.x), camY = Math.round(cam.y);
@@ -300,7 +307,7 @@ export function drawDungeonFrame(ctx, { grid, camera, viewport, player, time = 0
     }
   }
   const stats = {};
-  const things = collectDungeonThings({ grid, bounds, player, stats });
+  const things = collectDungeonThings({ grid, bounds, player, actors, stats });
   const wallOffset = wallDrawOffset();
   for (const thing of things) {
     ctx.globalAlpha = wallAlphaFor(thing, player);
@@ -313,9 +320,13 @@ export function drawDungeonFrame(ctx, { grid, camera, viewport, player, time = 0
     } else if (thing.type === 'torch') {
       const s = screenOf({ x: thing.sortX, y: thing.sortY });
       ctx.drawImage(art.torch(torchFrame(time, reducedMotion, thing.x + thing.y)), s.x - DUNGEON_GEOMETRY.torchAnchor.x, s.y - DUNGEON_GEOMETRY.torchAnchor.y);
-    } else if (thing.type === 'player') {
+    } else if (thing.type === 'player' || thing.type === 'remote-player') {
       ctx.globalAlpha = 1;
-      drawActor?.(ctx, thing, screenOf(thing));
+      if (thing.type === 'player') drawActor?.(ctx, thing, screenOf(thing));
+      else drawEntity?.(ctx, thing, screenOf(thing));
+    } else if (thing.type === 'animal' || thing.type === 'monster') {
+      ctx.globalAlpha = 1;
+      drawEntity?.(ctx, thing, screenOf(thing));
     }
   }
   ctx.globalAlpha = 1;

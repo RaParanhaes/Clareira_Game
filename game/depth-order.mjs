@@ -1,4 +1,4 @@
-const actorPriority=thing=>['player','self'].includes(thing?.type)?1:0;
+const actorPriority=thing=>['player','self','remote-player'].includes(thing?.type)?1:0;
 const stableId=thing=>String(thing?.sortId??thing?.id??thing?.item?.id??thing?.player?.id??thing?.animal?.id??thing?.type??'');
 
 export function compareSceneDepth(a,b){

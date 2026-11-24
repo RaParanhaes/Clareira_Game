@@ -303,6 +303,7 @@ function serializeWildlifeForNetwork(animal) {
   return {
     id: animal.id, speciesId: animal.speciesId,
     x: animal.x, y: animal.y, vx: animal.vx, vy: animal.vy,
+    ...(animal.dungeonBoss === true ? { dungeonBoss: true, scale: animal.scale } : {}),
     state: animal.state, health: animal.health, lifeStage: animal.lifeStage,
     awareness: animal.awarenessUntil > Date.now() ? animal.awareness : null,
     shelter: {

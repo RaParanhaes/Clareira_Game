@@ -51,11 +51,11 @@ export function createDungeonClient({ createCanvas, loadTileset = loadDungeonTil
       const distance = Math.hypot(position.x - (x + .5), position.y - (y + .5));
       return distance <= 1.5 ? { x: x + .5, y: y + .5, distance } : null;
     },
-    draw(ctx, { dimensionId, camera, viewport, player, time, reducedMotion, drawActor }) {
+    draw(ctx, { dimensionId, camera, viewport, player, actors = [], time, reducedMotion, drawActor, drawEntity }) {
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, viewport.width, viewport.height);
       if (!art || !view || view.dimensionId !== dimensionId) return;
-      drawDungeonFrame(ctx, { grid: view.level, camera, viewport, player, time, reducedMotion, art, drawActor });
+      drawDungeonFrame(ctx, { grid: view.level, camera, viewport, player, actors, time, reducedMotion, art, drawActor, drawEntity });
     },
   };
 }

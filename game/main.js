@@ -3342,7 +3342,8 @@ const craftingGuideView = createCraftingGuideView({
 let inventoryHudRenderKey='';
 function renderInventory(forcePanel = false) {
   if (!ui.quickbar || !ui.inventoryGrid) return;
-  craftingGuideView.update(localInventory, { dismissedStage: craftHintDismissedStage, canCraft: worldLocation === 'clearing' });
+  craftingGuideView.update(localInventory, { dismissedStage: craftHintDismissedStage,
+    visible: worldLocation === 'clearing', canCraft: worldLocation === 'clearing' });
   const hudKey=JSON.stringify([localInventory,inventorySelectionIndex,inventoryDragSource]);
   if(!forcePanel&&!ui.inventoryDialog.open&&hudKey===inventoryHudRenderKey){
     // Cooldowns depend on time; inventory, recipes and slot DOM do not.
@@ -4169,10 +4170,31 @@ function isDungeonScene() {
 }
 
 function drawDungeonScene(self, nameplateIds, pickupFrame) {
+  const actors = [];
+  for (const player of livePlayers.values()) {
+    if (player.id === selfId || (player.dimensionId && player.dimensionId !== worldDimensionId)) continue;
+    actors.push({ type: 'remote-player', id: player.id, x: player.x, y: player.y, player });
+  }
+  for (const animal of wildlife.values()) {
+    if (animal.dimensionId && animal.dimensionId !== worldDimensionId) continue;
+    const position = renderedWildlifePosition(animal) || animal;
+    const renderedAnimal = { ...animal, ...position,
+      dungeonBoss: animal.dungeonBoss === true || String(animal.id).startsWith('boss:') };
+    actors.push({ type: 'animal', id: animal.id, x: position.x, y: position.y, animal: renderedAnimal });
+  }
   dungeonClient.draw(ctx, {
     dimensionId: worldDimensionId, camera, viewport: { width: viewWidth, height: viewHeight },
-    player: localRenderPosition, time: worldClock, reducedMotion,
+    player: localRenderPosition, actors, time: worldClock, reducedMotion,
     drawActor: () => drawAvatar(self, worldClock, true, false, pickupFrame, nameplateIds),
+    drawEntity: (_frameCtx, thing) => {
+      if (thing.type === 'remote-player') {
+        if (!teleportEffects.shouldHide(thing.player.id, worldDimensionId, clientServerTime()))
+          drawAvatar(thing.player, worldClock, false, false, null, nameplateIds);
+      } else if (thing.type === 'animal') {
+        const nearest = nearestWildlifeTarget(localRenderPosition, 4.5);
+        drawWildlife(thing.animal, worldClock, thing.animal.dungeonBoss === true || nearest?.id === thing.animal.id);
+      }
+    },
   });
 }
 
@@ -6919,16 +6941,17 @@ function drawTutorialGuide(guide,time){
 function drawWildlife(animal,time,highlight=false) {
   const definition=WILDLIFE_BY_ID.get(animal.speciesId);
   if(!definition||animal.sheltered)return;
-  const p=point(animal.x,animal.y),[width,standingHeight]=definition.size;
+  const p=isDungeonScene()?point(animal.x,animal.y,camera,0):point(animal.x,animal.y),[width,standingHeight]=definition.size;
   const height=animal.state==='dormindo'?Math.round(standingHeight*.6):standingHeight;
   const colors=definition.colors,form=definition.form;
+  const visualScale=spriteScale*(Number.isFinite(animal.scale)?Math.min(2.25,Math.max(.7,animal.scale)):1);
   const moving=Math.hypot(animal.vx||0,animal.vy||0)>.22;
   const gait=moving?Math.round(Math.sin(time*(animal.state==='fugindo'?15:9)+(animal.id.length%7))*1.4):0;
   const bob=moving?Math.round(Math.abs(Math.sin(time*8+(animal.id.length%5)))):0;
-  drawSoftShadow(p.x,p.y+1,width*spriteScale*.52,height*spriteScale*.14,.08,.32);
+  drawSoftShadow(p.x,p.y+1,width*visualScale*.52,height*visualScale*.14,.08,.32);
   ctx.save();
   ctx.translate(Math.round(p.x),Math.round(p.y));
-  ctx.scale(spriteScale,spriteScale);
+  ctx.scale(visualScale,visualScale);
   if((animal.vx||0)<-.04)ctx.scale(-1,1);
   const pixel=(x,y,w,h,color)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.round(w)),Math.max(1,Math.round(h)));};
   const outline='#292820';
@@ -8455,7 +8478,11 @@ function advanceFrame(now) {
     setWeatherWind(windNow);
     const moon=gameDay.hasMoon&&gameDay.night>.5?moonAt(skyTime):null;
     const moonText=moon?` · ${moon.phaseName}${moon.redMoon?' (lua vermelha)':''}`:'';
-    ui.weatherText.replaceChildren(svgIcon(skyIcon),document.createTextNode(` ${gameDateTimeLabel(skyTime)} · ${gameDay.period} · ${weatherLabel(sky)} · ${windLabel(windNow)}${moonText}`));
+    if (isDungeonScene()) {
+      ui.weatherText.textContent = `Subterrâneo · ${gameDateTimeLabel(skyTime)}`;
+    } else {
+      ui.weatherText.replaceChildren(svgIcon(skyIcon),document.createTextNode(` ${gameDateTimeLabel(skyTime)} · ${gameDay.period} · ${weatherLabel(sky)} · ${windLabel(windNow)}${moonText}`));
+    }
   }
   sendInputIfChanged(now);
   const drawStartedAt=performance.now();

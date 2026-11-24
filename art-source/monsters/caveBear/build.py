@@ -44,13 +44,16 @@ ESCALA_JOGO = 0.95
 MATS = {
     "sombra_meia": dict(r=[(96, 86, 76)], layer="sombra_meia", w=1.0, dith=0.0, bias=0.0, ao=0.0),
     "sombra": dict(r=[(64, 56, 50), (46, 40, 36)], layer="sombra", w=1.0, dith=0.0, bias=0.0, ao=0.0),
-    "pelo": dict(r=[(118, 78, 50), (92, 58, 38), (66, 42, 30)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.5),
-    "pelo_claro": dict(r=[(176, 128, 84), (142, 100, 62)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.2),
-    "focinho": dict(r=[(220, 186, 140), (182, 148, 106)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.2),
+    "pelo_escuro": dict(r=[(96, 62, 40), (74, 46, 30), (56, 36, 26)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.5),
+    "pelo": dict(r=[(124, 82, 52), (100, 64, 40), (76, 48, 32)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.4),
+    "pelo_claro": dict(r=[(164, 120, 80), (138, 98, 64)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.2),
+    "rim": dict(r=[(216, 172, 122)], layer="corpo", w=1.0, dith=0.0, bias=0.0, ao=0.0),
+    "focinho": dict(r=[(226, 194, 148), (192, 158, 116)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.2),
     "musgo": dict(r=[(108, 140, 74), (76, 108, 52)], layer="corpo", w=1.2, dith=0.02, bias=0.0, ao=0.6),
-    "garra": dict(r=[(92, 80, 68), (48, 40, 36)], layer="olhos", w=1.5, dith=0.0, bias=0.0, ao=0.2),
-    "olho": dict(r=[(56, 44, 40), (20, 16, 16)], layer="olhos", w=2.0, dith=0.0, bias=0.0, ao=0.1),
-    "nariz": dict(r=[(44, 36, 34), (18, 14, 14)], layer="olhos", w=2.0, dith=0.0, bias=0.0, ao=0.1),
+    "garra": dict(r=[(244, 232, 204), (206, 188, 150)], layer="olhos", w=1.5, dith=0.0, bias=0.0, ao=0.1),
+    "olho": dict(r=[(44, 34, 30), (20, 16, 16)], layer="olhos", w=2.0, dith=0.0, bias=0.0, ao=0.1),
+    "brilho": dict(r=[(255, 252, 236)], layer="olhos", w=3.0, dith=0.0, bias=0.0, ao=0.0),
+    "nariz": dict(r=[(38, 30, 28), (18, 14, 14)], layer="olhos", w=2.0, dith=0.0, bias=0.0, ao=0.1),
 }
 CAMADAS = ["sombra_meia", "sombra", "corpo", "olhos"]                     # ordem de baixo para cima
 ESTILO = PP.Estilo(tile=TILE, mats=MATS, camadas=CAMADAS, sem_linha=("sombra", "sombra_meia"),
@@ -128,6 +131,31 @@ def tubo(a, b, r, lados=8):
     return orientar(verts, faces)
 
 
+def tubo_afinado(a, b, ra, rb, lados=8):
+    """Tronco de cone entre a e b (raio ra na ponta a, rb na ponta b), com tampas."""
+    a, b = np.array(a, np.float64), np.array(b, np.float64)
+    w = (b - a) / np.linalg.norm(b - a)
+    ref = np.array([0, 0, 1.0]) if abs(w[2]) < 0.9 else np.array([1.0, 0, 0])
+    u = np.cross(w, ref)
+    u /= np.linalg.norm(u)
+    v = np.cross(w, u)
+    verts = []
+    for ponta, r in ((a, ra), (b, rb)):
+        for j in range(lados):
+            t = 2 * math.pi * j / lados
+            verts.append(tuple(ponta + r * (math.cos(t) * u + math.sin(t) * v)))
+    verts.append(tuple(a))
+    verts.append(tuple(b))
+    faces = []
+    ca, cb = 2 * lados, 2 * lados + 1
+    for j in range(lados):
+        j2 = (j + 1) % lados
+        faces.append((j, j2, lados + j2, lados + j))
+        faces.append((ca, j2, j))
+        faces.append((cb, lados + j, lados + j2))
+    return orientar(verts, faces)
+
+
 def juntar(*malhas):
     verts, faces = [], []
     for vs, fs in malhas:
@@ -137,8 +165,8 @@ def juntar(*malhas):
     return verts, faces
 
 
-# ------------------------------------------------------------------ partes do urso
-# tipo: "fixo" (sombra, so gira), "corpo" (tronco, gira e segue o balanco), "cabeca" (gira em torno do pescoco),
+# ------------------------------------------------------------------ partes do urso (formas organicas)
+# tipo: "fixo" (sombra), "corpo" (tronco e enfeites, gira com a direcao), "cabeca" (gira em torno do pescoco),
 # "perna" (gira em torno do quadril; perna = 0..3, FL, FR, BL, BR)
 PARTES = []
 PERNAS = [
@@ -155,38 +183,49 @@ def add(nome, layer, mat, grp, malha, tipo="corpo", perna=None):
 
 
 add("sombra_meia", "sombra_meia", "sombra_meia", 30, elipsoide((0.0, 0.0, 0.001), 0.42, 0.66, 0.001, 1), "fixo")
-add("sombra", "sombra", "sombra", 31, elipsoide((0.0, 0.0, 0.002), 0.30, 0.52, 0.002, 1), "fixo")
+add("sombra", "sombra", "sombra", 31, elipsoide((0.0, 0.0, 0.002), 0.30, 0.52, 0.002, 2), "fixo")
 
-# tronco, ombros e quadris (grupo 1: sem linha interna entre as partes do corpo)
-add("tronco", "corpo", "pelo", 1, elipsoide((0.0, 0.12, 0.80), 0.30, 0.52, 0.27, 2))
-add("ombros", "corpo", "pelo", 1, elipsoide((0.0, -0.20, 0.92), 0.28, 0.26, 0.20, 2))
-add("quadril", "corpo", "pelo", 1, elipsoide((0.0, 0.42, 0.80), 0.28, 0.22, 0.25, 2))
-add("cauda", "corpo", "pelo", 1, elipsoide((0.0, 0.72, 0.80), 0.060, 0.060, 0.060, 1))
-add("pelo_claro_ombro", "corpo", "pelo_claro", 1, elipsoide((0.0, -0.20, 1.10), 0.14, 0.14, 0.04, 1))
-add("musgo0", "corpo", "musgo", 7, elipsoide((-0.12, -0.14, 1.10), 0.060, 0.070, 0.035, 1))
-add("musgo1", "corpo", "musgo", 7, elipsoide((0.10, -0.06, 1.11), 0.050, 0.060, 0.030, 1))
-add("musgo2", "corpo", "musgo", 7, elipsoide((0.02, -0.28, 1.12), 0.050, 0.050, 0.030, 1))
+# tronco arredondado: massa media, costas escuras por cima, barriga clara por baixo, corcunda e traseiro mais baixo
+add("tronco", "corpo", "pelo", 1, elipsoide((0.0, 0.10, 0.80), 0.30, 0.50, 0.26, 2))
+add("costas", "corpo", "pelo_escuro", 1, elipsoide((0.0, 0.08, 0.92), 0.27, 0.44, 0.16, 2))
+add("barriga", "corpo", "pelo_claro", 8, elipsoide((0.0, 0.12, 0.62), 0.25, 0.42, 0.13, 2))
+add("corcunda", "corpo", "pelo_escuro", 1, elipsoide((0.0, -0.18, 0.98), 0.27, 0.25, 0.19, 2))
+add("traseiro", "corpo", "pelo", 1, elipsoide((0.0, 0.42, 0.74), 0.28, 0.23, 0.21, 2))
+add("cauda", "corpo", "pelo_claro", 1, elipsoide((0.0, 0.70, 0.76), 0.065, 0.065, 0.065, 1))
+add("luz_ombro", "corpo", "rim", 9, elipsoide((-0.12, -0.20, 1.12), 0.07, 0.22, 0.02, 1))
 
-# cabeca e pescoco (giram em torno do pescoco, para o golpe e a morte)
-add("pescoco", "corpo", "pelo", 2, elipsoide((0.0, -0.40, 0.98), 0.20, 0.22, 0.20, 2), "cabeca")
-add("cabeca", "corpo", "pelo", 2, elipsoide((0.0, -0.60, 1.12), 0.19, 0.22, 0.19, 2), "cabeca")
-add("orelha0", "corpo", "pelo", 2, elipsoide((-0.13, -0.50, 1.30), 0.07, 0.06, 0.06, 1), "cabeca")
-add("orelha1", "corpo", "pelo", 2, elipsoide((0.13, -0.50, 1.30), 0.07, 0.06, 0.06, 1), "cabeca")
-add("focinho", "corpo", "focinho", 3, elipsoide((0.0, -0.84, 1.02), 0.115, 0.13, 0.10, 2), "cabeca")
-add("nariz", "olhos", "nariz", 4, elipsoide((0.0, -0.97, 1.05), 0.045, 0.040, 0.035, 1), "cabeca")
-add("olho0", "olhos", "olho", 5, elipsoide((-0.10, -0.74, 1.16), 0.030, 0.030, 0.030, 1), "cabeca")
-add("olho1", "olhos", "olho", 6, elipsoide((0.10, -0.74, 1.16), 0.030, 0.030, 0.030, 1), "cabeca")
+# tufo de musgo: 3 bolinhas irregulares no alto da corcunda (nao um bloco)
+add("musgo0", "corpo", "musgo", 7, elipsoide((-0.10, -0.10, 1.13), 0.050, 0.055, 0.040, 1))
+add("musgo1", "corpo", "musgo", 7, elipsoide((0.02, -0.18, 1.17), 0.040, 0.045, 0.034, 1))
+add("musgo2", "corpo", "musgo", 7, elipsoide((0.09, -0.07, 1.11), 0.032, 0.036, 0.028, 1))
 
-# 4 pernas: coxa e canela (tubo), pata (elipsoide), 3 garras (grupo proprio, material garra)
+# pescoco, cranio com testa, orelhas redondas, focinho claro, olhos escuros com brilho de 1 px
+add("pescoco", "corpo", "pelo", 2, elipsoide((0.0, -0.40, 0.96), 0.20, 0.22, 0.20, 2), "cabeca")
+add("cranio", "corpo", "pelo", 2, elipsoide((0.0, -0.58, 1.10), 0.19, 0.20, 0.19, 2), "cabeca")
+add("testa", "corpo", "pelo_escuro", 2, elipsoide((0.0, -0.66, 1.21), 0.15, 0.12, 0.08, 2), "cabeca")
+add("orelha0", "corpo", "pelo_escuro", 2, elipsoide((-0.14, -0.48, 1.27), 0.075, 0.07, 0.07, 2), "cabeca")
+add("orelha1", "corpo", "pelo_escuro", 2, elipsoide((0.14, -0.48, 1.27), 0.075, 0.07, 0.07, 2), "cabeca")
+add("focinho", "corpo", "focinho", 3, elipsoide((0.0, -0.83, 1.00), 0.12, 0.13, 0.10, 2), "cabeca")
+add("nariz", "olhos", "nariz", 4, elipsoide((0.0, -0.94, 1.04), 0.05, 0.04, 0.035, 1), "cabeca")
+add("olho0", "olhos", "olho", 5, elipsoide((-0.10, -0.74, 1.15), 0.036, 0.034, 0.036, 1), "cabeca")
+add("olho1", "olhos", "olho", 6, elipsoide((0.10, -0.74, 1.15), 0.036, 0.034, 0.036, 1), "cabeca")
+add("brilho0", "olhos", "brilho", 25, elipsoide((-0.11, -0.77, 1.18), 0.012, 0.012, 0.012, 0), "cabeca")
+add("brilho1", "olhos", "brilho", 26, elipsoide((0.09, -0.77, 1.18), 0.012, 0.012, 0.012, 0), "cabeca")
+
+# 4 pernas grossas em cima que afinam ate a pata; pata clara; 3 garras claras por pata
 for k, pe in enumerate(PERNAS):
     hx, hy, hz = pe["H"]
     grp = 10 + k
-    add("perna%d" % k, "corpo", "pelo", grp, tubo((hx, hy, hz), (hx, hy, 0.16), 0.10), "perna", perna=k)
-    px, py = hx, hy - 0.02
-    add("pata%d" % k, "corpo", "pelo_claro", grp, elipsoide((px, py, 0.07), 0.12, 0.13, 0.07, 1), "perna", perna=k)
-    for j, dx in enumerate((-0.06, 0.0, 0.06)):
+    coxa = juntar(tubo_afinado((hx, hy, hz), (hx, hy, 0.36), 0.14, 0.095),
+                  tubo_afinado((hx, hy, 0.36), (hx, hy - 0.01, 0.10), 0.095, 0.07),
+                  elipsoide((hx, hy, hz), 0.14, 0.14, 0.14, 1),
+                  elipsoide((hx, hy, 0.36), 0.095, 0.095, 0.095, 1))
+    add("perna%d" % k, "corpo", "pelo", grp, coxa, "perna", perna=k)
+    px, py = hx, hy - 0.03
+    add("pata%d" % k, "corpo", "pelo_claro", grp, elipsoide((px, py, 0.075), 0.115, 0.12, 0.075, 2), "perna", perna=k)
+    for j, dx in enumerate((-0.05, 0.0, 0.05)):
         add("garra%d_%d" % (k, j), "olhos", "garra", 20 + 3 * k + j,
-            elipsoide((px + dx, py - 0.13, 0.03), 0.022, 0.022, 0.022, 0), "perna", perna=k)
+            elipsoide((px + dx, py - 0.12, 0.035), 0.022, 0.024, 0.022, 0), "perna", perna=k)
 
 
 # ------------------------------------------------------------------ poses (locais; base no z = 0)

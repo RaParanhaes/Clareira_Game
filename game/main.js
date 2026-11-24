@@ -3343,7 +3343,7 @@ let inventoryHudRenderKey='';
 function renderInventory(forcePanel = false) {
   if (!ui.quickbar || !ui.inventoryGrid) return;
   craftingGuideView.update(localInventory, { dismissedStage: craftHintDismissedStage,
-    visible: worldLocation === 'clearing', canCraft: worldLocation === 'clearing' });
+    visible: worldLocation === 'clearing', canCraft: worldLocation === 'clearing', dimensionId: worldDimensionId });
   const hudKey=JSON.stringify([localInventory,inventorySelectionIndex,inventoryDragSource]);
   if(!forcePanel&&!ui.inventoryDialog.open&&hudKey===inventoryHudRenderKey){
     // Cooldowns depend on time; inventory, recipes and slot DOM do not.
@@ -6944,7 +6944,8 @@ function drawWildlife(animal,time,highlight=false) {
   const p=isDungeonScene()?point(animal.x,animal.y,camera,0):point(animal.x,animal.y),[width,standingHeight]=definition.size;
   const height=animal.state==='dormindo'?Math.round(standingHeight*.6):standingHeight;
   const colors=definition.colors,form=definition.form;
-  const visualScale=spriteScale*(Number.isFinite(animal.scale)?Math.min(2.25,Math.max(.7,animal.scale)):1);
+  const bossScale=animal.dungeonBoss===true?2:1;
+  const visualScale=spriteScale*(Number.isFinite(animal.scale)?Math.min(2.25,Math.max(.7,animal.scale)):1)*bossScale;
   const moving=Math.hypot(animal.vx||0,animal.vy||0)>.22;
   const gait=moving?Math.round(Math.sin(time*(animal.state==='fugindo'?15:9)+(animal.id.length%7))*1.4):0;
   const bob=moving?Math.round(Math.abs(Math.sin(time*8+(animal.id.length%5)))):0;

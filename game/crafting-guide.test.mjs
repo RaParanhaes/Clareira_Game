@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CRAFTING_RECIPES, craftingGuide, workKeyAction } from './crafting-guide.mjs';
+import { shouldShowCraftingHint } from './crafting-guide-ui.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const server = await readFile(path.join(root, 'scripts', 'prototype-server.mjs'), 'utf8');
@@ -101,6 +102,14 @@ test('o cliente liga o guia ao aviso do mundo e à seção de receitas do Invent
   assert.match(html, /id="crafting-guide"[\s\S]*data-craft-recipes/u);
   assert.match(main, /createCraftingGuideView\(/u);
   assert.match(main, /craftingGuideView\.update\(localInventory/u);
+});
+
+test('o aviso PRÓXIMO PASSO fica oculto em qualquer dimensão dg-', () => {
+  const guide = craftingGuide({ knife: 1 });
+  assert.equal(guide.showHint, true);
+  assert.equal(shouldShowCraftingHint(guide, { visible: true, dimensionId: 'dg-ninho-n1-0123456789' }), false);
+  assert.equal(shouldShowCraftingHint(guide, { visible: true, dimensionId: 'dg-' }), false);
+  assert.equal(shouldShowCraftingHint(guide, { visible: true, dimensionId: 'surface' }), true);
 });
 
 test('"Montar agora" só vale no bosque, a mesma regra de localização do servidor', async () => {

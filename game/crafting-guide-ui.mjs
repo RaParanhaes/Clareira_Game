@@ -4,6 +4,10 @@
 import { craftingGuide } from './crafting-guide.mjs';
 import { isTouchInput } from './input-mode.mjs';
 
+export function shouldShowCraftingHint(guide, { visible = true, dismissedStage = '', dimensionId = '' } = {}) {
+  return visible && !String(dimensionId).startsWith('dg-') && guide.showHint && dismissedStage !== guide.stage;
+}
+
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -49,9 +53,9 @@ export function createCraftingGuideView({ hint, panel, onOpen, onCraft, onDismis
   return {
     guideFor: craftingGuide,
     // `visible` diz se o aviso do mundo deve aparecer agora (bosque, sem dispensa).
-    update(inventory, { visible = true, dismissedStage = '', canCraft = true } = {}) {
+    update(inventory, { visible = true, dismissedStage = '', canCraft = true, dimensionId = '' } = {}) {
       const guide = craftingGuide(inventory, { touch: isTouchInput(), inClearing: canCraft });
-      const showHint = visible && guide.showHint && dismissedStage !== guide.stage;
+      const showHint = shouldShowCraftingHint(guide, { visible, dismissedStage, dimensionId });
       const nextHintKey = `${showHint}|${guide.stage}|${guide.text}`;
       if (hint && nextHintKey !== hintKey) {
         hintKey = nextHintKey;

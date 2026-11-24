@@ -1,0 +1,158 @@
+{
+ "especie": "mossSlime",
+ "familia": "slime",
+ "cell": 96,
+ "pivo": [
+  48,
+  80
+ ],
+ "dirs": "4",
+ "direcoes": [
+  "SE",
+  "NE",
+  "SO",
+  "NO"
+ ],
+ "escala": 0.25,
+ "altura_m": 0.45,
+ "camadas": [
+  "sombra_meia",
+  "sombra",
+  "corpo",
+  "nucleo",
+  "olhos",
+  "brilho"
+ ],
+ "escala_fisica": {
+  "ppu_por_metro_96": 43.915583775317494,
+  "ppu_tile": 43.915583775317494,
+  "origem_y": 80.0
+ },
+ "anims": {
+  "parado": {
+   "frames": 4,
+   "fps": 4,
+   "loop": true
+  },
+  "andar": {
+   "frames": 6,
+   "fps": 10,
+   "loop": true
+  },
+  "atacar": {
+   "frames": 4,
+   "fps": 12,
+   "loop": false,
+   "golpe_quadro": 2
+  },
+  "morrer": {
+   "frames": 6,
+   "fps": 10,
+   "loop": false
+  }
+ },
+ "paleta": [
+  [
+   14,
+   12,
+   14
+  ],
+  [
+   30,
+   19,
+   17
+  ],
+  [
+   30,
+   26,
+   28
+  ],
+  [
+   40,
+   48,
+   40
+  ],
+  [
+   46,
+   92,
+   38
+  ],
+  [
+   46,
+   98,
+   42
+  ],
+  [
+   56,
+   40,
+   33
+  ],
+  [
+   56,
+   66,
+   56
+  ],
+  [
+   70,
+   122,
+   52
+  ],
+  [
+   70,
+   130,
+   60
+  ],
+  [
+   92,
+   104,
+   92
+  ],
+  [
+   106,
+   160,
+   88
+  ],
+  [
+   120,
+   92,
+   70
+  ],
+  [
+   132,
+   186,
+   106
+  ],
+  [
+   156,
+   124,
+   98
+  ],
+  [
+   170,
+   214,
+   136
+  ],
+  [
+   206,
+   240,
+   170
+  ],
+  [
+   230,
+   246,
+   210
+  ],
+  [
+   238,
+   252,
+   214
+  ],
+  [
+   255,
+   255,
+   240
+  ]
+ ],
+ "paleta_max": 48,
+ "nota": "translucidez simulada por tons (corpo claro, nucleo escuro visivel, pedrinhas e folhas claras, brilho no topo); alfa binario. Sombra: nucleo solido e anel com meia-tinta (xadrez de pixels)."
+}

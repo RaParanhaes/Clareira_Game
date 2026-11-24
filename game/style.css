@@ -325,6 +325,7 @@ body.in-world{height:100svh;overflow:hidden;background:#0b141d}
 .mini-map-caption{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:1px 3px;color:#f1d795;font-size:8px;font-weight:900;letter-spacing:.12em}
 .mini-map-caption small{overflow:hidden;color:#b9cbb1;font-size:8px;font-weight:600;letter-spacing:0;text-overflow:ellipsis;white-space:nowrap}
 #mini-map-canvas{display:block;width:100%;height:auto;aspect-ratio:15/11;border:1px solid #b28b5b;background:#030609;image-rendering:pixelated;image-rendering:crisp-edges;pointer-events:none}
+.mini-map-player{position:absolute;left:0;top:0;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--clareira-ember,#f2c877);box-shadow:0 0 0 2px #030609cc;pointer-events:none;will-change:transform}
 .mini-map-open-hint{display:block;padding:1px 3px;color:#c2c7b5;font-size:8px;text-align:center}
 .shell.is-authenticated .scene-vignette{border-radius:0;box-shadow:inset 0 0 55px #07131d50,inset 0 -90px 100px #07131d65}
 .shell.is-authenticated .mini-coords{top:auto;right:18px;bottom:20px;left:auto;z-index:2;background:#0b171bd9;font-size:8px}

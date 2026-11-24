@@ -1,0 +1,1313 @@
+{
+  "schemaVersion": 1,
+  "assetVersion": 1,
+  "name": "character-paperdoll-v1",
+  "status": "owner-review-pending",
+  "source": {
+    "renderer": "art-source/character-paperdoll/build-blender.py",
+    "handAnchors": "art-source/character-paperdoll/mao_anchors.json",
+    "build": "npm run art:paperdoll:build",
+    "facingSourceCodes": {
+      "south": "S",
+      "southeast": "SE",
+      "east": "L",
+      "northeast": "NE",
+      "north": "N",
+      "northwest": "NO",
+      "west": "O",
+      "southwest": "SO"
+    }
+  },
+  "canvas": {
+    "width": 96,
+    "height": 96
+  },
+  "artHeight": 80,
+  "pivot": {
+    "x": 48,
+    "y": 84,
+    "anchor": "sole-center"
+  },
+  "facings": [
+    "south",
+    "southeast",
+    "east",
+    "northeast",
+    "north",
+    "northwest",
+    "west",
+    "southwest"
+  ],
+  "appearanceMode": "paperdoll-layers-recolor",
+  "layout": "direction-rows-frames-horizontal",
+  "sampling": "nearest-neighbor",
+  "layers": {
+    "corpo": {
+      "role": "body",
+      "description": "Pele, rosto, cabelo, barba e mãos.",
+      "drawn": true,
+      "animations": [
+        "parado",
+        "andar",
+        "golpear"
+      ]
+    },
+    "calca_botas": {
+      "role": "legs-boots",
+      "description": "Calça e botas.",
+      "drawn": true,
+      "animations": [
+        "parado",
+        "andar",
+        "golpear"
+      ]
+    },
+    "tunica": {
+      "role": "outfit",
+      "description": "Túnica, gola e mangas de linho, cinto e bolsa.",
+      "drawn": true,
+      "animations": [
+        "parado",
+        "andar",
+        "golpear"
+      ]
+    },
+    "gorro": {
+      "role": "headwear",
+      "description": "Gorro.",
+      "drawn": true,
+      "animations": [
+        "parado",
+        "andar",
+        "golpear"
+      ]
+    },
+    "ferramenta": {
+      "role": "tool",
+      "description": "Ferramenta inteira na mão (união de frente e atrás).",
+      "drawn": false,
+      "animations": [
+        "golpear"
+      ]
+    },
+    "ferramenta_frente": {
+      "role": "tool-front",
+      "description": "Partes da ferramenta à frente do corpo.",
+      "drawn": true,
+      "animations": [
+        "golpear"
+      ]
+    },
+    "ferramenta_tras": {
+      "role": "tool-back",
+      "description": "Partes da ferramenta atrás do corpo.",
+      "drawn": true,
+      "animations": [
+        "golpear"
+      ]
+    }
+  },
+  "layerOrder": {
+    "south": [
+      "ferramenta_tras",
+      "corpo",
+      "calca_botas",
+      "tunica",
+      "gorro",
+      "ferramenta_frente"
+    ],
+    "southeast": [
+      "ferramenta_tras",
+      "corpo",
+      "calca_botas",
+      "tunica",
+      "gorro",
+      "ferramenta_frente"
+    ],
+    "east": [
+      "ferramenta_tras",
+      "corpo",
+      "calca_botas",
+      "tunica",
+      "gorro",
+      "ferramenta_frente"
+    ],
+    "northeast": [
+      "ferramenta_tras",
+      "corpo",
+      "calca_botas",
+      "tunica",
+      "gorro",
+      "ferramenta_frente"
+    ],
+    "north": [
+      "ferramenta_tras",
+      "corpo",
+      "calca_botas",
+      "tunica",
+      "gorro",
+      "ferramenta_frente"
+    ],
+    "northwest": [
+      "ferramenta_tras",
+      "corpo",
+      "calca_botas",
+      "tunica",
+      "gorro",
+      "ferramenta_frente"
+    ],
+    "west": [
+      "ferramenta_tras",
+      "corpo",
+      "calca_botas",
+      "tunica",
+      "gorro",
+      "ferramenta_frente"
+    ],
+    "southwest": [
+      "ferramenta_tras",
+      "corpo",
+      "calca_botas",
+      "tunica",
+      "gorro",
+      "ferramenta_frente"
+    ]
+  },
+  "animations": {
+    "parado": {
+      "frameCount": 4,
+      "frameDurationMs": 250,
+      "loop": true,
+      "atlasSize": {
+        "width": 384,
+        "height": 768
+      },
+      "atlases": {
+        "corpo": "atlases/parado/corpo.png",
+        "calca_botas": "atlases/parado/calca_botas.png",
+        "tunica": "atlases/parado/tunica.png",
+        "gorro": "atlases/parado/gorro.png"
+      },
+      "emptyLayers": [
+        "ferramenta",
+        "ferramenta_frente",
+        "ferramenta_tras"
+      ],
+      "composite": "reference/parado-composta.png"
+    },
+    "andar": {
+      "frameCount": 8,
+      "frameDurationMs": 100,
+      "runFrameDurationMs": 70,
+      "loop": true,
+      "atlasSize": {
+        "width": 768,
+        "height": 768
+      },
+      "atlases": {
+        "corpo": "atlases/andar/corpo.png",
+        "calca_botas": "atlases/andar/calca_botas.png",
+        "tunica": "atlases/andar/tunica.png",
+        "gorro": "atlases/andar/gorro.png"
+      },
+      "emptyLayers": [
+        "ferramenta",
+        "ferramenta_frente",
+        "ferramenta_tras"
+      ],
+      "composite": "reference/andar-composta.png"
+    },
+    "golpear": {
+      "frameCount": 8,
+      "frameDurationMs": 90,
+      "loop": false,
+      "atlasSize": {
+        "width": 768,
+        "height": 768
+      },
+      "atlases": {
+        "corpo": "atlases/golpear/corpo.png",
+        "calca_botas": "atlases/golpear/calca_botas.png",
+        "tunica": "atlases/golpear/tunica.png",
+        "gorro": "atlases/golpear/gorro.png",
+        "ferramenta": "atlases/golpear/ferramenta.png",
+        "ferramenta_frente": "atlases/golpear/ferramenta_frente.png",
+        "ferramenta_tras": "atlases/golpear/ferramenta_tras.png"
+      },
+      "emptyLayers": [],
+      "composite": "reference/golpear-composta.png"
+    }
+  },
+  "recolor": {
+    "mode": "exact-source-color-lookup",
+    "fixedColors": {
+      "outline": "#1e1311",
+      "innerLine": "#382821"
+    },
+    "layers": {
+      "corpo": {
+        "ramps": {
+          "pele": {
+            "channel": "skin",
+            "mid": 2,
+            "colors": [
+              "#704c44",
+              "#926252",
+              "#b07a62",
+              "#c99272"
+            ]
+          },
+          "cabelo": {
+            "channel": "hair",
+            "mid": 2,
+            "colors": [
+              "#241b1a",
+              "#342622",
+              "#48352a",
+              "#624a38"
+            ]
+          },
+          "olho_branco": {
+            "channel": null,
+            "mid": 0,
+            "colors": [
+              "#cbbba0"
+            ]
+          },
+          "iris": {
+            "channel": null,
+            "mid": 0,
+            "colors": [
+              "#2e2830"
+            ]
+          }
+        }
+      },
+      "calca_botas": {
+        "ramps": {
+          "calca": {
+            "channel": null,
+            "mid": 2,
+            "colors": [
+              "#2c2724",
+              "#3b342d",
+              "#4c4338",
+              "#605547"
+            ]
+          },
+          "botas": {
+            "channel": null,
+            "mid": 2,
+            "colors": [
+              "#281d1e",
+              "#3a2823",
+              "#52382b",
+              "#6b4a35"
+            ]
+          }
+        }
+      },
+      "tunica": {
+        "ramps": {
+          "tunica": {
+            "channel": "coat",
+            "mid": 2,
+            "colors": [
+              "#272920",
+              "#343628",
+              "#424530",
+              "#52553b"
+            ]
+          },
+          "linho": {
+            "channel": null,
+            "mid": 1,
+            "colors": [
+              "#7a7066",
+              "#a69884",
+              "#cbbba0"
+            ]
+          },
+          "couro": {
+            "channel": null,
+            "mid": 1,
+            "colors": [
+              "#3a2823",
+              "#52382b",
+              "#6b4a35"
+            ]
+          },
+          "fivela": {
+            "channel": null,
+            "mid": 1,
+            "colors": [
+              "#424b5c",
+              "#626c7c",
+              "#88929e"
+            ]
+          }
+        }
+      },
+      "gorro": {
+        "ramps": {
+          "gorro": {
+            "channel": null,
+            "mid": 2,
+            "colors": [
+              "#2c2522",
+              "#3e352d",
+              "#54483a",
+              "#685a48"
+            ]
+          }
+        }
+      },
+      "ferramenta": {
+        "ramps": {
+          "cabo": {
+            "channel": null,
+            "mid": 1,
+            "colors": [
+              "#483028",
+              "#684632",
+              "#8a6240"
+            ]
+          },
+          "ferro": {
+            "channel": null,
+            "mid": 1,
+            "colors": [
+              "#424b5c",
+              "#626c7c",
+              "#88929e"
+            ]
+          }
+        }
+      },
+      "ferramenta_frente": {
+        "ramps": {
+          "cabo": {
+            "channel": null,
+            "mid": 1,
+            "colors": [
+              "#483028",
+              "#684632",
+              "#8a6240"
+            ]
+          },
+          "ferro": {
+            "channel": null,
+            "mid": 1,
+            "colors": [
+              "#424b5c",
+              "#626c7c",
+              "#88929e"
+            ]
+          }
+        }
+      },
+      "ferramenta_tras": {
+        "ramps": {
+          "cabo": {
+            "channel": null,
+            "mid": 1,
+            "colors": [
+              "#483028",
+              "#684632",
+              "#8a6240"
+            ]
+          },
+          "ferro": {
+            "channel": null,
+            "mid": 1,
+            "colors": [
+              "#424b5c",
+              "#626c7c",
+              "#88929e"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "sockets": {
+    "hand": {
+      "coordinateSpace": "cell-pixels-y-down",
+      "fields": [
+        "x",
+        "y",
+        "depth"
+      ],
+      "note": "Centro do punho direito; profundidade = distância ao eixo do corpo em direção à câmera (+ = mais perto).",
+      "anchors": {
+        "parado": {
+          "south": [
+            [
+              35.84,
+              47.65,
+              0.086
+            ],
+            [
+              35.93,
+              47.63,
+              0.096
+            ],
+            [
+              35.85,
+              47.56,
+              0.105
+            ],
+            [
+              35.76,
+              47.63,
+              0.096
+            ]
+          ],
+          "southeast": [
+            [
+              42.08,
+              51.39,
+              0.257
+            ],
+            [
+              42.43,
+              51.28,
+              0.262
+            ],
+            [
+              42.66,
+              51.18,
+              0.27
+            ],
+            [
+              42.31,
+              51.34,
+              0.265
+            ]
+          ],
+          "east": [
+            [
+              51.79,
+              51.83,
+              0.277
+            ],
+            [
+              52.19,
+              51.56,
+              0.275
+            ],
+            [
+              52.6,
+              51.34,
+              0.277
+            ],
+            [
+              52.19,
+              51.65,
+              0.279
+            ]
+          ],
+          "northeast": [
+            [
+              59.28,
+              48.71,
+              0.135
+            ],
+            [
+              59.5,
+              48.31,
+              0.127
+            ],
+            [
+              59.84,
+              47.93,
+              0.122
+            ],
+            [
+              59.62,
+              48.37,
+              0.13
+            ]
+          ],
+          "north": [
+            [
+              60.16,
+              43.85,
+              -0.086
+            ],
+            [
+              60.07,
+              43.43,
+              -0.096
+            ],
+            [
+              60.15,
+              42.97,
+              -0.105
+            ],
+            [
+              60.24,
+              43.43,
+              -0.096
+            ]
+          ],
+          "northwest": [
+            [
+              53.92,
+              40.11,
+              -0.257
+            ],
+            [
+              53.57,
+              39.78,
+              -0.262
+            ],
+            [
+              53.34,
+              39.34,
+              -0.27
+            ],
+            [
+              53.69,
+              39.72,
+              -0.265
+            ]
+          ],
+          "west": [
+            [
+              44.21,
+              39.67,
+              -0.277
+            ],
+            [
+              43.81,
+              39.5,
+              -0.275
+            ],
+            [
+              43.4,
+              39.19,
+              -0.277
+            ],
+            [
+              43.81,
+              39.41,
+              -0.279
+            ]
+          ],
+          "southwest": [
+            [
+              36.72,
+              42.79,
+              -0.135
+            ],
+            [
+              36.5,
+              42.75,
+              -0.127
+            ],
+            [
+              36.16,
+              42.59,
+              -0.122
+            ],
+            [
+              36.38,
+              42.68,
+              -0.13
+            ]
+          ]
+        },
+        "andar": {
+          "south": [
+            [
+              37.62,
+              50.23,
+              0.377
+            ],
+            [
+              37.63,
+              51.08,
+              0.333
+            ],
+            [
+              36.56,
+              48.54,
+              0.181
+            ],
+            [
+              35.68,
+              43.99,
+              -0.047
+            ],
+            [
+              35.57,
+              41.68,
+              -0.159
+            ],
+            [
+              34.57,
+              45.6,
+              -0.09
+            ],
+            [
+              34.54,
+              49.2,
+              0.123
+            ],
+            [
+              35.82,
+              50.36,
+              0.298
+            ]
+          ],
+          "southeast": [
+            [
+              52.38,
+              51.48,
+              0.434
+            ],
+            [
+              50.92,
+              52.69,
+              0.404
+            ],
+            [
+              45.42,
+              51.54,
+              0.314
+            ],
+            [
+              37.78,
+              48.73,
+              0.167
+            ],
+            [
+              34.26,
+              47.1,
+              0.088
+            ],
+            [
+              35.77,
+              50.85,
+              0.151
+            ],
+            [
+              42.38,
+              53.07,
+              0.302
+            ],
+            [
+              48.73,
+              52.66,
+              0.406
+            ]
+          ],
+          "east": [
+            [
+              64.57,
+              47.14,
+              0.236
+            ],
+            [
+              62.61,
+              49.13,
+              0.24
+            ],
+            [
+              55.93,
+              50.53,
+              0.266
+            ],
+            [
+              45.96,
+              51.33,
+              0.284
+            ],
+            [
+              41.01,
+              51.39,
+              0.283
+            ],
+            [
+              44.04,
+              54.14,
+              0.303
+            ],
+            [
+              53.39,
+              53.03,
+              0.302
+            ],
+            [
+              61.11,
+              49.73,
+              0.274
+            ]
+          ],
+          "northeast": [
+            [
+              67.06,
+              39.76,
+              -0.1
+            ],
+            [
+              65.74,
+              42.36,
+              -0.067
+            ],
+            [
+              61.79,
+              45.94,
+              0.059
+            ],
+            [
+              55.33,
+              50.17,
+              0.233
+            ],
+            [
+              51.85,
+              52.04,
+              0.313
+            ],
+            [
+              54.64,
+              53.65,
+              0.279
+            ],
+            [
+              61.24,
+              49.25,
+              0.128
+            ],
+            [
+              65.81,
+              43.39,
+              -0.017
+            ]
+          ],
+          "north": [
+            [
+              58.38,
+              33.66,
+              -0.377
+            ],
+            [
+              58.37,
+              36.47,
+              -0.333
+            ],
+            [
+              59.44,
+              40.61,
+              -0.181
+            ],
+            [
+              60.32,
+              46.03,
+              0.047
+            ],
+            [
+              60.43,
+              48.67,
+              0.159
+            ],
+            [
+              61.43,
+              49.56,
+              0.09
+            ],
+            [
+              61.46,
+              43.82,
+              -0.123
+            ],
+            [
+              60.18,
+              37.25,
+              -0.298
+            ]
+          ],
+          "northwest": [
+            [
+              43.62,
+              32.42,
+              -0.434
+            ],
+            [
+              45.08,
+              34.96,
+              -0.404
+            ],
+            [
+              50.58,
+              37.75,
+              -0.314
+            ],
+            [
+              58.22,
+              41.4,
+              -0.167
+            ],
+            [
+              61.74,
+              43.25,
+              -0.088
+            ],
+            [
+              60.23,
+              44.21,
+              -0.151
+            ],
+            [
+              53.62,
+              39.82,
+              -0.302
+            ],
+            [
+              47.27,
+              34.85,
+              -0.406
+            ]
+          ],
+          "west": [
+            [
+              31.43,
+              36.75,
+              -0.236
+            ],
+            [
+              33.39,
+              38.58,
+              -0.24
+            ],
+            [
+              40.07,
+              38.86,
+              -0.266
+            ],
+            [
+              50.04,
+              38.86,
+              -0.284
+            ],
+            [
+              54.99,
+              38.96,
+              -0.283
+            ],
+            [
+              51.96,
+              40.86,
+              -0.303
+            ],
+            [
+              42.61,
+              39.77,
+              -0.302
+            ],
+            [
+              34.89,
+              37.72,
+              -0.274
+            ]
+          ],
+          "southwest": [
+            [
+              28.94,
+              44.13,
+              0.1
+            ],
+            [
+              30.26,
+              45.29,
+              0.067
+            ],
+            [
+              34.21,
+              43.36,
+              -0.059
+            ],
+            [
+              40.67,
+              39.95,
+              -0.233
+            ],
+            [
+              44.15,
+              38.3,
+              -0.313
+            ],
+            [
+              41.36,
+              41.42,
+              -0.279
+            ],
+            [
+              34.76,
+              43.63,
+              -0.128
+            ],
+            [
+              30.19,
+              44.12,
+              0.017
+            ]
+          ]
+        },
+        "golpear": {
+          "south": [
+            [
+              35.22,
+              46.03,
+              0.395
+            ],
+            [
+              32.41,
+              38.32,
+              0.421
+            ],
+            [
+              31.86,
+              32.28,
+              0.355
+            ],
+            [
+              31.98,
+              29.44,
+              0.298
+            ],
+            [
+              32.06,
+              28.88,
+              0.281
+            ],
+            [
+              32.35,
+              48.14,
+              0.477
+            ],
+            [
+              35.67,
+              54.52,
+              0.41
+            ],
+            [
+              36.12,
+              49.34,
+              0.443
+            ]
+          ],
+          "southeast": [
+            [
+              51.23,
+              48.01,
+              0.485
+            ],
+            [
+              50.06,
+              41.12,
+              0.549
+            ],
+            [
+              47.62,
+              35.7,
+              0.511
+            ],
+            [
+              45.93,
+              33.18,
+              0.469
+            ],
+            [
+              45.47,
+              32.7,
+              0.456
+            ],
+            [
+              51.74,
+              50.61,
+              0.589
+            ],
+            [
+              52.01,
+              56.24,
+              0.488
+            ],
+            [
+              53.36,
+              50.69,
+              0.504
+            ]
+          ],
+          "east": [
+            [
+              65.35,
+              43.75,
+              0.291
+            ],
+            [
+              66.51,
+              36.86,
+              0.355
+            ],
+            [
+              63.61,
+              32.55,
+              0.368
+            ],
+            [
+              61.08,
+              30.9,
+              0.365
+            ],
+            [
+              60.36,
+              30.67,
+              0.363
+            ],
+            [
+              68.94,
+              45.5,
+              0.356
+            ],
+            [
+              65.99,
+              51.69,
+              0.281
+            ],
+            [
+              67.46,
+              45.55,
+              0.27
+            ]
+          ],
+          "northeast": [
+            [
+              69.31,
+              35.74,
+              -0.074
+            ],
+            [
+              72.11,
+              28.04,
+              -0.047
+            ],
+            [
+              70.45,
+              24.67,
+              0.009
+            ],
+            [
+              68.58,
+              23.93,
+              0.047
+            ],
+            [
+              68.01,
+              23.97,
+              0.058
+            ],
+            [
+              73.87,
+              35.81,
+              -0.085
+            ],
+            [
+              69.44,
+              43.52,
+              -0.091
+            ],
+            [
+              70.16,
+              36.94,
+              -0.122
+            ]
+          ],
+          "north": [
+            [
+              60.78,
+              28.68,
+              -0.395
+            ],
+            [
+              63.59,
+              19.82,
+              -0.421
+            ],
+            [
+              69.2,
+              18.99,
+              -0.378
+            ],
+            [
+              69.77,
+              16.67,
+              -0.325
+            ],
+            [
+              69.69,
+              16.62,
+              -0.31
+            ],
+            [
+              63.65,
+              27.21,
+              -0.477
+            ],
+            [
+              60.33,
+              36.53,
+              -0.41
+            ],
+            [
+              59.88,
+              29.89,
+              -0.443
+            ]
+          ],
+          "northwest": [
+            [
+              45.28,
+              27.57,
+              -0.478
+            ],
+            [
+              46.71,
+              18.01,
+              -0.554
+            ],
+            [
+              49.08,
+              13.52,
+              -0.522
+            ],
+            [
+              50.98,
+              12.62,
+              -0.478
+            ],
+            [
+              51.45,
+              12.69,
+              -0.464
+            ],
+            [
+              44.94,
+              25.5,
+              -0.582
+            ],
+            [
+              43.99,
+              34.8,
+              -0.488
+            ],
+            [
+              42.64,
+              28.54,
+              -0.504
+            ]
+          ],
+          "west": [
+            [
+              30.65,
+              30.97,
+              -0.291
+            ],
+            [
+              29.49,
+              21.27,
+              -0.355
+            ],
+            [
+              32.39,
+              16.41,
+              -0.368
+            ],
+            [
+              34.92,
+              14.89,
+              -0.365
+            ],
+            [
+              35.64,
+              14.73,
+              -0.363
+            ],
+            [
+              27.06,
+              29.85,
+              -0.356
+            ],
+            [
+              30.01,
+              39.36,
+              -0.281
+            ],
+            [
+              28.54,
+              33.68,
+              -0.27
+            ]
+          ],
+          "southwest": [
+            [
+              26.69,
+              38.97,
+              0.074
+            ],
+            [
+              23.89,
+              30.1,
+              0.047
+            ],
+            [
+              25.55,
+              24.29,
+              -0.009
+            ],
+            [
+              27.42,
+              21.86,
+              -0.047
+            ],
+            [
+              27.99,
+              21.43,
+              -0.058
+            ],
+            [
+              22.13,
+              39.54,
+              0.085
+            ],
+            [
+              26.56,
+              47.52,
+              0.091
+            ],
+            [
+              25.84,
+              42.3,
+              0.122
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "verification": {
+    "compositeEqualsLayerSum": true,
+    "compositePixelDifference": 0,
+    "framesChecked": 160,
+    "drawOrder": [
+      "ferramenta_tras",
+      "corpo",
+      "calca_botas",
+      "tunica",
+      "gorro",
+      "ferramenta_frente"
+    ]
+  }
+}

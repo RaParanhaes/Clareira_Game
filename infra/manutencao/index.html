@@ -142,6 +142,32 @@ h1{margin:4px 0 0;font-family:Georgia,'Palatino Linotype',serif;font-size:clamp(
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
   function smooth(u) { return u * u * (3 - 2 * u); }
 
+  // >>> decisao (cópia de decisao.mjs; o teste confere que são idênticas)
+  const MIN_STAY_MS = 90000;
+  const WAIT_NOTICE_MS = 300000;
+  const READS_NEEDED = 2;
+
+  function proximaLeitura(leiturasBoas, leituraBoa) {
+    return leituraBoa ? leiturasBoas + 1 : 0;
+  }
+
+  function podeVoltar({ vistoManutencao, desdeMs, agoraMs, semCabecalho, healthOk, leiturasBoas }) {
+    if (!vistoManutencao) return false;
+    if (!(agoraMs - desdeMs >= MIN_STAY_MS)) return false;
+    if (!semCabecalho || !healthOk) return false;
+    return leiturasBoas >= READS_NEEDED;
+  }
+
+  function etapaDe(desdeMs, agoraMs) {
+    var t = agoraMs - desdeMs;
+    if (!(t >= 0)) return 0;
+    if (t < 30000) return 0;
+    if (t < 60000) return 1;
+    if (t < MIN_STAY_MS) return 2;
+    return 3;
+  }
+  // <<< decisao
+
   /* Vagalumes: trajetória suave (curva Catmull-Rom por quadro, sem linhas retas) com ondulação senoidal.
      Profundidade: quanto mais para trás, menor e mais apagado; quanto mais para frente, maior e mais forte.
      Cada um faz um circuito: surge do mato, gira em volta de uma lanterna ou sobe ao medalhão,
@@ -311,29 +337,77 @@ h1{margin:4px 0 0;font-family:Georgia,'Palatino Linotype',serif;font-size:clamp(
     requestAnimationFrame(frame);
   }
 
-  var msgs = ["Ajustando as trilhas…", "Afiando as ferramentas…", "Reforjando o bosque…", "Acendendo as tochas…"];
-  var k = 0;
-  setInterval(function () {
-    k = (k + 1) % msgs.length;
-    ["msg", "msg2"].forEach(function (id) {
-      var m = document.getElementById(id); m.classList.add("fade");
-      setTimeout(function () { m.textContent = msgs[k]; m.classList.remove("fade"); }, 380);
-    });
-  }, 3200);
-  function setStatus(t) { document.getElementById("status").textContent = t; document.getElementById("status2").textContent = t; }
-  var sawMaint = false; // só recarrega depois de ter visto a manutenção (evita laço em página local)
-  function check() {
-    fetch(location.pathname + location.search, { cache: "no-store" }).then(function (r) {
-      var inMaint = !r.ok || !!r.headers.get("x-clareira-maintenance");
-      if (inMaint) sawMaint = true;
-      if (r.ok && !inMaint && sawMaint) {
-        setStatus("A clareira reabriu. Entrando…");
-        document.body.style.transition = "opacity .9s ease"; document.body.style.opacity = "0";
-        setTimeout(function () { location.reload(); }, reduce ? 0 : 950);
-      } else if (inMaint) setStatus("Ainda em manutenção · última verificação " + new Date().toLocaleTimeString("pt-BR"));
-      else setStatus("Verificando novamente em instantes…");
-    }).catch(function () { setStatus("Sem conexão com o bosque · tentando de novo…"); });
+  // Etapas visíveis: mudam pelo tempo desde a primeira vez que a manutenção foi vista (não medem progresso real).
+  var ETAPAS = ["Baixando a atualização…", "Conferindo os arquivos…", "Organizando o bosque…", "Quase pronto…"];
+  var etapaAtual = -1;
+  var STAY_KEY = "clareira-manutencao-desde";
+  var memDesde = null;      // reserva quando o sessionStorage não está disponível
+  var sawMaint = false;     // só recarrega depois de ter visto a manutenção nesta carga (evita laço em página local)
+  var leiturasBoas = 0;
+
+  function getDesde() {
+    try { var v = Number(sessionStorage.getItem(STAY_KEY)); if (isFinite(v) && v > 0) return v; } catch (e) {}
+    return memDesde;
   }
+  function setDesde(t) { memDesde = t; try { sessionStorage.setItem(STAY_KEY, String(t)); } catch (e) {} }
+  function limparDesde() { memDesde = null; try { sessionStorage.removeItem(STAY_KEY); } catch (e) {} }
+
+  function mostrarEtapa(i) {
+    if (i === etapaAtual) return;
+    etapaAtual = i;
+    ["msg", "msg2"].forEach(function (id) {
+      var m = document.getElementById(id);
+      if (!m) return;
+      m.classList.add("fade");
+      setTimeout(function () { m.textContent = ETAPAS[i]; m.classList.remove("fade"); }, reduce ? 0 : 380);
+    });
+  }
+  function tick() {
+    var d = getDesde();
+    mostrarEtapa(d ? etapaDe(d, Date.now()) : 0);
+  }
+  function setStatus(t) { document.getElementById("status").textContent = t; document.getElementById("status2").textContent = t; }
+
+  function check() {
+    var paginaP = fetch(location.pathname + location.search, { cache: "no-store" });
+    // /health falhando por rede ou CORS conta como "não pronto"
+    var saudeP = fetch("/health", { cache: "no-store" }).then(function (r) { return r.ok; }, function () { return false; });
+    paginaP.then(function (r) {
+      return saudeP.then(function (healthOk) {
+        var semCabecalho = !r.headers.get("x-clareira-maintenance");
+        var inMaint = !r.ok || !semCabecalho;
+        var agora = Date.now();
+        if (inMaint) {
+          sawMaint = true;
+          if (!getDesde()) setDesde(agora);
+        }
+        leiturasBoas = proximaLeitura(leiturasBoas, r.ok && semCabecalho && healthOk);
+        var desde = getDesde();
+        var pronto = podeVoltar({
+          vistoManutencao: sawMaint, desdeMs: desde || 0, agoraMs: agora,
+          semCabecalho: r.ok && semCabecalho, healthOk: healthOk, leiturasBoas: leiturasBoas
+        });
+        if (pronto) {
+          limparDesde();   // a próxima carga começa limpa, sem laço
+          setStatus("A clareira reabriu. Entrando…");
+          document.body.style.transition = "opacity .9s ease"; document.body.style.opacity = "0";
+          setTimeout(function () { location.reload(); }, reduce ? 0 : 950);
+        } else if (desde && agora - desde >= WAIT_NOTICE_MS) {
+          setStatus("A atualização continua em andamento.");
+        } else if (inMaint) {
+          setStatus("Ainda em manutenção · última verificação " + new Date(agora).toLocaleTimeString("pt-BR"));
+        } else {
+          setStatus("O jogo respondeu · confirmando que está pronto…");
+        }
+      });
+    }).catch(function () {
+      leiturasBoas = proximaLeitura(leiturasBoas, false);
+      setStatus("Sem conexão com o bosque · tentando de novo…");
+    });
+  }
+  tick();
+  setInterval(tick, 1000);
+  check();
   setInterval(check, 8000);
 })();
 </script>

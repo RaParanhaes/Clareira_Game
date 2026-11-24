@@ -59,6 +59,7 @@ import { VILLAGE_BUILDINGS, RECEPTION_BUILDING, villageBuildingsInBounds } from 
 import { nearestPlaceService, placeServicePoints, placeServiceAllowsAction, CABIN_EXTERIOR_SERVICES } from './place-services.mjs';
 import { createPanelController } from './panel-controller.mjs';
 import { discoverWorldMapCells, mergeWorldMapExploration, isWorldMapCellKnown, worldMapCellIndex, worldMapExplorationLabel, zoomWorldMapAround, preloadWorldMapCaches } from './world-map.mjs';
+import { chunkKeyFor, shouldRedrawMiniMap, shouldFlashMiniMapUpdate, miniMapViewForChunk, playerMarkerOffset, miniMapMarkerScreenPosition, MINI_MAP_UPDATING_MS, MINI_MAP_UPDATING_LABEL } from './mini-map-refresh.mjs';
 import { createPlacePanel } from './place-panel.mjs';
 import { attachDialogDrag } from './dialog-drag.mjs';
 attachDialogDrag(document);
@@ -138,6 +139,7 @@ import { decayRenderCorrection, reconcilePrediction, renderCorrectionOffset, sho
 import { createSceneArt } from './scene-art.mjs';
 import {centerWorldMapOn,drawWorldMap,hitTestWorldMapMarker,mapMarkers,screenToWorldMap,visibleWorldMapMarkers,worldMapTransform,worldMapDetailBounds,worldMapDetailTiles,WORLD_MAP_MAX_ZOOM} from './world-map.mjs';
 import {AVATAR_SPRITE_SPEC,AVATAR_SPRITE_WORLD_SCALE,advanceAvatarSpritePhase,drawAvatarSprite,getAvatarComposition,getAvatarSpriteVariant,preloadAvatarAnimationActions,preloadAvatarIdle,preloadAvatarSprites,selectAvatarFrame,setAvatarSpritesReadyListener} from './avatar-sprites.mjs';
+import {isPaperdollEnabled,preloadPaperdoll,setPaperdollReadyListener,tryDrawPaperdollAvatar} from './character/paperdoll-runtime.mjs';
 import {advanceAvatarMotion} from './avatar-motion.mjs';
 import {canvasAvatarCacheStats,drawCanvasAvatar} from './canvas-avatar.mjs';
 import { WILDLIFE_BY_ID, wildlifeCollisionBodies, canObserveWildlifeShelter } from './wildlife.mjs';
@@ -210,7 +212,7 @@ const ui = {
 };
 
 ui.worldMapToggle.hidden=true;
-const mapUi={dialog:document.querySelector('#world-map-dialog'),canvas:document.querySelector('#world-map-canvas'),miniMap:document.querySelector('#mini-map-toggle'),miniCanvas:document.querySelector('#mini-map-canvas'),miniStatus:document.querySelector('#mini-map-exploration-status'),revealAll:document.querySelector('#world-map-reveal-all'),search:document.querySelector('#world-map-search'),dimension:document.querySelector('#world-map-dimension'),results:document.querySelector('#world-map-results'),placeName:document.querySelector('#world-map-place-name'),placeMeta:document.querySelector('#world-map-place-meta'),placeCoords:document.querySelector('#world-map-place-coords'),go:document.querySelector('#world-map-go'),teleport:document.querySelector('#world-map-teleport'),teleportNote:document.querySelector('#world-map-teleport-note'),status:document.querySelector('#world-map-status')};
+const mapUi={dialog:document.querySelector('#world-map-dialog'),canvas:document.querySelector('#world-map-canvas'),miniMap:document.querySelector('#mini-map-toggle'),miniCanvas:document.querySelector('#mini-map-canvas'),playerMarker:document.querySelector('#mini-map-player-marker'),miniStatus:document.querySelector('#mini-map-exploration-status'),revealAll:document.querySelector('#world-map-reveal-all'),search:document.querySelector('#world-map-search'),dimension:document.querySelector('#world-map-dimension'),results:document.querySelector('#world-map-results'),placeName:document.querySelector('#world-map-place-name'),placeMeta:document.querySelector('#world-map-place-meta'),placeCoords:document.querySelector('#world-map-place-coords'),go:document.querySelector('#world-map-go'),teleport:document.querySelector('#world-map-teleport'),teleportNote:document.querySelector('#world-map-teleport-note'),status:document.querySelector('#world-map-status')};
 const arrivalUi={panel:document.querySelector('#arrival-tutorial'),step:document.querySelector('#arrival-tutorial-step'),title:document.querySelector('#arrival-tutorial-title'),text:document.querySelector('#arrival-tutorial-text'),next:document.querySelector('#arrival-tutorial-next'),skip:document.querySelector('#arrival-tutorial-skip')};
 let arrivalTutorial=null,arrivalTravelPending=false,arrivalGuideAsked=false,arrivalDepartureAsked=false,arrivalTypingText='',arrivalLastDistance=Infinity,arrivalTutorialPhaseSeen='',arrivalPhaseStartedAt=0;
 const keys = new Set();
@@ -347,6 +349,8 @@ let lastMovementAckDiagnosticAt=0,lastFrameGapDiagnosticAt=0,lastSendFailureDiag
 const worldMapExplorationByDimension=new Map();
 const worldMapGrid={worldSize:WORLD_SIZE,chunkSize:Math.ceil(WORLD_SIZE/48),columns:48,rows:48};
 let worldMapRevealAll=false,worldMapStatusNotice='',miniMapRedrawPending=false,miniMapRedrawAt=0,miniMapView={zoom:5,panX:0,panY:0};
+// Estado do último desenho do minimapa (null = ainda não desenhou ou ficou oculto). Ver mini-map-refresh.mjs.
+let miniMapState=null,miniMapDialogWasOpen=false,miniMapStatusTimer=0;
 let worldMapCanvasSize=null;
 let worldMapView={zoom:32,panX:0,panY:0};
 const worldMapFilters={trails:true,water:true,fires:true,places:true,resources:true,trees:true,grid:false};
@@ -2067,6 +2071,7 @@ function prepareSceneAssets(scene, appearance, position=localPosition, dimension
       if(isCurrentLoad())progress.complete('avatar:idle');
     });
     const avatarAssets=preloadAvatarSprites(appearance).then(()=>{if(isCurrentLoad())progress.complete('avatar:sprites')});
+    if(isPaperdollEnabled())void preloadPaperdoll(appearance).catch(()=>{});
     // Emote/action frames are optional: decode them during the first load without blocking entry.
     if(initialWarmup&&!reducedMotion){
       const animationVariant=getAvatarSpriteVariant(appearance);
@@ -2417,6 +2422,7 @@ function connect() {
         if (remoteAvatarVariants.get(player.id) !== avatarVariant) {
           remoteAvatarVariants.set(player.id, avatarVariant);
           void preloadAvatarSprites(player.appearance).catch(() => {});
+          if (isPaperdollEnabled()) void preloadPaperdoll(player.appearance).catch(() => {});
         }
       }
       let samples = remotePositions.get(player.id) || [];
@@ -2568,7 +2574,7 @@ function connect() {
             : roomCanEdit ? 'Seu quarto' : `Quarto de ${roomOwnerName || 'outra pessoa'}`
         : (dungeonTitleFor(worldDimensionId) || message.dimension?.name || dimensionList.find(dimension => dimension.id === worldDimensionId)?.name || contentById('place.clearing').label));
       ui.roomBuildTools.hidden = worldLocation !== 'room'||!roomCanEdit;
-      ui.worldMapToggle.hidden=worldLocation!=='clearing'||isDungeonScene();mapUi.miniMap.hidden=worldLocation!=='clearing'||isDungeonScene();requestMiniMapRedraw();
+      ui.worldMapToggle.hidden=worldLocation!=='clearing'||isDungeonScene();mapUi.miniMap.hidden=worldLocation!=='clearing'||isDungeonScene();if(mapUi.miniMap.hidden)miniMapState=null;requestMiniMapRedraw();
         ui.roomBuildToggle.hidden=!roomCanEdit;
         for(const element of [ui.roomPlace,ui.roomCategory,ui.roomKind,ui.roomMove,ui.roomRotate,ui.roomRemove])element.hidden=!roomCanEdit;
       canvas.setAttribute('aria-label', worldLocation === 'room'
@@ -3875,7 +3881,68 @@ function mergeMapExploration(message){
  const explored=activeMapExploration(message.dimensionId),added=mergeWorldMapExploration(explored,message.chunks,worldMapGrid);
  if(added.length){requestMiniMapRedraw();if(mapUi.dialog.open&&message.dimensionId===worldDimensionId)requestWorldMapRedraw();}
 }
-function drawMiniMap(){
+// Marcador do jogador: DOM sobreposto ao canvas, movido por translate3d sem tocar no canvas.
+// Escondido com o minimapa oculto, diálogo aberto ou fora da clareira.
+let lastMiniMapView=null,miniMapMarkerLeft=NaN,miniMapMarkerTop=NaN,miniMapMarkerSourceX=NaN,miniMapMarkerSourceY=NaN;
+// Métricas de layout do canvas, lidas fora do frame (após desenhar e no ResizeObserver).
+// O frame nunca lê layout: usa só este cache.
+let miniMapCanvasMetrics=null;
+function measureMiniMapCanvasMetrics(){
+ const canvas=mapUi.miniCanvas;
+ if(!canvas||canvas.clientWidth<1||canvas.clientHeight<1)return;
+ miniMapCanvasMetrics={offsetLeft:canvas.offsetLeft,offsetTop:canvas.offsetTop,clientLeft:canvas.clientLeft,clientTop:canvas.clientTop,clientWidth:canvas.clientWidth,clientHeight:canvas.clientHeight};
+ miniMapMarkerLeft=NaN;miniMapMarkerSourceX=NaN;
+}
+if(typeof ResizeObserver==='function'&&mapUi.miniCanvas)new ResizeObserver(()=>{if(!mapUi.miniMap.hidden)measureMiniMapCanvasMetrics();}).observe(mapUi.miniCanvas);
+// Só propriedades de estado (sem layout): mostra ou esconde o marcador.
+function syncMiniMapMarkerVisibility(){
+ const marker=mapUi.playerMarker;
+ if(!marker)return;
+ const hidden=!sceneReady||!lastMiniMapView||mapUi.miniMap.hidden||mapUi.dialog.open||worldLocation!=='clearing';
+ if(marker.hidden===hidden)return;
+ marker.hidden=hidden;
+ if(hidden){miniMapMarkerLeft=NaN;miniMapMarkerTop=NaN;}
+ miniMapMarkerSourceX=NaN;miniMapMarkerSourceY=NaN;
+}
+// Posiciona o marcador com as métricas em cache e a projeção do minimapa. Sem leitura de layout.
+function updateMiniMapPlayerMarker(){
+ const marker=mapUi.playerMarker;
+ if(!marker||marker.hidden||!lastMiniMapView||!miniMapCanvasMetrics)return;
+ const point=playerMarkerOffset(localRenderPosition,lastMiniMapView.view,lastMiniMapView);
+ const pos=miniMapMarkerScreenPosition(point,lastMiniMapView,miniMapCanvasMetrics);
+ if(!pos)return;
+ if(pos.left===miniMapMarkerLeft&&pos.top===miniMapMarkerTop)return;
+ miniMapMarkerLeft=pos.left;miniMapMarkerTop=pos.top;
+ marker.style.transform=`translate3d(${pos.left.toFixed(2)}px,${pos.top.toFixed(2)}px,0)`;
+}
+function miniMapSelectionKey(){
+ if(!worldMapSelection)return null;
+ return worldMapSelection.marker?.id??`${worldMapSelection.x},${worldMapSelection.y}`;
+}
+function miniMapRedrawInputs(){
+ const explored=activeMapExploration(),prev=miniMapState;
+ return {
+  prevChunkKey:prev?.chunkKey??null,
+  nextChunkKey:chunkKeyFor(localPosition,worldMapGrid.chunkSize),
+  dimensionChanged:!!prev&&prev.dimensionId!==worldDimensionId,
+  explorationGainedChunk:!!prev&&prev.explorationRevision!==(explored.revision||0),
+  dialogJustClosed:miniMapDialogWasOpen&&!mapUi.dialog.open,
+  overviewChanged:!!prev&&prev.overviewKey!==worldMapKeyFor(worldDimensionId,getWorldDefinition()),
+  firstDraw:!prev,
+  selectionChanged:!!prev&&prev.selectionKey!==miniMapSelectionKey(),
+  revealAllChanged:!!prev&&prev.revealAll!==worldMapRevealAll,
+ };
+}
+function flashMiniMapUpdating(){
+ if(!mapUi.miniStatus)return;
+ mapUi.miniStatus.textContent=MINI_MAP_UPDATING_LABEL;
+ clearTimeout(miniMapStatusTimer);
+ miniMapStatusTimer=setTimeout(()=>{
+  miniMapStatusTimer=0;
+  if(mapUi.miniStatus.textContent===MINI_MAP_UPDATING_LABEL&&worldMapOverview)mapUi.miniStatus.textContent=worldMapExplorationLabel(activeMapExploration(),worldMapOverview,{revealAll:worldMapRevealAll});
+ },MINI_MAP_UPDATING_MS);
+}
+function drawMiniMap(inputs={}){
  if(!sceneReady||!mapUi.miniMap||mapUi.miniMap.hidden||mapUi.dialog.open||worldLocation!=='clearing')return;
  const definition=getWorldDefinition(),key=worldMapKeyFor(worldDimensionId,definition);
  if(key!==worldMapOverviewKey){
@@ -3888,17 +3955,27 @@ function drawMiniMap(){
  const ratio=Math.min(1.25,window.devicePixelRatio||1),width=Math.max(1,Math.round(rect.width*ratio)),height=Math.max(1,Math.round(rect.height*ratio));
  if(mapUi.miniCanvas.width!==width||mapUi.miniCanvas.height!==height){mapUi.miniCanvas.width=width;mapUi.miniCanvas.height=height;}
  const context=mapUi.miniCanvas.getContext('2d');if(!context)return;context.setTransform(ratio,0,0,ratio,0,0);
- const view=centerWorldMapOn({...miniMapView,zoom:5},localPosition,{worldSize:worldMapOverview.worldSize,width:rect.width,height:rect.height});
+ // Vista fixa: centro do chunk atual. O ponto do jogador é um marcador DOM (updateMiniMapPlayerMarker).
+ const view=miniMapViewForChunk(localPosition,worldMapGrid.chunkSize,{worldSize:worldMapOverview.worldSize,width:rect.width,height:rect.height,base:miniMapView});
+ if(!view)return;
+ lastMiniMapView={view,worldSize:worldMapOverview.worldSize,width:rect.width,height:rect.height};
  const explored=activeMapExploration(),selectedMarkerId=worldMapSelection?.marker?.id;
  const miniMarkers=selectedMarkerId?worldMapMarkers.filter(marker=>marker.id!==selectedMarkerId):worldMapMarkers;
  const waypoint=worldMapSelection?{x:worldMapSelection.x,y:worldMapSelection.y}:null;
- drawWorldMap(context,{overview:worldMapOverview,width:rect.width,height:rect.height,view,player:localPosition,waypoint,markers:miniMarkers,filters:worldMapFilters,discoveredChunks:explored,revealAll:worldMapRevealAll,compact:true});
+ drawWorldMap(context,{overview:worldMapOverview,width:rect.width,height:rect.height,view,player:null,waypoint,markers:miniMarkers,filters:worldMapFilters,discoveredChunks:explored,revealAll:worldMapRevealAll,compact:true});
+ measureMiniMapCanvasMetrics();updateMiniMapPlayerMarker();
  mapUi.miniStatus.textContent=worldMapExplorationLabel(explored,worldMapOverview,{revealAll:worldMapRevealAll});
  mapUi.miniMap.setAttribute('aria-label',worldMapSelection?`Abrir minimapa e mapa completo. Destino marcado: ${worldMapSelection.name}.`:'Abrir minimapa e mapa completo');
+ if(shouldFlashMiniMapUpdate(inputs))flashMiniMapUpdating();
+ miniMapState={dimensionId:worldDimensionId,overviewKey:key,chunkKey:inputs.nextChunkKey??null,explorationRevision:explored.revision||0,selectionKey:miniMapSelectionKey(),revealAll:worldMapRevealAll};
+ miniMapDialogWasOpen=false;
 }
+// Chamado a cada snapshot: só redesenha quando shouldRedrawMiniMap disser que há motivo.
 function requestMiniMapRedraw(){
- if(!sceneReady||!mapUi.miniMap||mapUi.miniMap.hidden||mapUi.dialog.open||miniMapRedrawPending)return;
- miniMapRedrawPending=true;requestAnimationFrame(()=>{miniMapRedrawPending=false;const now=performance.now(),wait=Math.max(0,100-(now-miniMapRedrawAt));if(wait){setTimeout(requestMiniMapRedraw,wait);return;}miniMapRedrawAt=now;drawMiniMap();});
+ if(!sceneReady||!mapUi.miniMap)return;
+ if(mapUi.dialog.open){miniMapDialogWasOpen=true;return;}
+ if(mapUi.miniMap.hidden||miniMapRedrawPending)return;
+ miniMapRedrawPending=true;requestAnimationFrame(()=>{miniMapRedrawPending=false;if(!sceneReady||!mapUi.miniMap||mapUi.miniMap.hidden||mapUi.dialog.open)return;const inputs=miniMapRedrawInputs();if(!shouldRedrawMiniMap(inputs))return;const now=performance.now(),wait=Math.max(0,100-(now-miniMapRedrawAt));if(wait){setTimeout(requestMiniMapRedraw,wait);return;}miniMapRedrawAt=now;drawMiniMap(inputs);});
 }
 function focusInitialForestMap(features=null){
  if(!features){
@@ -4028,7 +4105,7 @@ ui.worldMapToggle.addEventListener('click',()=>{document.querySelector('.dimensi
 mapUi.miniMap.addEventListener('click',()=>openWorldMap({localDetail:true}));
 mapUi.revealAll.addEventListener('click',()=>{worldMapRevealAll=!worldMapRevealAll;worldMapStatusNotice=worldMapRevealAll?'Visão completa ativada. A exploração salva continua igual.':'';if(!worldMapRevealAll&&worldMapSelection&&!isWorldMapCellKnown(worldMapSelection,worldMapOverview,activeMapExploration()))worldMapSelection=null;requestWorldMapRedraw();requestMiniMapRedraw();});
 document.querySelector('#world-map-close').addEventListener('click',()=>panels.close());
-mapUi.dialog.addEventListener('close',()=>requestMiniMapRedraw());
+mapUi.dialog.addEventListener('close',()=>{miniMapDialogWasOpen=true;requestMiniMapRedraw();});
 function zoomWorldMapAtViewportCenter(factor){
  const rect=mapUi.canvas.getBoundingClientRect();if(rect.width<1||rect.height<1||!worldMapOverview)return;
  const point={x:rect.width/2,y:rect.height/2};
@@ -6746,7 +6823,8 @@ function drawAvatar(player, time, isSelf = false, shareTarget = false, pickupFra
     else drawCanvasAvatar(ctx,px,py,selected,appearance,{animation,smooth:smoothAvatar,surfaceLight});
     drawAvatarSprite(ctx,px,py,selected,appearance,{layerRoles:['aura-front'],smooth:smoothAvatar});
   };
-  const drawBody=()=>{if(!drawAvatarSprite(ctx,px,py,selected,appearance,{smooth:smoothAvatar,surfaceLight}))drawCanvasFallback();};
+  const paperdollInfo=isPaperdollEnabled()?{action:selected.action,facing,phase,moving:moving&&!swimming,running:running&&!swimming,reducedMotion,nowMs:Date.now()}:null;
+  const drawBody=()=>{if(paperdollInfo&&tryDrawPaperdollAvatar(ctx,px,py,appearance,paperdollInfo))return;if(!drawAvatarSprite(ctx,px,py,selected,appearance,{smooth:smoothAvatar,surfaceLight}))drawCanvasFallback();};
   if(rimSource&&!pose.lying&&!swimming)drawActorRimLight(px,py,rimSource,p,drawBody);
   if(pose.lying){
     const skew=Math.atan2(TILE_Y,TILE_X),angles=[-Math.PI/2+skew,Math.PI/2-skew,Math.PI/2+skew,-Math.PI/2-skew];
@@ -8386,6 +8464,11 @@ function advanceFrame(now) {
   if(pendingCameraZoom!==null&&sceneReady&&worldLocation==='clearing'
       &&sceneArt.terrainChunksReady(pendingZoomTerrainChunks()))commitCameraZoom(pendingCameraZoom);
   if (!sceneReady) { lastFrame = 0; accumulator = 0; return; }
+  syncMiniMapMarkerVisibility();
+  if(localRenderPosition.x!==miniMapMarkerSourceX||localRenderPosition.y!==miniMapMarkerSourceY){
+    miniMapMarkerSourceX=localRenderPosition.x;miniMapMarkerSourceY=localRenderPosition.y;
+    updateMiniMapPlayerMarker();
+  }
   const previousFrameAt=lastFrame,frameGapMs=previousFrameAt?Math.max(0,now-previousFrameAt):0;
   if(previousFrameAt&&document.visibilityState!=='hidden')performanceTelemetry.observeFrame(frameGapMs);
   if(now-lastPerformanceReportAt>=10_000)flushPerformanceTelemetry(now);
@@ -9647,7 +9730,7 @@ function renderAppearancePreview(){
  if(previewSpriteKey!==variantKey){previewSpriteKey=variantKey;void preloadAvatarSprites(appearance).catch(error=>console.error('Falha ao carregar a prévia PNG do personagem',error));}
  context.fillStyle='rgba(174,177,158,.22)';context.beginPath();context.ellipse(80,170,22,7,0,0,Math.PI*2);context.fill();
  context.fillStyle='rgba(3,11,20,.55)';context.beginPath();context.ellipse(80,168,12,3,0,0,Math.PI*2);context.fill();
- drawAvatarSprite(context,80,168,selected,appearance,{scale:2});
+ if(!(isPaperdollEnabled()&&tryDrawPaperdollAvatar(context,80,168,appearance,{action:selected.action,facing,phase:0,reducedMotion,scale:2,nowMs:Date.now()})))drawAvatarSprite(context,80,168,selected,appearance,{scale:2});
 }
 function animateAppearancePreview(timestamp){
  if(!appearanceDialog.open){previewFrame=0;return;}
@@ -9662,6 +9745,7 @@ appearanceForm.elements.namedItem('body').addEventListener('change',renderAppear
 appearanceForm.addEventListener('change',renderAppearancePreview);document.querySelector('#appearance-open').addEventListener('click',renderAppearancePreview);
 // The running RAF already draws ready sprites on its next frame.
 setAvatarSpritesReadyListener(()=>{if(appearanceDialog.open)renderAppearancePreview();});
+setPaperdollReadyListener(()=>{if(appearanceDialog.open)renderAppearancePreview();});
 createDraggableHud({
   container: document.querySelector('.canvas-wrap'),
   items: [

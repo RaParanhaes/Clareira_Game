@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test --test-concurrency=1 game/*.test.mjs database/*.test.mjs scripts/*.test.mjs && python3 -m unittest discover -s scripts -p '*_test.py'",
+    "test": "node --test --test-concurrency=1 game/*.test.mjs game/character/*.test.mjs database/*.test.mjs scripts/*.test.mjs && python3 -m unittest discover -s scripts -p '*_test.py'",
     "preview": "node scripts/dev-preview-page.mjs",
     "room": "node scripts/prototype-server.mjs",
     "scale:baseline": "node scripts/scale-baseline.mjs",
@@ -26,6 +26,8 @@
     "art:cottage:check": "node scripts/check-cottage-art.mjs",
     "art:fern:build": "blender --background --factory-startup --threads 4 --python-exit-code 1 --python scripts/blender/build-fern-cabin.py",
     "art:fern:check": "node scripts/check-fern-art.mjs",
+    "art:monsters:build": "node scripts/build-monster-atlases.mjs",
+    "art:paperdoll:build": "node scripts/build-paperdoll-atlases.mjs --out game/art/avatar-frames/character-paperdoll-v1",
     "forest:inventory": "node scripts/export-initial-forest-inventory.mjs"
   },
   "dependencies": {

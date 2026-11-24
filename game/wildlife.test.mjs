@@ -233,6 +233,7 @@ test('hunting wounds first, then grants exact drops and removes the animal', asy
 
   const kill=await huntWildlifeTarget({...options,now:2000});
   assert.equal(kill.status,'killed');
+  assert.equal(rabbit.diedAt,2000);
   assert.deepEqual(kill.loot,{rawMeat:1,hide:1});
   assert.equal(player.inventory.rawMeat,1);
   assert.equal(player.inventory.hide,1);

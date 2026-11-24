@@ -70,6 +70,8 @@ import {
   WILDLIFE_BY_ID, WILDLIFE_ZONE_SIZE, WILDLIFE_POPULATION_LIMIT, createWildlifeForZone, stepWildlifePopulation, wildlifeCollisionBodies,
 } from '../game/wildlife.mjs';
 import { huntWildlifeTarget } from '../game/wildlife-hunt.mjs';
+import { DUNGEON_SPECIES_BY_ID, dungeonWildlifeDefinition, planDungeonSpawns, scaleSpecies } from '../game/dungeon-bestiary.mjs';
+for (const id of DUNGEON_SPECIES_BY_ID.keys()) WILDLIFE_BY_ID.set(id, dungeonWildlifeDefinition(id));
 import { villageActorsFor } from '../game/village-npcs.mjs';
 import { restoreAmbientFires } from '../game/ambient-fires.mjs';
 import {
@@ -299,12 +301,15 @@ function snapshotGroupKey(player) {
 }
 
 function serializeWildlifeForNetwork(animal) {
-  const definition = WILDLIFE_BY_ID.get(animal.speciesId);
+  const definition = WILDLIFE_BY_ID.get(animal.speciesId) || dungeonWildlifeDefinition(animal.speciesId);
   return {
     id: animal.id, speciesId: animal.speciesId,
     x: animal.x, y: animal.y, vx: animal.vx, vy: animal.vy,
     ...(animal.dungeonBoss === true ? { dungeonBoss: true, scale: animal.scale } : {}),
     state: animal.state, health: animal.health, lifeStage: animal.lifeStage,
+    ...(animal.diedAt ? { diedAt: animal.diedAt } : {}),
+    ...(Number.isFinite(animal.attackAt) ? { attackAt: animal.attackAt } : {}),
+    ...(Number.isFinite(animal.animationStartedAt) ? { animationStartedAt: animal.animationStartedAt } : {}),
     awareness: animal.awarenessUntil > Date.now() ? animal.awareness : null,
     shelter: {
       id: animal.shelterId || animal.groupId || animal.id,
@@ -668,6 +673,22 @@ export function createPrototypeServer({
     wildlifeFor(dimensionId).set(animal.id, animal);
     dungeonBossByDimension.set(dimensionId, { bossId: animal.id, contributors: new Set(), defeated: false });
   };
+  const ensureDungeonWildlife = (dimensionId, level) => {
+    const population = wildlifeFor(dimensionId);
+    if (population.size) return;
+    if (level !== 1) return;
+    const plan = planDungeonSpawns(dungeonLevel(level));
+    for (let index = 0; index < plan.initial.length; index++) {
+      const spawn = plan.initial[index], definition = DUNGEON_SPECIES_BY_ID.get(spawn.species);
+      if (!definition) continue;
+      const scaled = scaleSpecies(definition, level), id = `dungeon:${dimensionId}:${index}`;
+      population.set(id, { id, speciesId:spawn.species, dimensionId, x:spawn.x+.5, y:spawn.y+.5,
+        vx:0, vy:0, health:scaled.health, ageDays:1, lifeStage:'adulto', state:'explorando',
+        thinkAt:now()+1000, wakeRadius:scaled.wakeRadius, leash:scaled.leash, targetX:spawn.x+.5, targetY:spawn.y+.5, shelterX:spawn.x+.5, shelterY:spawn.y+.5,
+        shelterId:id, sheltered:false, hunger:10, thirst:10, energy:80, groupId:`dungeon:${dimensionId}:${spawn.roomId}:${spawn.species}`,
+        sex:'macho', randomSeed:index+1, randomState:index+1, provokedUntil:0, provokedBy:null });
+    }
+  };
   // Acerto em animal da fauna: o chefe da masmorra usa o próprio registro; o resto segue o covil exterior.
   const recordWildlifeHit = (hit, attacker) => {
     if (hit.dungeonBoss) {
@@ -698,7 +719,7 @@ export function createPrototypeServer({
     placeNearLairMouth(playerId) {
       const player = [...peers.values()].find(entry => entry.id === playerId);
       if (!player || player.location !== 'clearing' || (player.dimensionId || 'surface') !== 'surface') return false;
-      player.position = { ...player.position, x: LAIR_MOUTH_DOOR.x - 2.1, y: LAIR_MOUTH_DOOR.y, vx: 0, vy: 0 };
+      player.position = { ...player.position, x: LAIR_MOUTH_DOOR.x - .8, y: LAIR_MOUTH_DOOR.y, vx: 0, vy: 0 };
       indexPlayer(player.socket, player);
       broadcast(false);
       return true;
@@ -708,6 +729,31 @@ export function createPrototypeServer({
       if (!player || !isDungeonDimensionId(player.dimensionId)) return false;
       player.position = { ...player.position, x: point.x, y: point.y, vx: 0, vy: 0 };
       indexPlayer(player.socket, player);
+      return true;
+    },
+    setDungeonMonsterState(playerId, state) {
+      const player = [...peers.values()].find(entry => entry.id === playerId);
+      if (!player || !isDungeonDimensionId(player.dimensionId) || !['idle', 'walking', 'attacking', 'dying'].includes(state)) return false;
+      const population = wildlifeFor(player.dimensionId);
+      let animal = [...population.values()].find(entry => entry.speciesId === 'mossSlime');
+      if (!animal) {
+        const scaled = scaleSpecies('mossSlime', parseDungeonDimensionId(player.dimensionId).level);
+        const id = `test:${player.dimensionId}:mossSlime`;
+        animal = { id, speciesId:'mossSlime', dimensionId:player.dimensionId, x:player.position.x, y:player.position.y,
+          vx:0, vy:0, health:scaled.health, ageDays:1, lifeStage:'adulto', state:'dormindo', thinkAt:now()+60_000,
+          wakeRadius:scaled.wakeRadius, leash:scaled.leash,
+          targetX:player.position.x, targetY:player.position.y, shelterX:player.position.x, shelterY:player.position.y,
+          shelterId:id, sheltered:false, hunger:10, thirst:10, energy:80, groupId:id, sex:'macho', randomSeed:1,
+          randomState:1, provokedUntil:0, provokedBy:null };
+        population.set(id, animal);
+      }
+      animal.x = player.position.x + 1.1; animal.y = player.position.y + .7;
+      animal.animationStartedAt = now(); animal.thinkAt=now()+60_000; animal.vx = state === 'walking' ? .65 : 0; animal.vy = 0;
+      animal.state = state === 'idle' ? 'dormindo' : state === 'walking' ? 'explorando' : state === 'attacking' ? 'atacando' : 'morto';
+      if (state === 'dying') { animal.health = 0; animal.diedAt = now(); animal.removeAt = now() + 30_000; }
+      else { animal.health = Math.max(1, animal.health); delete animal.diedAt; delete animal.removeAt; }
+      animal.attackAt = state === 'attacking' ? now() : null;
+      broadcast(false);
       return true;
     },
     playerState(playerId) {
@@ -739,6 +785,7 @@ export function createPrototypeServer({
     }
     const { dimensionId } = acquired.instance;
     ensureDungeonBoss(dimensionId, level);
+    ensureDungeonWildlife(dimensionId, level);
     player.dimensionId = dimensionId;
     // Ponto de volta da masmorra é a boca do covil; a regra de morte (outra branch) vai usá-lo.
     player.respawnPoint = { lairId: LAIRS.ninho.id, x: LAIRS.ninho.mouth.x, y: LAIRS.ninho.mouth.y };
@@ -2728,7 +2775,7 @@ export function createPrototypeServer({
         const damage = combatTechnique
           ? ability.damage + weaponDamage + attributeAttackBonus(player.inventory.attributes,player.inventory.learnedAbilities)
           : ability.damage + attributeSpellDamageBonus(player.inventory.attributes);
-        const result = await huntWildlifeTarget({ player, animal, population, now:now(), persist:persistPlayer, onHit:recordWildlifeHit,
+        const result = await huntWildlifeTarget({ player, animal, population, now:now(), persist:persistPlayer, onHit:recordWildlifeHit, deathRetentionMs:800,
           rangeOverride:ability.range, damageOverride:damage, weaponOverride:combatTechnique?null:'spell',
           hasClearPath:(from,to,definition)=>hasClearInteractionPath(from,to,{targetRadius:definition.stats.radius,
             fires:[...firesFor(player.dimensionId||'surface').values()],ignoreWildlife:animal.id}), });

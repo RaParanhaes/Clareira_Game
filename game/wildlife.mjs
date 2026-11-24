@@ -620,6 +620,10 @@ export function stepWildlifePopulation(population, {dimensionId='surface', playe
     populationCount,populationLimit,events};
   const delta=Math.max(0,Math.min(.12,Number(deltaSeconds)||0));
   for (const animal of activeAnimals) {
+    if (animal.diedAt) {
+      if (now >= (animal.removeAt || animal.diedAt)) population.delete(animal.id);
+      continue;
+    }
     const definition=WILDLIFE_BY_ID.get(animal.speciesId);
     if (!definition) { population.delete(animal.id); continue; }
     animal.ageDays+=(delta*1000)/GAME_DAY_DURATION_MS;

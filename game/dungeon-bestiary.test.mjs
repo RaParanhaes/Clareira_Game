@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateDungeon } from './dungeon-gen.mjs';
+import monsterManifest from './art/monsters/manifest.json' with { type: 'json' };
 import { WILDLIFE_BY_ID } from './wildlife.mjs';
 import {
   DUNGEON_BANDS, DUNGEON_RULES, DUNGEON_SPECIES, BOSSES, bandOfLevel, bossFor,
@@ -106,6 +107,14 @@ test('cada nível contém apenas espécies cujas faixas o incluem', () => {
   for (let level = 1; level <= 20; level++) {
     const expected = DUNGEON_SPECIES.filter(s => level >= s.bands[0] && level <= s.bands[1]).map(s => s.id);
     assert.deepEqual(speciesIdsForLevel(level), expected);
+  }
+});
+
+test('ids do manifest de atlas resolvem para a definição correta do bestiário', () => {
+  for (const id of Object.keys(monsterManifest.especies)) {
+    const definition = dungeonWildlifeDefinition(id);
+    assert.ok(definition, `${id} deve ser aceito pelo mapeamento de espécies`);
+    assert.equal(definition.sprite, id);
   }
 });
 

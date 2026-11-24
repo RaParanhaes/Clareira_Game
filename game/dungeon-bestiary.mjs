@@ -119,7 +119,9 @@ export function dungeonWildlifeDefinition(id) {
     dropChances: species.drops.map(drop => drop.chance),
     attack: { mode: species.family === 'bear' ? 'swipe' : species.family === 'spider' ? 'bite' : 'bite', when: species.id === 'elderBear' ? 'intruder' : 'cornered', reach: species.reach, force: species.baseForce, cooldownMs: species.cooldownMs },
     senses: { sight: species.wakeRadius ?? 5, hearing: 8, smell: 6, night: 1, cone: 3 },
-    aggression: 'monster', isMonster: true, family: species.family, sprite: species.sprite, bands: [...species.bands], armor: species.armor, kind: species.kind,
+    aggression: 'monster', isMonster: true, fixed: true, alwaysActive: true, diet: 'carnivore', activity: 'diurnal',
+    predators: [], prey: [], wakeRadius: species.wakeRadius ?? 5, leash: species.leash ?? 8,
+    family: species.family, sprite: species.sprite, bands: [...species.bands], armor: species.armor, kind: species.kind,
   };
 }
 

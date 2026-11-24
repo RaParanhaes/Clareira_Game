@@ -143,6 +143,10 @@ import {isPaperdollEnabled,preloadPaperdoll,setPaperdollReadyListener,tryDrawPap
 import {advanceAvatarMotion} from './avatar-motion.mjs';
 import {canvasAvatarCacheStats,drawCanvasAvatar} from './canvas-avatar.mjs';
 import { WILDLIFE_BY_ID, wildlifeCollisionBodies, canObserveWildlifeShelter } from './wildlife.mjs';
+import { BOSSES, DUNGEON_SPECIES, dungeonWildlifeDefinition, speciesIdsForLevel } from './dungeon-bestiary.mjs';
+for (const species of [...DUNGEON_SPECIES, ...BOSSES]) WILDLIFE_BY_ID.set(species.id, dungeonWildlifeDefinition(species.id));
+import { createMonsterSprites } from './monster-sprites.mjs';
+import monsterManifest from './art/monsters/manifest.json' with { type: 'json' };
 import { villageNpcAppearance, villageNpcDayRoster } from './village-npcs.mjs';
 const strides=new Map();
 const avatarSelections=new Map();
@@ -376,6 +380,16 @@ let lairs = [];
 const dungeonClient = createDungeonClient({
   createCanvas: (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; },
 });
+const speciesById = new Map(WILDLIFE_BY_ID);
+for (const species of [...DUNGEON_SPECIES, ...BOSSES]) {
+  const definition = dungeonWildlifeDefinition(species.id);
+  if (definition) speciesById.set(species.id, definition);
+}
+const monsterSprites = createMonsterSprites({
+  manifest: monsterManifest,
+  loadImage: src => new Promise((resolve, reject) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = () => reject(new Error(`Falha ao carregar ${src}`)); image.src = src; }),
+});
+let monsterSpriteDimension = null;
 const warmedCabinsNearby=new Set();
 let resourceContracts = [];
 let marketQuotes = {};
@@ -2477,7 +2491,7 @@ function connect() {
     if(Array.isArray(message.animals)){
       const visibleAnimalIds=new Set();
       for(const animal of message.animals){
-        if(!animal||typeof animal.id!=='string'||!WILDLIFE_BY_ID.has(animal.speciesId))continue;
+        if(!animal||typeof animal.id!=='string'||!speciesById.has(animal.speciesId))continue;
         visibleAnimalIds.add(animal.id);
         wildlife.set(animal.id,animal);
         const samples=wildlifePositions.get(animal.id)||[];
@@ -4205,7 +4219,7 @@ function nearestWildlifeTarget(position=localPosition,maxDistance=1.45) {
     if(animal.health<=0||animal.sheltered)continue;
     const distance=Math.hypot(position.x-animal.x,position.y-animal.y);
     if(distance>=gap)continue;
-    const definition=WILDLIFE_BY_ID.get(animal.speciesId);
+    const definition=speciesById.get(animal.speciesId);
     if(maxDistance<=1.45&&definition&&!hasClearInteractionPath(position,animal,{fires:[...fires.values()],targetRadius:definition.stats.radius}))continue;
     nearest=animal;gap=distance;
   }
@@ -4235,7 +4249,17 @@ function touchLairMouth(lair) {
   else requestWalkPath({ x: lair.mouth.x, y: lair.mouth.y });
 }
 
-function syncDungeonDimension(dimensionId, snapshotDungeon) { dungeonClient.sync(dimensionId, snapshotDungeon); }
+function syncDungeonDimension(dimensionId, snapshotDungeon) {
+  dungeonClient.sync(dimensionId, snapshotDungeon);
+  if (dimensionId !== monsterSpriteDimension) {
+    monsterSprites.release();
+    monsterSpriteDimension = dimensionId;
+    if (dungeonClient.isActive(dimensionId)) {
+      const level = Number(dimensionId.match(/-n(\d+)-/)?.[1]) || 1;
+      void monsterSprites.preload(speciesIdsForLevel(level)).catch(() => {});
+    }
+  }
+}
 function dungeonTitleFor(dimensionId) { return dungeonClient.title(dimensionId); }
 
 function nearestDungeonExit() {
@@ -4419,7 +4443,7 @@ function updateContextActionLabel() {
   if (lair) { describe(lairPromptText(lair, rawGameDayTimestampMs())); return; }
   const animal = nearestWildlifeTarget();
   if (animal) {
-    const species = WILDLIFE_BY_ID.get(animal.speciesId);
+    const species = speciesById.get(animal.speciesId);
     describe(`Caçar ${species?.label || 'animal'} com a ferramenta equipada`);
     return;
   }
@@ -7017,9 +7041,12 @@ function drawTutorialGuide(guide,time){
 }
 
 function drawWildlife(animal,time,highlight=false) {
-  const definition=WILDLIFE_BY_ID.get(animal.speciesId);
+  const definition=speciesById.get(animal.speciesId);
   if(!definition||animal.sheltered)return;
-  const p=isDungeonScene()?point(animal.x,animal.y,camera,0):point(animal.x,animal.y),[width,standingHeight]=definition.size;
+  const spritePoint=isDungeonScene()?point(animal.x,animal.y,camera,0):point(animal.x,animal.y);
+  if(monsterSprites.has(animal.speciesId))drawSoftShadow(spritePoint.x,spritePoint.y+1,definition.size[0]*spriteScale*.13,definition.size[1]*spriteScale*.035,.08,.32);
+  if(monsterSprites.draw(ctx,{...animal,hp:animal.health}, {px:spritePoint.x,py:spritePoint.y,scale:spriteScale*.25*(Number.isFinite(animal.scale)?animal.scale:1),time:Date.now()/1000,reducedMotion}))return;
+  const p=spritePoint,[width,standingHeight]=definition.size;
   const height=animal.state==='dormindo'?Math.round(standingHeight*.6):standingHeight;
   const colors=definition.colors,form=definition.form;
   const bossScale=animal.dungeonBoss===true?2:1;
@@ -7027,7 +7054,7 @@ function drawWildlife(animal,time,highlight=false) {
   const moving=Math.hypot(animal.vx||0,animal.vy||0)>.22;
   const gait=moving?Math.round(Math.sin(time*(animal.state==='fugindo'?15:9)+(animal.id.length%7))*1.4):0;
   const bob=moving?Math.round(Math.abs(Math.sin(time*8+(animal.id.length%5)))):0;
-  drawSoftShadow(p.x,p.y+1,width*visualScale*.52,height*visualScale*.14,.08,.32);
+  if(!monsterSprites.has(animal.speciesId))drawSoftShadow(p.x,p.y+1,width*visualScale*.52,height*visualScale*.14,.08,.32);
   ctx.save();
   ctx.translate(Math.round(p.x),Math.round(p.y));
   ctx.scale(visualScale,visualScale);
@@ -7183,7 +7210,7 @@ function updateObjective() {
   const objectiveFires=[...fires.values()];
   const nearbyAnimal=nearestWildlifeTarget(localRenderPosition,5.5);
   const nearLair=nearestLairMouth();
-  const nearbySpecies=nearbyAnimal&&WILDLIFE_BY_ID.get(nearbyAnimal.speciesId);
+  const nearbySpecies=nearbyAnimal&&speciesById.get(nearbyAnimal.speciesId);
   const shelterNames={burrow:'toca',cave:'caverna',thicket:'moita',den:'covil','tree-hollow':'oco de árvore','root-hollow':'raízes','high-nest':'ninho alto','canopy-nest':'copa','hedge-nest':'cerca viva','pond-edge':'beira d’água','warm-rock':'pedras quentes','open-meadow':'campo aberto','barn-edge':'abrigo do rebanho','rock-shelter':'abrigo de pedra','tall-grass':'capim alto'};
   const nearbyAnimalText=nearbyAnimal?`${nearbySpecies?.label||'Animal'} · ${nearbyAnimal.lifeStage} · ${nearbyAnimal.state.replaceAll('-',' ')}. ${(nearbySpecies?.lifeGoal||'explorar o bosque').split(',')[0]}. Abrigo: ${shelterNames[nearbySpecies?.shelter]||'vegetação'}. ${nearbyAnimal.awareness?`Notou você por ${nearbyAnimal.awareness}.`:'Agache com C para se aproximar em silêncio.'}`:'';
   const guide=nearestTutorialGuide();

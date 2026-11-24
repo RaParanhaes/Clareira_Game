@@ -4,15 +4,16 @@ import {
 } from './inventory.mjs';
 import { isWeapon, weaponDamageFor } from './equipment.mjs';
 import { WILDLIFE_BY_ID } from './wildlife.mjs';
+import { dungeonWildlifeDefinition } from './dungeon-bestiary.mjs';
 import { attributeAttackBonus } from './progression.mjs';
 
 const HUNT_REACH = 1.45;
 
 export async function huntWildlifeTarget({
   player, animal, population, hasClearPath=()=>true, now=Date.now(), persist=async()=>{},
-  rangeOverride=null, damageOverride=null, weaponOverride=null, onHit=()=>{},
+  rangeOverride=null, damageOverride=null, weaponOverride=null, onHit=()=>{}, deathRetentionMs=0,
 }) {
-  const definition=animal&&WILDLIFE_BY_ID.get(animal.speciesId);
+  const definition=animal&&(WILDLIFE_BY_ID.get(animal.speciesId)||dungeonWildlifeDefinition(animal.speciesId));
   if(!animal||!definition||animal.dimensionId!==(player.dimensionId||'surface')||animal.health<=0||animal.sheltered)
     return {status:'missing'};
   const allowedRange=Number.isFinite(rangeOverride)?Math.max(0,rangeOverride):HUNT_REACH;
@@ -58,7 +59,10 @@ export async function huntWildlifeTarget({
     animal.provokedUntil=previousProvokedUntil;animal.provokedBy=previousProvokedBy;
     return {status:'save-failed',definition};
   }
-  population?.delete(animal.id);
+  animal.diedAt=now;
+  animal.state='morto';
+  if(deathRetentionMs>0)animal.removeAt=now+deathRetentionMs;
+  else population?.delete(animal.id);
   onHit(animal, player);
   return {status:'killed',definition,loot};
 }

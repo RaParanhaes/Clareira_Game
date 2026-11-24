@@ -1,0 +1,44 @@
+{
+ "versao": 1,
+ "especie": "caveBear",
+ "cell": 96,
+ "pivo": [
+  48,
+  78
+ ],
+ "dirs": "8",
+ "direcoes": [
+  "S",
+  "SE",
+  "L",
+  "NE",
+  "N",
+  "NO",
+  "O",
+  "SO"
+ ],
+ "escala": 0.95,
+ "anims": {
+  "parado": {
+   "frames": 4,
+   "fps": 4,
+   "loop": true
+  },
+  "andar": {
+   "frames": 6,
+   "fps": 10,
+   "loop": true
+  },
+  "atacar": {
+   "frames": 6,
+   "fps": 12,
+   "loop": false,
+   "golpe_quadro": 2
+  },
+  "morrer": {
+   "frames": 6,
+   "fps": 10,
+   "loop": false
+  }
+ }
+}

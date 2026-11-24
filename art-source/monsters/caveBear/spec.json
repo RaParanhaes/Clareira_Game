@@ -1,0 +1,160 @@
+{
+ "especie": "caveBear",
+ "familia": "urso",
+ "cell": 96,
+ "pivo": [
+  48,
+  78.0
+ ],
+ "dirs": "8",
+ "direcoes": [
+  "S",
+  "SE",
+  "L",
+  "NE",
+  "N",
+  "NO",
+  "O",
+  "SO"
+ ],
+ "escala": 0.95,
+ "altura_m": 1.31,
+ "camadas": [
+  "sombra_meia",
+  "sombra",
+  "corpo",
+  "olhos"
+ ],
+ "escala_fisica": {
+  "ppu_por_metro_96": 43.915583775317494,
+  "ppu_tile": 43.915583775317494,
+  "origem_y": 78.0
+ },
+ "anims": {
+  "parado": {
+   "frames": 4,
+   "fps": 4,
+   "loop": true
+  },
+  "andar": {
+   "frames": 6,
+   "fps": 10,
+   "loop": true
+  },
+  "atacar": {
+   "frames": 6,
+   "fps": 12,
+   "loop": false,
+   "golpe_quadro": 2
+  },
+  "morrer": {
+   "frames": 6,
+   "fps": 10,
+   "loop": false
+  }
+ },
+ "paleta": [
+  [
+   18,
+   14,
+   14
+  ],
+  [
+   20,
+   16,
+   16
+  ],
+  [
+   30,
+   19,
+   17
+  ],
+  [
+   44,
+   36,
+   34
+  ],
+  [
+   46,
+   40,
+   36
+  ],
+  [
+   48,
+   40,
+   36
+  ],
+  [
+   56,
+   40,
+   33
+  ],
+  [
+   56,
+   44,
+   40
+  ],
+  [
+   64,
+   56,
+   50
+  ],
+  [
+   66,
+   42,
+   30
+  ],
+  [
+   76,
+   108,
+   52
+  ],
+  [
+   92,
+   58,
+   38
+  ],
+  [
+   92,
+   80,
+   68
+  ],
+  [
+   96,
+   86,
+   76
+  ],
+  [
+   108,
+   140,
+   74
+  ],
+  [
+   118,
+   78,
+   50
+  ],
+  [
+   142,
+   100,
+   62
+  ],
+  [
+   176,
+   128,
+   84
+  ],
+  [
+   182,
+   148,
+   106
+  ],
+  [
+   220,
+   186,
+   140
+  ]
+ ],
+ "paleta_max": 48,
+ "nota": "urso marrom-escuro de 4 patas, focinho creme, garras, musgo nos ombros; 8 direcoes renderizadas (sem espelho); alfa binario; sombra com meia-tinta (xadrez) e nucleo solido."
+}

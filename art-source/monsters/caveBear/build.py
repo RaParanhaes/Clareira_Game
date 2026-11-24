@@ -47,6 +47,7 @@ MATS = {
     "pelo_escuro": dict(r=[(96, 62, 40), (74, 46, 30), (56, 36, 26)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.5),
     "pelo": dict(r=[(124, 82, 52), (100, 64, 40), (76, 48, 32)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.4),
     "pelo_claro": dict(r=[(164, 120, 80), (138, 98, 64)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.2),
+    "olho_ambar": dict(r=[(226, 155, 42), (190, 112, 25)], layer="olhos", w=2.0, dith=0.0, bias=0.0, ao=0.0),
     "rim": dict(r=[(216, 172, 122)], layer="corpo", w=1.0, dith=0.0, bias=0.0, ao=0.0),
     "focinho": dict(r=[(226, 194, 148), (192, 158, 116)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.2),
     "musgo": dict(r=[(108, 140, 74), (76, 108, 52)], layer="corpo", w=1.2, dith=0.02, bias=0.0, ao=0.6),
@@ -56,7 +57,7 @@ MATS = {
     "nariz": dict(r=[(38, 30, 28), (18, 14, 14)], layer="olhos", w=2.0, dith=0.0, bias=0.0, ao=0.1),
 }
 CAMADAS = ["sombra_meia", "sombra", "corpo", "olhos"]                     # ordem de baixo para cima
-ESTILO = PP.Estilo(tile=TILE, mats=MATS, camadas=CAMADAS, sem_linha=("sombra", "sombra_meia"),
+ESTILO = PP.Estilo(tile=TILE, mats=MATS, camadas=CAMADAS, sem_linha=("sombra", "sombra_meia", "olho_ambar", "brilho"),
                    origem_y=ORIGEM_Y, pivo=(TILE // 2, ORIGEM_Y))
 
 
@@ -170,10 +171,10 @@ def juntar(*malhas):
 # "perna" (gira em torno do quadril; perna = 0..3, FL, FR, BL, BR)
 PARTES = []
 PERNAS = [
-    dict(H=(-0.19, -0.26, 0.70), fase=0.0, dianteira=True),     # dianteira esquerda (x negativo)
-    dict(H=(0.19, -0.26, 0.70), fase=math.pi, dianteira=True),  # dianteira direita
-    dict(H=(-0.19, 0.42, 0.70), fase=math.pi, dianteira=False), # traseira esquerda
-    dict(H=(0.19, 0.42, 0.70), fase=0.0, dianteira=False),      # traseira direita
+    dict(H=(-0.22, -0.28, 0.72), fase=0.0, dianteira=True),
+    dict(H=(0.22, -0.28, 0.72), fase=math.pi, dianteira=True),
+    dict(H=(-0.22, 0.38, 0.66), fase=math.pi, dianteira=False),
+    dict(H=(0.22, 0.38, 0.66), fase=0.0, dianteira=False),
 ]
 PIVO_PESCOCO = (0.0, -0.30, 0.90)
 
@@ -185,12 +186,16 @@ def add(nome, layer, mat, grp, malha, tipo="corpo", perna=None):
 add("sombra_meia", "sombra_meia", "sombra_meia", 30, elipsoide((0.0, 0.0, 0.001), 0.42, 0.66, 0.001, 1), "fixo")
 add("sombra", "sombra", "sombra", 31, elipsoide((0.0, 0.0, 0.002), 0.30, 0.52, 0.002, 2), "fixo")
 
-# tronco arredondado: massa media, costas escuras por cima, barriga clara por baixo, corcunda e traseiro mais baixo
-add("tronco", "corpo", "pelo", 1, elipsoide((0.0, 0.10, 0.80), 0.30, 0.50, 0.26, 2))
-add("costas", "corpo", "pelo_escuro", 1, elipsoide((0.0, 0.08, 0.92), 0.27, 0.44, 0.16, 2))
-add("barriga", "corpo", "pelo_claro", 8, elipsoide((0.0, 0.12, 0.62), 0.25, 0.42, 0.13, 2))
-add("corcunda", "corpo", "pelo_escuro", 1, elipsoide((0.0, -0.18, 0.98), 0.27, 0.25, 0.19, 2))
-add("traseiro", "corpo", "pelo", 1, elipsoide((0.0, 0.42, 0.74), 0.28, 0.23, 0.21, 2))
+# Tres massas do tronco formam uma única malha por voxel remesh (aplicado antes dos atributos nd/uv/gp).
+TRONCO_ORGANICO = juntar(
+    elipsoide((0.0, 0.04, 0.82), 0.37, 0.55, 0.30, 3),  # peito largo e alto
+    elipsoide((0.0, -0.27, 0.94), 0.35, 0.31, 0.34, 3), # ombros/corcunda
+    elipsoide((0.0, 0.43, 0.73), 0.34, 0.30, 0.25, 3),  # garupa baixa
+)
+add("tronco", "corpo", "pelo", 1, TRONCO_ORGANICO)
+# Faixas tonais largas seguem as massas (não são um tronco de cilindros empilhados).
+add("costas", "corpo", "pelo_escuro", 1, elipsoide((0.0, 0.03, 1.02), 0.30, 0.48, 0.115, 2))
+add("barriga", "corpo", "pelo_claro", 8, elipsoide((0.0, 0.12, 0.62), 0.27, 0.43, 0.12, 2))
 add("cauda", "corpo", "pelo_claro", 1, elipsoide((0.0, 0.70, 0.76), 0.065, 0.065, 0.065, 1))
 add("luz_ombro", "corpo", "rim", 9, elipsoide((-0.12, -0.20, 1.12), 0.07, 0.22, 0.02, 1))
 
@@ -207,25 +212,37 @@ add("orelha0", "corpo", "pelo_escuro", 2, elipsoide((-0.14, -0.48, 1.27), 0.075,
 add("orelha1", "corpo", "pelo_escuro", 2, elipsoide((0.14, -0.48, 1.27), 0.075, 0.07, 0.07, 2), "cabeca")
 add("focinho", "corpo", "focinho", 3, elipsoide((0.0, -0.83, 1.00), 0.12, 0.13, 0.10, 2), "cabeca")
 add("nariz", "olhos", "nariz", 4, elipsoide((0.0, -0.94, 1.04), 0.05, 0.04, 0.035, 1), "cabeca")
-add("olho0", "olhos", "olho", 5, elipsoide((-0.10, -0.74, 1.15), 0.036, 0.034, 0.036, 1), "cabeca")
-add("olho1", "olhos", "olho", 6, elipsoide((0.10, -0.74, 1.15), 0.036, 0.034, 0.036, 1), "cabeca")
-add("brilho0", "olhos", "brilho", 25, elipsoide((-0.11, -0.77, 1.18), 0.012, 0.012, 0.012, 0), "cabeca")
-add("brilho1", "olhos", "brilho", 26, elipsoide((0.09, -0.77, 1.18), 0.012, 0.012, 0.012, 0), "cabeca")
+for lado in (-1, 1):
+    x = lado * 0.145
+    add("olho_ambar_%s" % lado, "olhos", "olho_ambar", 5 + (lado > 0),
+        elipsoide((x, -0.715, 1.155), 0.034, 0.027, 0.034, 1), "cabeca")
+    add("pupila_%s" % lado, "olhos", "olho", 7 + (lado > 0),
+        elipsoide((x, -0.739, 1.157), 0.014, 0.012, 0.018, 1), "cabeca")
+    add("brilho_%s" % lado, "olhos", "brilho", 25 + (lado > 0),
+        elipsoide((x - 0.008, -0.752, 1.171), 0.007, 0.006, 0.007, 0), "cabeca")
 
-# 4 pernas grossas em cima que afinam ate a pata; pata clara; 3 garras claras por pata
+# Pernas em cápsulas com joelho/cotovelo deslocado: volumes arredondados e flexionados.
 for k, pe in enumerate(PERNAS):
     hx, hy, hz = pe["H"]
     grp = 10 + k
-    coxa = juntar(tubo_afinado((hx, hy, hz), (hx, hy, 0.36), 0.14, 0.095),
-                  tubo_afinado((hx, hy, 0.36), (hx, hy - 0.01, 0.10), 0.095, 0.07),
-                  elipsoide((hx, hy, hz), 0.14, 0.14, 0.14, 1),
-                  elipsoide((hx, hy, 0.36), 0.095, 0.095, 0.095, 1))
+    joelho_y = hy + (0.06 if pe["dianteira"] else -0.10)
+    tornozelo_y = hy - 0.07
+    coxa = juntar(
+        elipsoide((hx, hy + (0.035 if pe["dianteira"] else -0.03), 0.54), 0.145 if pe["dianteira"] else 0.17, 0.18, 0.23, 2),
+        tubo_afinado((hx, hy, hz), (hx, joelho_y, 0.42), 0.135, 0.095, 10),
+        elipsoide((hx, joelho_y, 0.40), 0.105, 0.115, 0.12, 2),
+        tubo_afinado((hx, joelho_y, 0.40), (hx, tornozelo_y, 0.14), 0.095, 0.072, 10),
+        elipsoide((hx, tornozelo_y, 0.15), 0.078, 0.10, 0.10, 2),
+    )
     add("perna%d" % k, "corpo", "pelo", grp, coxa, "perna", perna=k)
-    px, py = hx, hy - 0.03
-    add("pata%d" % k, "corpo", "pelo_claro", grp, elipsoide((px, py, 0.075), 0.115, 0.12, 0.075, 2), "perna", perna=k)
-    for j, dx in enumerate((-0.05, 0.0, 0.05)):
-        add("garra%d_%d" % (k, j), "olhos", "garra", 20 + 3 * k + j,
-            elipsoide((px + dx, py - 0.12, 0.035), 0.022, 0.024, 0.022, 0), "perna", perna=k)
+    px, py = hx, tornozelo_y - 0.045
+    # Pata baixa, comprida no eixo frontal (-Y), em pelo marrom contínuo.
+    add("pata%d" % k, "corpo", "pelo", grp, juntar(
+        elipsoide((px, py, 0.073), 0.115, 0.19, 0.070, 2),
+        elipsoide((px, py - 0.105, 0.060), 0.112, 0.095, 0.052, 2)), "perna", perna=k)
+    for j, dx in enumerate((-0.058, -0.019, 0.019, 0.058)):
+        add("garra%d_%d" % (k, j), "olhos", "garra", 20 + j,
+            elipsoide((px + dx, py - 0.18, 0.035), 0.014, 0.031, 0.016, 1), "perna", perna=k)
 
 
 # ------------------------------------------------------------------ poses (locais; base no z = 0)
@@ -257,7 +274,9 @@ def corpo_T(anim, f):
     if anim == "parado":
         return T((0, 0, [0.0, 0.008, 0.012, 0.006][f]))
     if anim == "andar":
-        return T((0, 0, 0.012 * (1 - math.cos(4 * math.pi * f / 6)) / 2))
+        # Alterna carga entre lados; o tronco acompanha a passada com leve balanço e compressão.
+        phase = 2 * math.pi * f / 6
+        return T((0.018 * math.sin(phase), 0, 0.018 + 0.022 * (1 - math.cos(2 * phase)) / 2)) @ Ry_em(0.035 * math.sin(phase), (0, 0.05, 0.78))
     if anim == "atacar":
         return T((0, AVANCO_ATAQUE[f], 0))
     return Matrix.Identity(4)
@@ -275,7 +294,10 @@ def cabeca_rx(anim, f):
 
 def perna_rx(p, anim, f):
     if anim == "andar":
-        return AMP_PASSO * math.sin(2 * math.pi * f / 6 + p["fase"])
+        phase = 2 * math.pi * f / 6 + p["fase"]
+        # O cosseno antecipa/recolhe o pé em relação ao arco de balanço; evita que
+        # contato inicial (0) e apoio oposto (3) caiam na mesma pose amostrada.
+        return AMP_PASSO * math.sin(phase) + 0.08 * math.cos(phase) + 0.06 * math.sin(2 * phase)
     if anim == "atacar" and p["dianteira"]:
         return ANGULO_PATA_ATAQUE[f] if p["H"][0] > 0 else ANGULO_PATA_ATAQUE[f] * 0.6
     return 0.0
@@ -312,6 +334,34 @@ def matrizes(anim, f):
 for ob in list(bpy.data.objects):
     bpy.data.objects.remove(ob, do_unlink=True)
 coll = bpy.context.scene.collection
+
+
+def voxel_union(malha, voxel_size=0.025):
+    """Une os elipsoides do tronco por voxel remesh, aplica a malha e só então retorna polígonos puros."""
+    verts, faces = malha
+    me = bpy.data.meshes.new("tronco_voxel_src")
+    me.from_pydata(verts, [], faces)
+    me.update()
+    ob = bpy.data.objects.new("tronco_voxel_tmp", me)
+    coll.objects.link(ob)
+    bpy.context.view_layer.objects.active = ob
+    ob.select_set(True)
+    mod = ob.modifiers.new("uniao_organica", "REMESH")
+    mod.mode = "VOXEL"
+    mod.voxel_size = voxel_size
+    mod.use_smooth_shade = True
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+    smooth = ob.modifiers.new("suavizacao_leve", "SMOOTH")
+    smooth.factor = 0.45
+    smooth.iterations = 2
+    bpy.ops.object.modifier_apply(modifier=smooth.name)
+    result = ([(v.co.x, v.co.y, v.co.z) for v in ob.data.vertices],
+              [tuple(poly.vertices) for poly in ob.data.polygons])
+    bpy.data.objects.remove(ob, do_unlink=True)
+    bpy.data.meshes.remove(me)
+    return result
+
+
 BMAT = {}
 for nome in ESTILO.nomes:
     m = bpy.data.materials.new(nome)
@@ -322,6 +372,8 @@ for nome in ESTILO.nomes:
 PARTS = []
 for p in PARTES:
     (verts, faces) = p["malha"]
+    if p["nome"] == "tronco":
+        verts, faces = voxel_union((verts, faces))
     me = bpy.data.meshes.new(p["nome"])
     me.from_pydata(verts, [], faces)
     me.update()
@@ -421,7 +473,7 @@ if os.environ.get("ESCREVER_SPEC", "1") == "1":
                       **({"golpe_quadro": GOLPE_QUADRO[a]} if a in GOLPE_QUADRO else {})} for a in ANIMS},
         "paleta": sorted([list(c) for c in ESTILO.paleta]),
         "paleta_max": PP.PALETA_MAX,
-        "nota": "urso marrom-escuro de 4 patas, focinho creme, garras, musgo nos ombros; 8 direcoes renderizadas "
+        "nota": "urso robusto com tronco voxel-remesh, olho ambar projetado sem emissao, focinho creme, garras e musgo; 8 direcoes renderizadas "
                 "(sem espelho); alfa binario; sombra com meia-tinta (xadrez) e nucleo solido.",
     }
     with open(os.path.join(HERE, "spec.json"), "w", encoding="utf-8") as fh:

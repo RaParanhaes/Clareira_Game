@@ -150,6 +150,11 @@
    80
   ],
   [
+   190,
+   112,
+   25
+  ],
+  [
    192,
    158,
    116
@@ -163,6 +168,11 @@
    216,
    172,
    122
+  ],
+  [
+   226,
+   155,
+   42
   ],
   [
    226,
@@ -181,5 +191,5 @@
   ]
  ],
  "paleta_max": 48,
- "nota": "urso marrom-escuro de 4 patas, focinho creme, garras, musgo nos ombros; 8 direcoes renderizadas (sem espelho); alfa binario; sombra com meia-tinta (xadrez) e nucleo solido."
+ "nota": "urso robusto com tronco voxel-remesh, olho ambar projetado sem emissao, focinho creme, garras e musgo; 8 direcoes renderizadas (sem espelho); alfa binario; sombra com meia-tinta (xadrez) e nucleo solido."
 }

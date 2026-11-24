@@ -7052,10 +7052,14 @@ function drawWildlife(animal,time,highlight=false) {
     if((animal.vx||0)<-.04)ctx.scale(-1,1);
     // Guardião fixo é adulto: nunca recebe o sufixo de filhote.
     const text=definition.label+(!definition.fixed&&animal.lifeStage==='filhote'?' · filhote':'');
+    ctx.save();
+    if(bossScale>1)ctx.scale(1/bossScale,1/bossScale);
     ctx.font=`bold ${Math.max(6,6.4/spriteScale)}px system-ui`;ctx.textAlign='center';
     const textWidth=ctx.measureText(text).width;
-    pixel(-textWidth/2-2,-height*1.48,textWidth+4,8,'#192621');
-    ctx.fillStyle=CLAREIRA.palette.parchment;ctx.fillText(text,0,-height*1.48+6);
+    const labelY=-height*1.48*bossScale;
+    pixel(-textWidth/2-2,labelY,textWidth+4,8,'#192621');
+    ctx.fillStyle=CLAREIRA.palette.parchment;ctx.fillText(text,0,labelY+6);
+    ctx.restore();
   }
   ctx.restore();
 }

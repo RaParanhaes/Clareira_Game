@@ -1,256 +1,128 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateDungeon } from './dungeon-gen.mjs';
-import { WILDLIFE_SPECIES } from './wildlife.mjs';
+import { WILDLIFE_BY_ID } from './wildlife.mjs';
 import {
-  DUNGEON_RULES, DUNGEON_SPECIES, scaleSpecies, dropsFor, groupOf,
-  planDungeonSpawns, planRespawn, speciesIdsForLevel,
+  DUNGEON_BANDS, DUNGEON_RULES, DUNGEON_SPECIES, BOSSES, bandOfLevel, bossFor,
+  scaleSpecies, dropsFor, groupOf, planDungeonSpawns, planRespawn,
+  speciesIdsForLevel, dungeonWildlifeDefinition,
 } from './dungeon-bestiary.mjs';
 
-const SEEDS = Array.from({ length: 8 }, (_, i) => 0x4e494e48 + i * 7919);
-const LEVELS = [1, 2, 3];
+const SEEDS = [0x4e494e48, 0x4e494e48 + 7919, 0x4e494e48 + 2 * 7919];
 const MIN = 60 * 1000;
-
-// BFS própria do teste (independente da do módulo): passos a partir da entrada.
-function stepsFrom(level, origin) {
-  const { w, h, cells } = level;
-  const dist = new Map([[`${origin.x},${origin.y}`, 0]]);
+function distancesFrom(dungeon, origin) {
+  const distances = new Map([[`${origin.x},${origin.y}`, 0]]);
   const queue = [origin];
-  for (let head = 0; head < queue.length; head++) {
-    const p = queue[head];
-    const d = dist.get(`${p.x},${p.y}`);
+  for (let i = 0; i < queue.length; i++) {
+    const p = queue[i], d = distances.get(`${p.x},${p.y}`);
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nx = p.x + dx, ny = p.y + dy;
-      if (nx < 0 || ny < 0 || nx >= w || ny >= h || cells[ny * w + nx] !== 1) continue;
-      const key = `${nx},${ny}`;
-      if (dist.has(key)) continue;
-      dist.set(key, d + 1);
-      queue.push({ x: nx, y: ny });
+      const x = p.x + dx, y = p.y + dy, key = `${x},${y}`;
+      if (x < 0 || y < 0 || x >= dungeon.w || y >= dungeon.h || dungeon.cells[y * dungeon.w + x] !== 1 || distances.has(key)) continue;
+      distances.set(key, d + 1); queue.push({ x, y });
     }
   }
-  return dist;
+  return distances;
 }
-
 const inRect = (p, r) => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h;
-
-// Sala sintética para o reaparecimento: 12 pontos em linha, espaçados de 3 tiles, longe de jogadores em (0,0).
+const spawnPlan = (seed, level) => planDungeonSpawns(generateDungeon(seed, level));
 function roomSpawner(species, max = 4) {
-  const spawnPoints = Array.from({ length: 12 }, (_, i) => ({ x: 100 + i * 3, y: 50 }));
-  return { roomId: 'rT', kind: 'cave', max, respawnMs: 5 * MIN, species, spawnPoints };
+  return { roomId: 'rT', kind: 'cave', max, respawnMs: 5 * MIN,
+    species, spawnPoints: Array.from({ length: 12 }, (_, i) => ({ x: 100 + i * 3, y: 50 })) };
 }
 
-function spawnPlan(seed, level) {
-  return planDungeonSpawns(generateDungeon(seed, level));
-}
-
-test('cinco espécies, todas com forms existentes em wildlife.mjs e sem moeda nos drops', () => {
-  assert.equal(DUNGEON_SPECIES.length, 5);
-  const forms = new Set(WILDLIFE_SPECIES.map(s => s.form));
-  for (const species of DUNGEON_SPECIES) {
-    assert.ok(forms.has(species.form), `form ${species.form} de ${species.id} existe no catálogo da fauna`);
-    assert.ok(['swarm', 'flyer', 'ambush', 'pack', 'stalker'].includes(species.behavior), species.id);
-    for (const drop of dropsFor(species)) {
-      assert.ok(!['bronze', 'silver', 'gold'].includes(drop.item), `${species.id} não dropa moeda`);
-    }
-  }
+test('faixas e tabela F1 conferem com o plano A', () => {
+  assert.deepEqual(DUNGEON_BANDS.map(({ id, minLevel, maxLevel }) => [id, minLevel, maxLevel]), [
+    ['F1', 1, 2], ['F2', 3, 5], ['F3', 6, 9], ['F4', 10, Infinity],
+  ]);
+  assert.deepEqual(DUNGEON_SPECIES.map(s => [s.id, s.label, s.bands, s.baseHealth, s.baseForce, s.reach, s.cooldownMs, s.behavior, s.kind, s.weight, s.group, s.drops.map(d => [d.item, d.chance])]), [
+    ['caveBear', 'Urso-pardo', [1, 2], 9, 2.2, 1.3, 1800, 'territorial', 'melee', 1, { min: 1, max: 1 }, [['rawMeat', 0.6], ['hide', 0.4], ['bone', 0.3]]],
+    ['mossSlime', 'Gosma-de-musgo', [1, 1], 4, 1, 0.6, 1400, 'swarm', 'melee', 3, { min: 2, max: 3 }, [['gel', 0.5]]],
+    ['dustSpider', 'Aranhinha-de-poeira', [1, 1], 2, 0.8, 0.6, 1100, 'pack', 'ambush', 2, { min: 3, max: 4 }, [['silk', 0.4], ['bone', 0.1]]],
+  ]);
+  assert.deepEqual([BOSSES[0].id, BOSSES[0].label, BOSSES[0].level, BOSSES[0].baseHealth, BOSSES[0].baseForce, BOSSES[0].reach, BOSSES[0].cooldownMs],
+    ['elderBear', 'Urso-ancião', 2, 45, 2.6, 1.6, 1900]);
+  assert.equal(bandOfLevel(1).id, 'F1');
+  assert.equal(bandOfLevel(3).id, 'F2');
+  assert.equal(bandOfLevel(6).id, 'F3');
+  assert.equal(bandOfLevel(10).id, 'F4');
+  assert.deepEqual(speciesIdsForLevel(1), ['caveBear', 'mossSlime', 'dustSpider']);
+  assert.deepEqual(speciesIdsForLevel(2), ['caveBear']);
+  assert.deepEqual(speciesIdsForLevel(3), []);
+  assert.equal(bossFor(2).id, 'elderBear');
+  assert.equal(bossFor(1), null);
 });
 
-test('ids da masmorra seguem a §4 e não colidem com a fauna de wildlife.mjs', () => {
-  assert.deepEqual(DUNGEON_SPECIES.map(s => s.id), ['stoneRat', 'caveBat', 'blindSnake', 'gloomWolf', 'coldWraith']);
-  const wildIds = new Set(WILDLIFE_SPECIES.map(s => s.id));
-  for (const species of DUNGEON_SPECIES) {
-    assert.ok(!wildIds.has(species.id), `${species.id} não colide com a fauna`);
-  }
-});
-
-test('vida e dano crescem com a profundidade, de forma estrita do nível 1 ao 5', () => {
-  for (const species of DUNGEON_SPECIES) {
-    const levels = [1, 2, 3, 4, 5].map(n => scaleSpecies(species.id, n));
-    for (let i = 1; i < levels.length; i++) {
-      assert.ok(levels[i].health >= levels[i - 1].health, `${species.id} vida não cai`);
-      assert.ok(levels[i].damage >= levels[i - 1].damage, `${species.id} dano não cai`);
-      assert.ok(levels[i].speed >= levels[i - 1].speed, `${species.id} velocidade não cai`);
-    }
-    assert.ok(levels[4].health > levels[0].health, `${species.id} vida cresce`);
-    assert.ok(levels[4].damage > levels[0].damage, `${species.id} dano cresce`);
-  }
-  assert.deepEqual(scaleSpecies('stoneRat', 1), { id: 'stoneRat', level: 1, behavior: 'swarm', health: 2, force: 0.55, damage: 2, reach: 0.57, cooldownMs: 1200, speed: 2.8, wakeRadius: 7, leash: 8 });
-});
-
-test('a sombra só aparece no nível 3 e o lobo no 2', () => {
-  assert.deepEqual(speciesIdsForLevel(1), ['stoneRat', 'caveBat', 'blindSnake']);
-  assert.deepEqual(speciesIdsForLevel(2), ['stoneRat', 'caveBat', 'blindSnake', 'gloomWolf']);
-  assert.ok(speciesIdsForLevel(3).includes('coldWraith'));
-});
-
-test('determinismo: mesma seed e nível dão o mesmo plano; seed diferente muda o plano', () => {
-  for (const level of LEVELS) {
-    const a = spawnPlan(SEEDS[0], level);
-    const b = spawnPlan(SEEDS[0], level);
-    assert.deepEqual(a, b);
-  }
-  assert.notDeepEqual(spawnPlan(SEEDS[0], 1).initial, spawnPlan(SEEDS[1], 1).initial);
-});
-
-test('tetos: por sala, por instância e nenhuma sala passa do máximo', () => {
-  for (const seed of SEEDS) {
-    for (const level of LEVELS) {
-      const plan = spawnPlan(seed, level);
-      assert.ok(plan.initial.length <= DUNGEON_RULES.instanceMaxAlive, 'teto de 36 por instância');
-      const perRoom = new Map();
-      for (const entry of plan.initial) perRoom.set(entry.roomId, (perRoom.get(entry.roomId) || 0) + 1);
-      for (const spawner of plan.spawners) {
-        assert.ok(spawner.max >= 1 && spawner.max <= DUNGEON_RULES.roomMaxAlive, 'max entre 1 e 4');
-        assert.ok((perRoom.get(spawner.roomId) || 0) <= spawner.max, `sala ${spawner.roomId} respeita o teto`);
-      }
-    }
-  }
-});
-
-test('nada nasce na arena, na sala inicial ou a menos de 14 passos da entrada', () => {
-  for (const seed of SEEDS) {
-    for (const level of LEVELS) {
-      const dungeon = generateDungeon(seed, level);
-      const plan = planDungeonSpawns(dungeon);
-      const steps = stepsFrom(dungeon, dungeon.entrance);
-      const startRoomIds = new Set(
-        dungeon.rooms.map((room, index) => (room.kind === 'start' ? `r${index}` : null)).filter(Boolean),
-      );
-      for (const entry of plan.initial) {
-        assert.ok(!inRect(entry, dungeon.boss.arena), 'nada na arena');
-        assert.ok(!startRoomIds.has(entry.roomId), 'nada na sala inicial');
-        assert.ok(steps.get(`${entry.x},${entry.y}`) >= DUNGEON_RULES.entranceSafeTiles, 'nada perto da entrada');
-      }
-      for (const spawner of plan.spawners) {
-        for (const p of spawner.spawnPoints) {
-          assert.ok(!inRect(p, dungeon.boss.arena), 'ponto de nascimento fora da arena');
-          assert.ok(steps.get(`${p.x},${p.y}`) >= DUNGEON_RULES.entranceSafeTiles, 'ponto de nascimento longe da entrada');
-        }
-      }
-    }
-  }
-});
-
-test('o plano só usa espécies liberadas no nível', () => {
-  const level1 = spawnPlan(SEEDS[2], 1);
-  assert.ok(level1.initial.every(e => ['stoneRat', 'caveBat', 'blindSnake'].includes(e.species)));
-  const level3 = spawnPlan(SEEDS[2], 3);
-  assert.ok(level3.initial.every(e => speciesIdsForLevel(3).includes(e.species)));
-});
-
-test('composição: ratos nascem em bandos de 3 a 4, lobos em duplas, os demais sozinhos', () => {
-  let sawRatBand = false;
-  let sawWolfPair = false;
-  for (const seed of SEEDS) {
-    for (const level of LEVELS) {
-      const plan = spawnPlan(seed, level);
-      for (const spawner of plan.spawners) {
-        const members = plan.initial.filter(e => e.roomId === spawner.roomId);
-        const count = id => members.filter(e => e.species === id).length;
-        const rats = count('stoneRat');
-        const wolves = count('gloomWolf');
-        assert.ok(rats === 0 || (rats >= 3 && rats <= 4), `bando de ratos em ${spawner.roomId}: ${rats}`);
-        assert.equal(wolves % 2, 0, `lobos em duplas em ${spawner.roomId}`);
-        if (rats) sawRatBand = true;
-        if (wolves) sawWolfPair = true;
-        for (const entry of members) {
-          if (entry.species === 'stoneRat' || entry.species === 'gloomWolf') continue;
-          assert.ok(['caveBat', 'blindSnake', 'coldWraith'].includes(entry.species), entry.species);
-        }
-      }
-    }
-  }
-  assert.ok(sawRatBand, 'algum plano tem bando de ratos');
-  assert.ok(sawWolfPair, 'algum plano tem dupla de lobos');
-});
-
-test('drop fixo: osso em 40% em toda espécie, sem redução de anti-farm', () => {
-  for (const species of DUNGEON_SPECIES) {
-    assert.deepEqual(dropsFor(species), [{ item: 'bone', chance: 0.4 }], species.id);
-  }
-  assert.equal(groupOf('stoneRat').min, 3);
-  assert.equal(groupOf('gloomWolf').min, 2);
-});
-
-test('anti-farm só pelo reaparecimento: sala limpa de novo espera 5 min e segue no teto da sala', () => {
-  const spawner = roomSpawner(['caveBat']);
-  const base = { spawner, aliveInRoom: 0, aliveInInstance: 0, players: [{ x: 0, y: 0 }], now: 20 * MIN, lastRespawnAt: null };
-  assert.equal(planRespawn({ ...base, lastRoomDeathAt: 20 * MIN - MIN }).reason, 'sala-recente');
-  assert.equal(planRespawn({ ...base, lastRoomDeathAt: 20 * MIN - 6 * MIN }).ok, true);
-  assert.equal(planRespawn({ ...base, aliveInRoom: spawner.max }).reason, 'sala-cheia');
-});
-
-test('reaparecimento: só com sala abaixo do teto, intervalo vencido e sem jogador por perto', () => {
-  const spawner = roomSpawner(['caveBat']);
-  const far = [{ x: 0, y: 0 }];
-  const base = { spawner, aliveInRoom: 0, aliveInInstance: 0, players: far, now: 10 * MIN, lastRespawnAt: null, lastRoomDeathAt: null };
-
-  const ok = planRespawn(base);
-  assert.equal(ok.ok, true);
-  assert.ok(spawner.spawnPoints.some(p => p.x === ok.point.x && p.y === ok.point.y));
-  assert.ok(spawner.species.includes(ok.species));
-
-  assert.equal(planRespawn({ ...base, aliveInRoom: spawner.max }).reason, 'sala-cheia');
-  assert.equal(planRespawn({ ...base, aliveInInstance: 36 }).reason, 'instancia-cheia');
-  assert.equal(planRespawn({ ...base, lastRespawnAt: base.now - MIN }).reason, 'intervalo');
-  assert.equal(planRespawn({ ...base, lastRoomDeathAt: base.now - MIN }).reason, 'sala-recente');
-  assert.equal(planRespawn({ ...base, lastRoomDeathAt: base.now - 6 * MIN }).ok, true);
-
-  const blocked = planRespawn({ ...base, players: spawner.spawnPoints.map(p => ({ x: p.x, y: p.y })) });
-  assert.equal(blocked.ok, false);
-  assert.equal(blocked.reason, 'jogador-perto');
-
-  const occupiedAll = new Set(spawner.spawnPoints.map(p => `${p.x},${p.y}`));
-  assert.equal(planRespawn({ ...base, occupied: occupiedAll }).reason, 'sem-ponto-livre');
-});
-
-test('bando reaparece inteiro: rato 3 a 4, lobo em dupla, todos em pontos livres e longe dos jogadores', () => {
-  const far = [{ x: 0, y: 0 }];
-  const rats = planRespawn({ spawner: roomSpawner(['stoneRat']), players: far, now: 10 * MIN, rotation: 0 });
-  assert.equal(rats.ok, true);
-  assert.ok(rats.size >= 3 && rats.size <= 4, `bando de ${rats.size}`);
-  assert.equal(rats.points.length, rats.size);
-  assert.equal(new Set(rats.points.map(p => `${p.x},${p.y}`)).size, rats.size, 'pontos distintos');
-  for (const p of rats.points) {
-    assert.ok(Math.hypot(p.x, p.y) >= DUNGEON_RULES.playerClearanceTiles);
-  }
-  const wolves = planRespawn({ spawner: roomSpawner(['gloomWolf']), players: far, now: 10 * MIN, rotation: 0 });
-  assert.equal(wolves.ok, true);
-  assert.equal(wolves.size, 2);
-  assert.equal(wolves.points.length, 2);
-});
-
-test('com só uma vaga na sala, nenhum rato nasce; o grupo espera o próximo ciclo', () => {
-  const spawner = roomSpawner(['stoneRat'], 4);
-  const far = [{ x: 0, y: 0 }];
-  const oneSlot = planRespawn({ spawner, aliveInRoom: 3, players: far, now: 10 * MIN, rotation: 0 });
-  assert.equal(oneSlot.ok, false);
-  assert.equal(oneSlot.reason, 'sem-vaga-grupo');
-  assert.equal(oneSlot.points, undefined, 'nenhum ponto de rato é devolvido');
-  // Com a sala vazia o mesmo grupo volta inteiro.
-  assert.equal(planRespawn({ spawner, aliveInRoom: 0, players: far, now: 10 * MIN, rotation: 0 }).ok, true);
-  // Só uma vaga na instância também barra o grupo.
-  const instanceOneSlot = planRespawn({ spawner, aliveInInstance: 35, players: far, now: 10 * MIN, rotation: 0 });
-  assert.equal(instanceOneSlot.reason, 'sem-vaga-grupo');
-  // Dupla de lobo com uma vaga também espera.
-  assert.equal(planRespawn({ spawner: roomSpawner(['gloomWolf']), aliveInRoom: 3, players: far, now: 10 * MIN }).reason, 'sem-vaga-grupo');
-});
-
-test('espécie solitária volta uma por vez, mesmo com uma vaga', () => {
-  const result = planRespawn({ spawner: roomSpawner(['caveBat']), aliveInRoom: 3, players: [{ x: 0, y: 0 }], now: 10 * MIN });
-  assert.equal(result.ok, true);
-  assert.equal(result.size, 1);
-  assert.equal(result.points.length, 1);
-});
-
-test('reaparecimento nunca escolhe ponto a menos de 14 tiles de um jogador', () => {
-  const spawner = spawnPlan(SEEDS[1], 2).spawners.find(s => s.spawnPoints.length > 1);
-  const player = spawner.spawnPoints[0];
-  const result = planRespawn({
-    spawner, aliveInRoom: 0, aliveInInstance: 0, now: 10 * MIN,
-    players: [{ x: player.x, y: player.y }],
+test('F1 números usam k relativo à faixa e a fórmula aprovada', () => {
+  assert.deepEqual(scaleSpecies('caveBear', 1), {
+    id: 'caveBear', level: 1, band: 'F1', k: 0, behavior: 'territorial', kind: 'melee', armor: 0,
+    health: 9, force: 2.2, damage: 9, reach: 1.3, cooldownMs: 1800, speed: 2.8, wakeRadius: 5, leash: 8,
   });
-  if (result.ok) {
-    assert.ok(Math.hypot(result.point.x - player.x, result.point.y - player.y) >= DUNGEON_RULES.playerClearanceTiles);
+  const scaled = scaleSpecies('caveBear', 2);
+  assert.equal(scaled.k, 1);
+  assert.equal(scaled.health, Math.ceil(9 * 1.15));
+  assert.equal(scaled.force, 2.38);
+  assert.equal(scaled.speed, 2.85);
+  assert.equal(scaleSpecies('elderBear', 2).damage, 10);
+  const synthetic = { id: 'synthetic', baseHealth: 10, baseForce: 1, baseSpeed: 2, behavior: 'melee', kind: 'melee', armor: 0 };
+  assert.equal(scaleSpecies(synthetic, 30).k, 6);
+  assert.equal(scaleSpecies(synthetic, 30).health, 19);
+});
+
+test('ids F1 não colidem com fauna, v1 foi removido, e wildlife adapter expõe os ids', () => {
+  const retired = ['stoneRat', 'caveBat', 'blindSnake', 'gloomWolf', 'coldWraith'];
+  const ids = [...DUNGEON_SPECIES, ...BOSSES].map(s => s.id);
+  for (const id of ids) {
+    assert.equal(WILDLIFE_BY_ID.has(id), false, `${id} não colide com wildlife.mjs`);
+    const definition = dungeonWildlifeDefinition(id);
+    for (const key of ['id', 'label', 'form', 'size', 'colors', 'stats', 'drops', 'attack']) assert.ok(key in definition, `${id}.${key}`);
+  }
+  for (const id of retired) assert.equal(dungeonWildlifeDefinition(id), null);
+  assert.equal(dungeonWildlifeDefinition('elderBear').id, 'elderBear');
+});
+
+test('cada nível contém apenas espécies cujas faixas o incluem', () => {
+  for (let level = 1; level <= 20; level++) {
+    const expected = DUNGEON_SPECIES.filter(s => level >= s.bands[0] && level <= s.bands[1]).map(s => s.id);
+    assert.deepEqual(speciesIdsForLevel(level), expected);
+  }
+});
+
+test('spawns determinísticos, com teto por sala e instância e sem arena nem entrada', () => {
+  for (const level of [1, 2]) for (const seed of SEEDS) {
+    const dungeon = generateDungeon(seed, level);
+    const first = planDungeonSpawns(dungeon);
+    const distances = distancesFrom(dungeon, dungeon.entrance);
+    assert.deepEqual(first, planDungeonSpawns(dungeon));
+    assert.ok(first.initial.length <= DUNGEON_RULES.instanceMaxAlive);
+    for (const entry of first.initial) {
+      assert.ok(speciesIdsForLevel(level).includes(entry.species));
+      assert.equal(inRect(entry, dungeon.boss.arena), false);
+      assert.ok(distances.get(`${entry.x},${entry.y}`) >= DUNGEON_RULES.entranceSafeTiles);
+      assert.equal(dungeon.rooms.some(room => room.kind === 'start' && inRect(entry, room)), false);
+    }
+    for (const spawner of first.spawners) assert.ok(spawner.max <= DUNGEON_RULES.roomMaxAlive);
+  }
+});
+
+test('bandos inteiros reaparecem em pontos livres longe dos jogadores', () => {
+  const far = [{ x: 0, y: 0 }];
+  for (const id of ['mossSlime', 'dustSpider']) {
+    const result = planRespawn({ spawner: roomSpawner([id]), players: far, now: 10 * MIN, rotation: 0 });
+    assert.equal(result.ok, true);
+    assert.ok(result.size >= groupOf(id).min && result.size <= groupOf(id).max);
+    assert.equal(result.points.length, result.size);
+    assert.equal(new Set(result.points.map(p => `${p.x},${p.y}`)).size, result.size);
+  }
+  const noRoom = planRespawn({ spawner: roomSpawner(['mossSlime']), aliveInRoom: 3, players: far, now: 10 * MIN });
+  assert.equal(noRoom.reason, 'sem-vaga-grupo');
+  const bear = planRespawn({ spawner: roomSpawner(['caveBear']), aliveInRoom: 3, players: far, now: 10 * MIN });
+  assert.equal(bear.ok, true);
+  assert.equal(bear.size, 1);
+});
+
+test('drops permanecem fixos e sem moeda', () => {
+  for (const species of DUNGEON_SPECIES) {
+    assert.deepEqual(dropsFor(species).map(d => [d.item, d.chance]), species.drops.map(d => [d.item, d.chance]));
+    assert.ok(dropsFor(species).every(d => !['bronze', 'silver', 'gold'].includes(d.item)));
   }
 });

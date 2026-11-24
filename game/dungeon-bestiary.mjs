@@ -16,89 +16,112 @@ export const DUNGEON_RULES = Object.freeze({
   spawnPointsPerRoom: 12,
 });
 
-// Escala por nível: vida x(1+.35(N-1)) arredondada para cima; força x min(1.8, 1+.2(N-1)); velocidade +0,1 por nível (teto +0,4).
-// Dano ao jogador = round(força x 4), antes da defesa.
-export const DUNGEON_SCALE = Object.freeze({
-  healthGrowth: 0.35,
-  forceGrowth: 0.2,
-  forceCap: 1.8,
-  speedGrowth: 0.1,
-  speedCap: 0.4,
-});
+// Faixas de profundidade. F2-F4 recebem espécies nas fatias seguintes.
+export const DUNGEON_BANDS = Object.freeze([
+  Object.freeze({ id: 'F1', minLevel: 1, maxLevel: 2 }),
+  Object.freeze({ id: 'F2', minLevel: 3, maxLevel: 5 }),
+  Object.freeze({ id: 'F3', minLevel: 6, maxLevel: 9 }),
+  Object.freeze({ id: 'F4', minLevel: 10, maxLevel: Infinity }),
+]);
 
-// Drop fixo, sem redução por anti-farm (ARQUITETURA §4): osso 40% em todo monstro comum.
-const BASE_DROP = Object.freeze({ item: 'bone', chance: 0.4 });
-
-// group: tamanho do bando que nasce junto numa sala (sorteado entre min e max, por seed).
-export const DUNGEON_SPECIES = Object.freeze([
-  {
-    id: 'stoneRat', label: 'Rato-da-pedra', form: 'rat', behavior: 'swarm', minLevel: 1, group: { min: 3, max: 4 },
-    baseHealth: 2, baseForce: 0.55, reach: 0.57, cooldownMs: 1200, baseSpeed: 2.8,
-    wakeRadius: 7, leash: 8,
-    colors: { body: '#5d5862', shadow: '#2c2a31', light: '#837b86', accent: '#a7948f', mark: '#1e1d22' },
-  },
-  {
-    id: 'caveBat', label: 'Morcego-da-gruta', form: 'raptor', behavior: 'flyer', minLevel: 1, group: { min: 1, max: 1 },
-    baseHealth: 2, baseForce: 0.75, reach: 0.8, cooldownMs: 1400, baseSpeed: 5.0,
-    wakeRadius: 9, leash: 12,
-    colors: { body: '#3e3a4c', shadow: '#24212d', light: '#6c6682', accent: '#b7a6c9', mark: '#171520' },
-  },
-  {
-    id: 'blindSnake', label: 'Cobra-cega', form: 'snake', behavior: 'ambush', minLevel: 1, group: { min: 1, max: 1 },
-    baseHealth: 3, baseForce: 1.0, reach: 0.82, cooldownMs: 1700, baseSpeed: 1.7,
-    wakeRadius: 3, leash: 5,
-    colors: { body: '#4f5a48', shadow: '#2a3127', light: '#7a8a70', accent: '#b5ab7a', mark: '#1c221c' },
-  },
-  {
-    id: 'gloomWolf', label: 'Lobo-de-gruta', form: 'wolf', behavior: 'pack', minLevel: 2, group: { min: 2, max: 2 },
-    baseHealth: 5, baseForce: 1.1, reach: 1.2, cooldownMs: 1400, baseSpeed: 4.0,
-    wakeRadius: 10, leash: 14,
-    colors: { body: '#4b4f56', shadow: '#282b30', light: '#7d838c', accent: '#9aa3ad', mark: '#17191c' },
-  },
-  {
-    id: 'coldWraith', label: 'Sombra fria', form: 'ashWraith', behavior: 'stalker', minLevel: 3, group: { min: 1, max: 1 },
-    baseHealth: 8, baseForce: 1.5, reach: 1.25, cooldownMs: 1700, baseSpeed: 3.1,
-    wakeRadius: 6, leash: 10,
-    colors: { body: '#3b4c58', shadow: '#1f2a33', light: '#6f8c9c', accent: '#b9dbe8', mark: '#132028' },
-  },
-].map(species => Object.freeze({
-  ...species,
-  colors: Object.freeze({ ...species.colors }),
-  drops: Object.freeze([Object.freeze({ ...BASE_DROP })]),
-})));
-
-export const DUNGEON_SPECIES_BY_ID = new Map(DUNGEON_SPECIES.map(species => [species.id, species]));
-
-// Espécies que podem nascer num nível (a sombra só a partir do 3).
-export function speciesIdsForLevel(level) {
-  const n = Math.max(1, Math.floor(level));
-  return DUNGEON_SPECIES.filter(species => species.minLevel <= n).map(species => species.id);
+export function bandOfLevel(level) {
+  const n = Math.max(1, Math.floor(Number(level) || 1));
+  return DUNGEON_BANDS.find(band => n >= band.minLevel && n <= band.maxLevel) || DUNGEON_BANDS.at(-1);
 }
 
-// Números de uma espécie no nível N. Só cresce com a profundidade.
+const COMMON_SPECIES = [
+  {
+    id: 'caveBear', label: 'Urso-pardo', form: 'bear', family: 'bear', sprite: 'caveBear',
+    bands: [1, 2], behavior: 'territorial', kind: 'melee', weight: 1, group: { min: 1, max: 1 },
+    baseHealth: 9, baseForce: 2.2, reach: 1.3, cooldownMs: 1800, baseSpeed: 2.8, armor: 0,
+    wakeRadius: 5, leash: 8, size: [27, 22],
+    colors: { body: '#77503a', shadow: '#392920', light: '#ad7952', accent: '#d8a56d', mark: '#231d1b' },
+    drops: [{ item: 'rawMeat', chance: 0.6 }, { item: 'hide', chance: 0.4 }, { item: 'bone', chance: 0.3 }],
+  },
+  {
+    id: 'mossSlime', label: 'Gosma-de-musgo', form: 'slime', family: 'slime', sprite: 'mossSlime',
+    bands: [1, 1], behavior: 'swarm', kind: 'melee', weight: 3, group: { min: 2, max: 3 },
+    baseHealth: 4, baseForce: 1, reach: 0.6, cooldownMs: 1400, baseSpeed: 1.4, armor: 0,
+    wakeRadius: 3, leash: 6, size: [16, 12],
+    colors: { body: '#687c45', shadow: '#34402d', light: '#a5b66b', accent: '#c7ce83', mark: '#293226' },
+    drops: [{ item: 'gel', chance: 0.5 }],
+  },
+  {
+    id: 'dustSpider', label: 'Aranhinha-de-poeira', form: 'spider', family: 'spider', sprite: 'dustSpider',
+    bands: [1, 1], behavior: 'pack', kind: 'ambush', weight: 2, group: { min: 3, max: 4 },
+    baseHealth: 2, baseForce: 0.8, reach: 0.6, cooldownMs: 1100, baseSpeed: 3.6, armor: 0,
+    wakeRadius: 3, leash: 7, size: [13, 10],
+    colors: { body: '#77736b', shadow: '#3e3b38', light: '#aaa398', accent: '#c59c57', mark: '#292725' },
+    drops: [{ item: 'silk', chance: 0.4 }, { item: 'bone', chance: 0.1 }],
+  },
+].map(species => Object.freeze({ ...species,
+  bands: Object.freeze([...species.bands]), group: Object.freeze({ ...species.group }),
+  colors: Object.freeze({ ...species.colors }), size: Object.freeze([...species.size]),
+  drops: Object.freeze(species.drops.map(drop => Object.freeze({ ...drop }))),
+}));
+
+export const DUNGEON_SPECIES = Object.freeze(COMMON_SPECIES);
+export const DUNGEON_SPECIES_BY_ID = new Map(DUNGEON_SPECIES.map(species => [species.id, species]));
+
+export const BOSSES = Object.freeze([
+  Object.freeze({
+    id: 'elderBear', label: 'Urso-ancião', form: 'bear', family: 'bear', sprite: 'elderBear',
+    level: 2, bands: Object.freeze([1, 2]), behavior: 'territorial', kind: 'charge', armor: 0,
+    baseHealth: 45, baseForce: 2.6, reach: 1.6, cooldownMs: 1900, baseSpeed: 2.8,
+    size: Object.freeze([46, 38]),
+    colors: Object.freeze({ body: '#716c60', shadow: '#393832', light: '#aaa18b', accent: '#ddd2b6', mark: '#702f2b' }),
+    drops: Object.freeze([{ item: 'ironShortSword', chance: 1 }, { item: 'ironJerkin', chance: 1 }].map(Object.freeze)),
+  }),
+]);
+export function bossFor(level) { return BOSSES.find(boss => boss.level === Math.floor(level)) || null; }
+export function guardianFor(level) {
+  const band = bandOfLevel(level);
+  if (bossFor(level)) return null;
+  return DUNGEON_SPECIES.find(species => level >= band.minLevel && level <= band.maxLevel && species.bands[0] <= band.minLevel && species.bands[1] >= band.minLevel) || null;
+}
+
+// Números do nível: k é a distância do início da faixa, limitada a seis níveis.
 export function scaleSpecies(speciesOrId, level) {
-  const species = typeof speciesOrId === 'string' ? DUNGEON_SPECIES_BY_ID.get(speciesOrId) : speciesOrId;
+  const species = typeof speciesOrId === 'string' ? DUNGEON_SPECIES_BY_ID.get(speciesOrId) || BOSSES.find(value => value.id === speciesOrId) : speciesOrId;
   if (!species) throw new Error(`espécie desconhecida na masmorra: ${speciesOrId}`);
   const n = Math.max(1, Math.floor(level));
-  const health = Math.max(1, Math.ceil(species.baseHealth * (1 + DUNGEON_SCALE.healthGrowth * (n - 1))));
-  const force = round2(species.baseForce * Math.min(DUNGEON_SCALE.forceCap, 1 + DUNGEON_SCALE.forceGrowth * (n - 1)));
-  const speed = round2(species.baseSpeed + Math.min(DUNGEON_SCALE.speedCap, DUNGEON_SCALE.speedGrowth * (n - 1)));
+  const band = bandOfLevel(n);
+  const isBoss = BOSSES.includes(species);
+  const k = isBoss ? 0 : Math.min(6, Math.max(0, n - band.minLevel));
+  const health = Math.max(1, Math.ceil(species.baseHealth * (1 + 0.15 * k)));
+  const force = round2(species.baseForce * (1 + 0.08 * k));
+  const speed = round2(species.baseSpeed + Math.min(0.3, 0.05 * k));
   return {
-    id: species.id, level: n, behavior: species.behavior,
+    id: species.id, level: n, band: band.id, k, behavior: species.behavior, kind: species.kind, armor: species.armor,
     health, force, damage: Math.max(1, Math.round(force * 4)),
     reach: species.reach, cooldownMs: species.cooldownMs, speed,
     wakeRadius: species.wakeRadius, leash: species.leash,
   };
 }
 
-// Drops da espécie. Sempre iguais: o anti-farm não esconde drop; ele só limita reaparecimento (planRespawn).
+export function speciesIdsForLevel(level) {
+  const n = Math.max(1, Math.floor(level));
+  return DUNGEON_SPECIES.filter(species => n >= species.bands[0] && n <= species.bands[1]).map(species => species.id);
+}
+
+export function dungeonWildlifeDefinition(id) {
+  const species = DUNGEON_SPECIES_BY_ID.get(id) || BOSSES.find(value => value.id === id);
+  if (!species) return null;
+  return {
+    id: species.id, label: species.label, form: species.form, size: [...species.size], colors: { ...species.colors },
+    stats: { health: species.baseHealth, speed: species.baseSpeed, radius: species.size[0] / 100 },
+    drops: species.drops.map(drop => [drop.item, 1, drop.chance]),
+    attack: { mode: species.kind, when: 'intruder', reach: species.reach, force: species.baseForce, cooldownMs: species.cooldownMs },
+    isMonster: true, family: species.family, sprite: species.sprite, bands: [...species.bands], armor: species.armor, kind: species.kind,
+  };
+}
+
 export function dropsFor(speciesOrId) {
-  const species = typeof speciesOrId === 'string' ? DUNGEON_SPECIES_BY_ID.get(speciesOrId) : speciesOrId;
+  const species = typeof speciesOrId === 'string' ? DUNGEON_SPECIES_BY_ID.get(speciesOrId) || BOSSES.find(value => value.id === speciesOrId) : speciesOrId;
   if (!species) throw new Error(`espécie desconhecida na masmorra: ${speciesOrId}`);
   return species.drops.map(drop => ({ item: drop.item, chance: drop.chance }));
 }
 
-// Tamanho do bando de uma espécie (min e max).
 export function groupOf(speciesOrId) {
   const species = typeof speciesOrId === 'string' ? DUNGEON_SPECIES_BY_ID.get(speciesOrId) : speciesOrId;
   if (!species) throw new Error(`espécie desconhecida na masmorra: ${speciesOrId}`);
@@ -139,7 +162,7 @@ export function planDungeonSpawns(dungeon) {
     const max = Math.min(DUNGEON_RULES.roomMaxAlive, 1 + Math.floor((room.w * room.h) / 60) + (level >= 2 ? 1 : 0));
     const spawnPoints = shuffle(candidates, rand).slice(0, DUNGEON_RULES.spawnPointsPerRoom);
     const wanted = Math.min(spawnPoints.length, 1 + Math.floor(rand() * max));
-    // Só espécies cujo bando cabe no teto da sala (bando de ratos não entra numa sala de 2).
+    // Só espécies cujo bando inteiro cabe no teto da sala.
     const fit = pool.filter(id => groupOf(id).min <= max);
     plan.spawners.push({ roomId, kind: room.kind, max, respawnMs: DUNGEON_RULES.respawnMs, species: fit, spawnPoints });
     rooms2.push({ roomId, spawnPoints, units: composeRoom(wanted, fit, rand), used: new Set(), nextUnit: 0 });
@@ -173,8 +196,7 @@ export function planDungeonSpawns(dungeon) {
 
 // Uma tentativa de reaparecimento numa sala. Devolve { ok:true, point, points, species, size } ou { ok:false, reason }.
 // rotation escolhe a espécie da lista da sala (em ordem determinística) e o tamanho do bando, dentro do mínimo e máximo.
-// Regra de bando (decisão do coordenador, substitui o "um por vez" da §4): rato e lobo voltam com o grupo inteiro
-// (rato 3 a 4, lobo 2) e só quando há vaga para o grupo todo dentro do teto da sala e da instância; senão esperam
+// Bandos de qualquer espécie voltam inteiros e só quando há vaga para o grupo todo dentro do teto da sala e da instância; senão esperam
 // o próximo ciclo ('sem-vaga-grupo'). Espécies solitárias voltam uma por vez (size 1).
 export function planRespawn({
   spawner, aliveInRoom = 0, aliveInInstance = 0, players = [], occupied = new Set(),
@@ -224,20 +246,27 @@ export function distancesFrom(dungeon, origin) {
 }
 
 // Monta os bandos de uma sala até `wanted` monstros. Cada bando tem tamanho sorteado entre min e max da espécie
-// e só entra se couber no que falta. Sempre há espécie de bando 1, então a sala fecha no `wanted`.
+// e só entra se couber no que falta. A espécie solitária mantém a sala preenchível.
 function composeRoom(wanted, pool, rand) {
   const units = [];
   let left = wanted;
   while (left > 0) {
     const options = pool.filter(id => groupOf(id).min <= left);
     if (options.length === 0) break;
-    const species = options[Math.floor(rand() * options.length)];
+    const species = weightedPick(options, rand);
     const { min, max } = groupOf(species);
     const size = Math.min(left, min + Math.floor(rand() * (max - min + 1)));
     units.push({ species, size });
     left -= size;
   }
   return units;
+}
+
+function weightedPick(ids, rand) {
+  const total = ids.reduce((sum, id) => sum + (DUNGEON_SPECIES_BY_ID.get(id)?.weight || 1), 0);
+  let pick = rand() * total;
+  for (const id of ids) { pick -= DUNGEON_SPECIES_BY_ID.get(id)?.weight || 1; if (pick < 0) return id; }
+  return ids.at(-1);
 }
 
 function dist2(a, b) {

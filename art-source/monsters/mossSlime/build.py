@@ -44,18 +44,18 @@ BICO = 0.03                                # m, bico leve no topo
 # ------------------------------------------------------------------ paleta por material (tons claro -> escuro)
 MATS = {
     "gelatina": dict(r=[(238, 252, 214), (206, 240, 170), (170, 214, 136)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.3),
-    "nucleo": dict(r=[(92, 150, 72), (66, 112, 52), (44, 80, 40)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.4),
-    "pedra_clara": dict(r=[(255, 252, 236), (236, 230, 206), (206, 200, 178)], layer="corpo", w=0.9, dith=0.02, bias=0.0, ao=0.4),
-    "folha_clara": dict(r=[(230, 248, 178), (196, 230, 140)], layer="corpo", w=0.9, dith=0.02, bias=0.0, ao=0.4),
+    "nucleo": dict(r=[(132, 186, 106), (106, 160, 88)], layer="nucleo", w=1.0, dith=0.0, bias=0.0, ao=0.0),
+    "pedra_escura": dict(r=[(156, 124, 98), (120, 92, 70)], layer="corpo", w=0.9, dith=0.02, bias=0.0, ao=0.4),
+    "folha_escura": dict(r=[(70, 130, 60), (46, 98, 42)], layer="corpo", w=0.9, dith=0.02, bias=0.0, ao=0.4),
     "musgo": dict(r=[(70, 122, 52), (46, 92, 38)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.6),
     "sombra_meia": dict(r=[(92, 104, 92)], layer="sombra_meia", w=1.0, dith=0.0, bias=0.0, ao=0.0),
     "sombra": dict(r=[(56, 66, 56), (40, 48, 40)], layer="sombra", w=1.0, dith=0.0, bias=0.0, ao=0.0),
     "olho": dict(r=[(30, 26, 28), (14, 12, 14)], layer="olhos", w=1.0, dith=0.0, bias=0.0, ao=0.2),
     "brilho": dict(r=[(255, 255, 240), (230, 246, 210)], layer="brilho", w=1.0, dith=0.0, bias=0.0, ao=0.0),
 }
-CAMADAS = ["sombra_meia", "sombra", "corpo", "olhos", "brilho"]          # ordem de baixo para cima
+CAMADAS = ["sombra_meia", "sombra", "corpo", "nucleo", "olhos", "brilho"]          # ordem de baixo para cima
 # pe do modelo na linha 80 (pivo (48, 80)): a sombra de contato precisa de folga abaixo da base iso
-ESTILO = PP.Estilo(tile=TILE, mats=MATS, camadas=CAMADAS, sem_linha=("brilho", "sombra", "sombra_meia"),
+ESTILO = PP.Estilo(tile=TILE, mats=MATS, camadas=CAMADAS, sem_linha=("brilho", "sombra", "sombra_meia", "nucleo"),
                    origem_y=80.0, pivo=(TILE // 2, 80))
 
 
@@ -166,25 +166,26 @@ def add(nome, layer, mat, grp, malha, pose_grp="corpo"):
 add("sombra_meia", "sombra_meia", "sombra_meia", 10, elipsoide((0.0, 0.0, 0.001), 0.35, 0.23, 0.001, 1), "fixo")
 add("sombra", "sombra", "sombra", 8, elipsoide((0.0, 0.0, 0.004), 0.22, 0.15, 0.002, 1), "fixo")
 add("casca", "corpo", "gelatina", 1, gelatina())
-add("nucleo", "corpo", "nucleo", 6, elipsoide((0.0, -0.19, 0.10), 0.16, 0.12, 0.12, 1), "rosto")
-PEDRAS = [(math.radians(-70), 0.13, 0.045, "pedra_clara"), (math.radians(-120), 0.25, 0.038, "pedra_clara"),
-          (math.radians(-98), 0.36, 0.032, "pedra_clara")]
+# nucleo: disco medio centralizado (um pouco acima do meio), na camada propria, com bordas tramadas
+add("nucleo", "nucleo", "nucleo", 6, elipsoide(sobre_superficie(math.radians(-90), 0.205, 0.004), 0.05, 0.012, 0.035, 1), "rosto")
+PEDRAS = [(math.radians(-30), 0.34, 0.030, "pedra_escura"), (math.radians(-160), 0.22, 0.026, "pedra_escura"),
+          (math.radians(-45), 0.10, 0.024, "pedra_escura")]
 for i, (th, z, r, mat) in enumerate(PEDRAS):
     c = sobre_superficie(th, z, r * 0.5)
-    add("pedra%d" % i, "corpo", mat, 3, elipsoide(c, r, r, r * 0.8, 0))
-FOLHAS = [(math.radians(-150), 0.20), (math.radians(-40), 0.16)]
+    add("pedra%d" % i, "corpo", mat, 3, elipsoide(c, r, r, r * 0.8, 0), "rosto")
+FOLHAS = [(math.radians(10), 0.27), (math.radians(-140), 0.12)]
 for i, (th, z) in enumerate(FOLHAS):
-    add("folha%d" % i, "corpo", "folha_clara", 4, folha(th, z))
+    add("folha%d" % i, "corpo", "folha_escura", 4, folha(th, z), "rosto")
 MUSGO = [((0.00, 0.00), 0.455, 0.040), ((0.05, 0.03), 0.430, 0.030), ((-0.05, 0.02), 0.420, 0.030), ((0.01, -0.05), 0.440, 0.026)]
 for i, ((dx, dy), z, r) in enumerate(MUSGO):
     add("musgo%d" % i, "corpo", "musgo", 7, elipsoide((dx, dy, z), r, r, r * 0.7, 0))
 # rosto (frente = camera): olhos maiores, brilho branco de 1 px e boca simples
-OLHOS = [(math.radians(-110), 0.26), (math.radians(-70), 0.26)]
+OLHOS = [(math.radians(-110), 0.32), (math.radians(-70), 0.32)]
 for i, (th, z) in enumerate(OLHOS):
     c = sobre_superficie(th, z, 0.05)
     add("olho%d" % i, "olhos", "olho", 2, elipsoide(c, 0.07, 0.07, 0.07, 1), "rosto")
     add("brilho%d" % i, "brilho", "brilho", 5, elipsoide((c[0] - 0.028, c[1] - 0.045, c[2] + 0.030), 0.024, 0.024, 0.024, 0), "rosto")
-boca_c = sobre_superficie(math.radians(-90), 0.175, 0.014)
+boca_c = sobre_superficie(math.radians(-90), 0.115, 0.012)
 add("boca", "olhos", "olho", 9, elipsoide(boca_c, 0.05, 0.013, 0.013, 0), "rosto")
 # brilho umido no topo (segue o corpo)
 add("brilho_topo", "brilho", "brilho", 5, elipsoide(sobre_superficie(math.radians(-62), 0.39, 0.004), 0.055, 0.022, 0.012, 0), "corpo")
@@ -293,6 +294,16 @@ def pousar_todos(M_local, yaw):
     pousar(M_local, yaw, "fixo")
 
 
+def borda_tramada(rgba):
+    """Bordas do nucleo em 50% (xadrez) e miolo solido: parece atras da camada de gelatina."""
+    a = rgba.copy()
+    m = a[..., 3] > 0
+    inner = m & np.roll(m, 1, 0) & np.roll(m, -1, 0) & np.roll(m, 1, 1) & np.roll(m, -1, 1)
+    yy, xx = np.mgrid[0:a.shape[0], 0:a.shape[1]]
+    a[m & ~inner & ((xx + yy) % 2 == 1), 3] = 0
+    return a
+
+
 def meia_tinta(rgba):
     """Meio-tom com alfa binario: apaga metade dos pixels (xadrez) da camada de sombra exterior."""
     a = rgba.copy()
@@ -310,8 +321,9 @@ for anim in ANIMS_EXEC:
         for f in range(nf):
             pousar_todos(pose(anim, f), yaw_para(dname))
             PIPE.set_attrs()
-            partes = [meia_tinta(PIPE.estagio(CAMADAS, camada)[0]) if camada == "sombra_meia"
-                      else PIPE.estagio(CAMADAS, camada)[0] for camada in CAMADAS]
+            partes = [PIPE.estagio(CAMADAS, camada)[0] for camada in CAMADAS]
+            partes = [meia_tinta(r) if c == "sombra_meia" else borda_tramada(r) if c == "nucleo" else r
+                      for c, r in zip(CAMADAS, partes)]
             cels.append(PP.compose(partes))
         linhas.append(cels)
     PP.save_png(PP.montar_atlas(linhas), os.path.join(OUTDIR, "%s.png" % anim))

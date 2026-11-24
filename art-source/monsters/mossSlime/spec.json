@@ -16,6 +16,7 @@
  "escala": 0.25,
  "altura_m": 0.45,
  "camadas": [
+  "sombra_meia",
   "sombra",
   "corpo",
   "olhos",
@@ -51,8 +52,8 @@
  },
  "paleta": [
   [
-   16,
    14,
+   12,
    14
   ],
   [
@@ -61,14 +62,19 @@
    17
   ],
   [
-   34,
    30,
-   30
+   26,
+   28
   ],
   [
-   42,
-   50,
-   42
+   40,
+   48,
+   40
+  ],
+  [
+   44,
+   80,
+   40
   ],
   [
    46,
@@ -81,14 +87,14 @@
    33
   ],
   [
-   60,
-   70,
-   60
+   56,
+   66,
+   56
   ],
   [
-   64,
-   110,
-   54
+   66,
+   112,
+   52
   ],
   [
    70,
@@ -97,43 +103,33 @@
   ],
   [
    92,
-   146,
-   74
+   104,
+   92
   ],
   [
-   118,
-   168,
-   88
+   92,
+   150,
+   72
   ],
   [
-   160,
-   206,
-   118
-  ],
-  [
-   168,
-   212,
-   118
-  ],
-  [
-   176,
    170,
-   150
-  ],
-  [
-   206,
-   240,
-   150
-  ],
-  [
-   206,
-   240,
-   160
-  ],
-  [
    214,
-   208,
-   186
+   136
+  ],
+  [
+   196,
+   230,
+   140
+  ],
+  [
+   206,
+   200,
+   178
+  ],
+  [
+   206,
+   240,
+   170
   ],
   [
    230,
@@ -141,9 +137,24 @@
    210
   ],
   [
-   246,
-   242,
-   226
+   230,
+   248,
+   178
+  ],
+  [
+   236,
+   230,
+   206
+  ],
+  [
+   238,
+   252,
+   214
+  ],
+  [
+   255,
+   252,
+   236
   ],
   [
    255,
@@ -152,5 +163,5 @@
   ]
  ],
  "paleta_max": 48,
- "nota": "translucidez simulada por tons (nucleo escuro, borda clara); alfa binario. Pedrinhas e folhas sao inclusoes claras na casca. Sombra de contato e um disco escuro fixo (alfa binario, sem meio-tom)."
+ "nota": "translucidez simulada por tons (corpo claro, nucleo escuro visivel, pedrinhas e folhas claras, brilho no topo); alfa binario. Sombra: nucleo solido e anel com meia-tinta (xadrez de pixels)."
 }

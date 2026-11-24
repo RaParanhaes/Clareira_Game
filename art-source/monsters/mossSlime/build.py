@@ -1,15 +1,18 @@
 """Gosma-de-musgo (mossSlime), familia slime, fatia D1 do plano masmorra v2.
 
-Gota gelatinosa verde-musgo com pedrinhas e folhas presas na superficie, dois olhos e um brilho umido.
-Escala FISICA do personagem A7 (43,92 px por metro na celula 96): a gota tem ~0,45 m de altura, ~0,25 do
-jogador (1,9 m). Nada de autofit.
+Gota gelatinosa verde-musgo: base larga que se espalha no chao, topo arredondado com bico leve; nucleo mais
+escuro na frente, borda clara; 3 pedrinhas e 2 folhas claras presas na casca; tufo de musgo no topo; olhos
+com brilho e boca voltados para a frente nas 4 direcoes; sombra de contato no chao.
+Escala FISICA do personagem A7 (43,92 px/m na celula 96): gota de ~0,48 m, cerca de 0,25 do jogador. Sem autofit.
 
 Render: 4 direcoes radiais (SE, NE, SO, NO), sem espelho (a luz da biblioteca e assimetrica).
-Animacoes: parado 4 (pulsar), andar 6 (esticar e saltar), atacar 4 (bote, golpe no quadro 2),
-morrer 6 (derreter; fica no ultimo quadro). Saida: uma folha crua por animacao (linhas = direcoes na ordem de
-RADIAL4, colunas = quadros) em OUTDIR, e spec.json ao lado deste arquivo.
+Corpo e enfeites giram com a direcao; rosto e boca ficam voltados para a camera. A sombra fica no chao.
+Animacoes: parado 4 (pulsar), andar 6 (esticar e saltar), atacar 4 (bote, golpe no quadro 2), morrer 6 (derreter).
+Saida: uma folha crua por animacao (linhas = direcoes na ordem de RADIAL4, colunas = quadros) em OUTDIR, e
+spec.json ao lado deste arquivo.
 
-Ambiente: REPO (raiz do worktree), OUTDIR (saida crua), ANIMS (ex.: parado,andar; padrao todas), TAG (log).
+Ambiente: REPO (raiz do worktree), OUTDIR (saida crua), ANIMS (ex.: parado,andar; padrao todas), TAG (log),
+ESCREVER_SPEC (1 grava spec.json).
 Rodar: REPO=... OUTDIR=... ANIMS=parado timeout 900 blender -b --factory-startup -P build.py
 """
 import json
@@ -34,22 +37,82 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 TAG = os.environ.get("TAG", "run")
 DIRS = PP.RADIAL4                          # SE, NE, SO, NO (ordem de FOUR em game/monster-sprites.mjs)
 
-ALTURA = 0.45                              # m
-RAIO = 0.26                                # m, meia largura da base
+ALTURA = 0.45                              # m (corpo, sem o bico)
+RAIO = 0.26                                # m, raio de referencia
+BICO = 0.03                                # m, bico leve no topo
+
 # ------------------------------------------------------------------ paleta por material (tons claro -> escuro)
 MATS = {
-    "gelatina": dict(r=[(186, 226, 132), (140, 192, 100), (98, 150, 72), (66, 104, 52)], layer="corpo",
-                     w=1.0, dith=0.02, bias=0.0, ao=0.45),
-    "pedra": dict(r=[(164, 146, 122), (120, 104, 88), (84, 72, 60)], layer="corpo", w=0.9, dith=0.02, bias=0.0, ao=0.6),
-    "folha": dict(r=[(92, 150, 70), (60, 110, 48), (40, 76, 36)], layer="corpo", w=0.9, dith=0.02, bias=0.0, ao=0.6),
-    "olho": dict(r=[(44, 34, 34), (22, 18, 18)], layer="olhos", w=1.0, dith=0.0, bias=0.0, ao=0.2),
-    "brilho": dict(r=[(248, 252, 230), (214, 236, 196)], layer="brilho", w=1.0, dith=0.0, bias=0.0, ao=0.0),
+    "gelatina": dict(r=[(206, 240, 160), (160, 206, 118), (118, 168, 88)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.4),
+    "nucleo": dict(r=[(92, 146, 74), (64, 110, 54)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.5),
+    "pedra_clara": dict(r=[(246, 242, 226), (214, 208, 186), (176, 170, 150)], layer="corpo", w=0.9, dith=0.02, bias=0.0, ao=0.5),
+    "folha_clara": dict(r=[(206, 240, 150), (168, 212, 118)], layer="corpo", w=0.9, dith=0.02, bias=0.0, ao=0.5),
+    "musgo": dict(r=[(70, 122, 52), (46, 92, 38)], layer="corpo", w=1.0, dith=0.02, bias=0.0, ao=0.6),
+    "sombra": dict(r=[(60, 70, 60), (42, 50, 42)], layer="sombra", w=1.0, dith=0.0, bias=0.0, ao=0.0),
+    "olho": dict(r=[(34, 30, 30), (16, 14, 14)], layer="olhos", w=1.0, dith=0.0, bias=0.0, ao=0.2),
+    "brilho": dict(r=[(255, 255, 240), (230, 246, 210)], layer="brilho", w=1.0, dith=0.0, bias=0.0, ao=0.0),
 }
-CAMADAS = ["corpo", "olhos", "brilho"]
-ESTILO = PP.Estilo(tile=TILE, mats=MATS, camadas=CAMADAS, sem_linha=("brilho",))
+CAMADAS = ["sombra", "corpo", "olhos", "brilho"]          # ordem de baixo para cima
+# pe do modelo na linha 80 (pivo (48, 80)): a sombra de contato precisa de folga abaixo da base iso
+ESTILO = PP.Estilo(tile=TILE, mats=MATS, camadas=CAMADAS, sem_linha=("brilho", "sombra"),
+                   origem_y=80.0, pivo=(TILE // 2, 80))
 
 
-# ------------------------------------------------------------------ malhas (metros, base no z = 0, olhos na frente = -Y)
+# ------------------------------------------------------------------ perfil do corpo (anel por anel, exato)
+N_ANEIS = 10
+M_LADOS = 14
+
+
+def perfil():
+    """Anel i (1..N): s = i/N de 0 (topo) a 1 (base). Base larga (1,1 R), topo arredondado (0,5 R) com bico."""
+    zs, rs = [], []
+    for i in range(1, N_ANEIS + 1):
+        s = i / N_ANEIS
+        z = ALTURA * math.cos(s * math.pi / 2) ** 0.9 + BICO * max(0.0, 1 - s / 0.2) ** 2
+        r = RAIO * (0.5 + 0.6 * math.sin(s * math.pi / 2))
+        zs.append(z)
+        rs.append(r)
+    return zs, rs
+
+
+ZS, RS = perfil()
+ZS_ASC, RS_ASC = list(reversed(ZS)), list(reversed(RS))
+
+
+def raio_superficie(z):
+    """Raio da casca na altura z (interpolado entre os aneis exatos)."""
+    return float(np.interp(min(max(z, 0.0), ZS[0]), ZS_ASC, RS_ASC))
+
+
+def sobre_superficie(theta, z, afasta=0.0):
+    r = raio_superficie(z) + afasta
+    return (r * math.cos(theta), r * math.sin(theta), z)
+
+
+def gelatina():
+    verts = [(0.0, 0.0, ZS[0] + 0.0)]                         # polo do topo (com bico)
+    verts[0] = (0.0, 0.0, ZS[0] + 0.0)
+    for i in range(N_ANEIS):
+        for j in range(M_LADOS):
+            a = 2 * math.pi * j / M_LADOS
+            verts.append((RS[i] * math.cos(a), RS[i] * math.sin(a), ZS[i]))
+    centro_base = len(verts)
+    verts.append((0.0, 0.0, 0.0))
+
+    def idx(i, j):                                            # i = 0..N-1 (anel i+1), j modulo M
+        return 1 + i * M_LADOS + (j % M_LADOS)
+
+    faces = []
+    for j in range(M_LADOS):
+        faces.append((0, idx(0, j), idx(0, j + 1)))
+    for i in range(N_ANEIS - 1):
+        for j in range(M_LADOS):
+            faces.append((idx(i, j), idx(i, j + 1), idx(i + 1, j + 1), idx(i + 1, j)))
+    for j in range(M_LADOS):
+        faces.append((centro_base, idx(N_ANEIS - 1, j + 1), idx(N_ANEIS - 1, j)))
+    return verts, faces
+
+
 def icosfera(sub):
     t = (1 + 5 ** 0.5) / 2
     v = [(-1, t, 0), (1, t, 0), (-1, -t, 0), (1, -t, 0), (0, -1, t), (0, 1, t), (0, -1, -t), (0, 1, -t),
@@ -60,6 +123,7 @@ def icosfera(sub):
     v = [tuple(np.array(p) / np.linalg.norm(p)) for p in v]
     for _ in range(sub):
         cache, nf = {}, []
+
         def meio(a, b):
             k = (min(a, b), max(a, b))
             if k not in cache:
@@ -74,83 +138,52 @@ def icosfera(sub):
     return [tuple(p) for p in v], f
 
 
-def corpo_gelatina():
-    """Icosfera de 80 faces (sub=1): cupula com base plana; base larga, topo mais estreito."""
-    v, f = icosfera(1)
-    out = []
-    for x, y, z in v:
-        t = min(1.0, max(0.0, (z + 0.85) / 1.7))          # 0 na base, 1 no topo (aprox.; icosfera tem z em [-0.85, 0.85])
-        h = t * ALTURA
-        fat = 1.0 - 0.35 * t * t
-        out.append((x * RAIO * fat, y * RAIO * fat, h))
-    return out, f
+def elipsoide(c, rx, ry, rz, sub=1):
+    v, f = icosfera(sub)
+    return [(c[0] + x * rx, c[1] + y * ry, c[2] + z * rz) for x, y, z in v], f
 
 
-def pedrinha(c, r):
-    v, f = icosfera(0)
-    return [(c[0] + x * r, c[1] + y * r, c[2] + z * r * 0.7) for x, y, z in v], f
-
-
-def raio_superficie(z):
-    """Raio da superficie do corpo na altura z (mesma forma de corpo_gelatina)."""
-    t = min(1.0, max(0.0, z / ALTURA))
-    return RAIO * (1.0 - 0.35 * t * t)
-
-
-def sobre_superficie(theta, z, afasta=0.0):
-    r = raio_superficie(z) + afasta
-    return (r * math.cos(theta), r * math.sin(theta), z)
-
-
-def folha(theta, z, comp=0.05, larg=0.032):
-    """Folha vertical presa na superficie: losango no plano tangente (T, Z), afastado 0,012 m da casca."""
-    u = (math.cos(theta), math.sin(theta), 0.0)
+def folha(theta, z, comp=0.055, larg=0.034):
+    """Folha vertical presa na casca: losango no plano tangente, afastado da casca."""
     T = (-math.sin(theta), math.cos(theta), 0.0)
-    c = sobre_superficie(theta, z, 0.012)
+    c = sobre_superficie(theta, z, 0.008)
+
     def ponto(a, b):
-        return (c[0] + u[0] * 0 + T[0] * a, c[1] + T[1] * a, c[2] + b)
+        return (c[0] + T[0] * a, c[1] + T[1] * a, c[2] + b)
     return [ponto(0, comp), ponto(larg, 0), ponto(0, -comp * 0.6), ponto(-larg, 0)], [(0, 1, 2, 3)]
 
 
-def olho(theta, z):
-    v, f = icosfera(1)
-    c = sobre_superficie(theta, z, 0.01)
-    return [(c[0] + x * 0.06, c[1] + y * 0.06, c[2] + z2 * 0.06) for x, y, z2 in v], f
+# ------------------------------------------------------------------ partes: (nome, layer, material, grupo, malha, grupo_de_pose)
+# grupo_de_pose: "corpo" gira com a direcao e recebe a pose; "rosto" fica voltado para a camera; "fixo" so gira
+PARTES = []
 
 
-def brilho_umido(theta, z):
-    v, f = icosfera(1)
-    c = sobre_superficie(theta, z, 0.004)
-    return [(c[0] + x * 0.045, c[1] + y * 0.03, c[2] + z2 * 0.018) for x, y, z2 in v], f
+def add(nome, layer, mat, grp, malha, pose_grp="corpo"):
+    PARTES.append((nome, layer, mat, grp, malha, pose_grp))
 
 
-def pedrinha(theta, z, r):
-    v, f = icosfera(0)
-    c = sobre_superficie(theta, z, r * 0.35)
-    return [(c[0] + x * r, c[1] + y * r, c[2] + z2 * r * 0.8) for x, y, z2 in v], f
-
-
-# superficie: pedrinhas e folhas presas na casca (angulo em rad: -pi/2 = frente, -Y; z em m)
-PEDRAS = [(math.radians(-75), 0.14, 0.030), (math.radians(-120), 0.11, 0.024), (math.radians(-98), 0.27, 0.022)]
-FOLHAS = [(math.radians(-140), 0.20), (math.radians(-40), 0.10)]
-OLHOS = [(math.radians(-112), 0.16), (math.radians(-68), 0.16)]
-BRILHO = (math.radians(-62), 0.36)
-
-PARTES = []  # (nome, layer, material, grupo, (verts, faces))
-
-
-def add(nome, layer, mat, grp, malha):
-    PARTES.append((nome, layer, mat, grp, malha))
-
-
-add("corpo", "corpo", "gelatina", 1, corpo_gelatina())
-for i, (th, z, r) in enumerate(PEDRAS):
-    add("pedra%d" % i, "corpo", "pedra", 3, pedrinha(th, z, r))
+add("sombra", "sombra", "sombra", 8, elipsoide((0.0, 0.0, 0.002), 0.35, 0.23, 0.002, 1), "fixo")
+add("casca", "corpo", "gelatina", 1, gelatina())
+add("nucleo", "corpo", "nucleo", 6, elipsoide((0.0, -0.17, 0.085), 0.13, 0.09, 0.09, 1), "rosto")
+PEDRAS = [(math.radians(-70), 0.12, 0.036, "pedra_clara"), (math.radians(-118), 0.24, 0.030, "pedra_clara"),
+          (math.radians(-100), 0.36, 0.026, "pedra_clara")]
+for i, (th, z, r, mat) in enumerate(PEDRAS):
+    c = sobre_superficie(th, z, r * 0.4)
+    add("pedra%d" % i, "corpo", mat, 3, elipsoide(c, r, r, r * 0.8, 0))
+FOLHAS = [(math.radians(-150), 0.20), (math.radians(-40), 0.16)]
 for i, (th, z) in enumerate(FOLHAS):
-    add("folha%d" % i, "corpo", "folha", 4, folha(th, z))
+    add("folha%d" % i, "corpo", "folha_clara", 4, folha(th, z))
+MUSGO = [((0.00, 0.00), 0.455, 0.040), ((0.05, 0.03), 0.430, 0.030), ((-0.05, 0.02), 0.420, 0.030), ((0.01, -0.05), 0.440, 0.026)]
+for i, ((dx, dy), z, r) in enumerate(MUSGO):
+    add("musgo%d" % i, "corpo", "musgo", 7, elipsoide((dx, dy, z), r, r, r * 0.7, 0))
+# rosto (frente = camera): olhos maiores, brilho branco de 1 px e boca simples
+OLHOS = [(math.radians(-112), 0.27), (math.radians(-68), 0.27)]
 for i, (th, z) in enumerate(OLHOS):
-    add("olho%d" % i, "olhos", "olho", 2, olho(th, z))
-add("brilho", "brilho", "brilho", 5, brilho_umido(*BRILHO))
+    c = sobre_superficie(th, z, 0.024)
+    add("olho%d" % i, "olhos", "olho", 2, elipsoide(c, 0.05, 0.05, 0.05, 1), "rosto")
+    add("brilho%d" % i, "brilho", "brilho", 5, elipsoide((c[0] - 0.016, c[1] - 0.030, c[2] + 0.018), 0.014, 0.014, 0.014, 0), "rosto")
+boca_c = sobre_superficie(math.radians(-90), 0.165, 0.012)
+add("boca", "olhos", "olho", 9, elipsoide(boca_c, 0.045, 0.011, 0.011, 0), "rosto")
 
 for ob in list(bpy.data.objects):
     bpy.data.objects.remove(ob, do_unlink=True)
@@ -163,7 +196,7 @@ for nome in ESTILO.nomes:
     BMAT[nome] = m
 
 PARTS = []
-for nome, layer, mat, grp, (verts, faces) in PARTES:
+for nome, layer, mat, grp, (verts, faces), pose_grp in PARTES:
     me = bpy.data.meshes.new(nome)
     me.from_pydata(verts, [], faces)
     me.update()
@@ -179,11 +212,10 @@ for nome, layer, mat, grp, (verts, faces) in PARTES:
     me.materials.append(BMAT[mat])
     ob = bpy.data.objects.new(nome, me)
     coll.objects.link(ob)
-    ob["layer"], ob["only"], ob["grp"] = layer, "", grp
+    ob["layer"], ob["only"], ob["grp"], ob["pose"] = layer, "", grp, pose_grp
     PARTS.append(ob)
 
-
-# ------------------------------------------------------------------ poses (locais, base no z = 0; a frente e -Y)
+# ------------------------------------------------------------------ poses (locais, base no z = 0)
 def escala(sz):
     """Estica em Z e mantem o volume aproximado nos eixos X/Y."""
     return Matrix.Diagonal(Vector((1 / math.sqrt(sz), 1 / math.sqrt(sz), sz, 1)))
@@ -191,8 +223,7 @@ def escala(sz):
 
 def pose(anim, f):
     if anim == "parado":                      # pulsar: inspira e expira, base fixa
-        sz = [1.00, 1.05, 1.00, 0.96][f]
-        return escala(sz)
+        return escala([1.00, 1.05, 1.00, 0.96][f])
     if anim == "andar":                       # esticar e saltar: agacha, estica, sobe, cai
         sz = [0.85, 1.15, 1.10, 0.85, 1.08, 0.97][f]
         hop = [0.0, 0.03, 0.06, 0.0, 0.02, 0.0][f]
@@ -235,10 +266,27 @@ def yaw_para(dname):
     return math.atan2(f.x, -f.y)
 
 
-def pousar(M_local, yaw):
-    M = Matrix.Rotation(yaw, 4, "Z") @ M_local
+# o rosto (-Y local) aponta para a camera: a camera fica em +BACK (cam.location = ... + BACK * 10)
+_v = Vector((PIPE.back.x, PIPE.back.y, 0)).normalized()
+YAW_ROSTO = math.atan2(_v.x, -_v.y)
+
+
+def pousar(M_local, yaw, grupo):
+    if grupo == "rosto":
+        M = Matrix.Rotation(YAW_ROSTO, 4, "Z") @ M_local
+    elif grupo == "fixo":                       # sombra: so gira com a direcao, sem pose
+        M = Matrix.Rotation(yaw, 4, "Z")
+    else:
+        M = Matrix.Rotation(yaw, 4, "Z") @ M_local
     for ob in PARTS:
-        ob.matrix_world = M
+        if ob["pose"] == grupo:
+            ob.matrix_world = M
+
+
+def pousar_todos(M_local, yaw):
+    pousar(M_local, yaw, "corpo")
+    pousar(M_local, yaw, "rosto")
+    pousar(M_local, yaw, "fixo")
 
 
 # ------------------------------------------------------------------ renders: 4 direcoes x quadros x camadas
@@ -248,7 +296,7 @@ for anim in ANIMS_EXEC:
     for dname in DIRS:
         cels = []
         for f in range(nf):
-            pousar(pose(anim, f), yaw_para(dname))
+            pousar_todos(pose(anim, f), yaw_para(dname))
             PIPE.set_attrs()
             partes = [PIPE.estagio(CAMADAS, camada)[0] for camada in CAMADAS]
             cels.append(PP.compose(partes))
@@ -273,8 +321,8 @@ if os.environ.get("ESCREVER_SPEC", "1") == "1":
                       **({"golpe_quadro": GOLPE_QUADRO[a]} if a in GOLPE_QUADRO else {})} for a in ANIMS},
         "paleta": sorted([list(c) for c in ESTILO.paleta]),
         "paleta_max": PP.PALETA_MAX,
-        "nota": "translucidez simulada por tons e brilho (a biblioteca tem alfa binario); pedrinhas e folhas sao "
-                "inclusoes na superficie",
+        "nota": "translucidez simulada por tons (nucleo escuro, borda clara); alfa binario. Pedrinhas e folhas sao "
+                "inclusoes claras na casca. Sombra de contato e um disco escuro fixo (alfa binario, sem meio-tom).",
     }
     with open(os.path.join(HERE, "spec.json"), "w", encoding="utf-8") as fh:
         json.dump(spec, fh, indent=1, ensure_ascii=False)

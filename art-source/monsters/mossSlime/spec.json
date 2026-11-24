@@ -1,0 +1,135 @@
+{
+ "especie": "mossSlime",
+ "familia": "slime",
+ "cell": 96,
+ "pivo": [
+  48,
+  84
+ ],
+ "dirs": "4",
+ "direcoes": [
+  "SE",
+  "NE",
+  "SO",
+  "NO"
+ ],
+ "escala": 0.25,
+ "altura_m": 0.45,
+ "camadas": [
+  "corpo",
+  "olhos",
+  "brilho"
+ ],
+ "escala_fisica": {
+  "ppu_por_metro_96": 43.915583775317494,
+  "ppu_tile": 43.915583775317494,
+  "origem_y": 84.0
+ },
+ "anims": {
+  "parado": {
+   "frames": 4,
+   "fps": 4,
+   "loop": true
+  },
+  "andar": {
+   "frames": 6,
+   "fps": 10,
+   "loop": true
+  },
+  "atacar": {
+   "frames": 4,
+   "fps": 12,
+   "loop": false,
+   "golpe_quadro": 2
+  },
+  "morrer": {
+   "frames": 6,
+   "fps": 10,
+   "loop": false
+  }
+ },
+ "paleta": [
+  [
+   22,
+   18,
+   18
+  ],
+  [
+   30,
+   19,
+   17
+  ],
+  [
+   40,
+   76,
+   36
+  ],
+  [
+   44,
+   34,
+   34
+  ],
+  [
+   56,
+   40,
+   33
+  ],
+  [
+   60,
+   110,
+   48
+  ],
+  [
+   66,
+   104,
+   52
+  ],
+  [
+   84,
+   72,
+   60
+  ],
+  [
+   92,
+   150,
+   70
+  ],
+  [
+   98,
+   150,
+   72
+  ],
+  [
+   120,
+   104,
+   88
+  ],
+  [
+   140,
+   192,
+   100
+  ],
+  [
+   164,
+   146,
+   122
+  ],
+  [
+   186,
+   226,
+   132
+  ],
+  [
+   214,
+   236,
+   196
+  ],
+  [
+   248,
+   252,
+   230
+  ]
+ ],
+ "paleta_max": 48,
+ "nota": "translucidez simulada por tons e brilho (a biblioteca tem alfa binario); pedrinhas e folhas sao inclusoes na superficie"
+}
